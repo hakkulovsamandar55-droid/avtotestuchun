@@ -1,0 +1,31 @@
+// Prisma sxemasi — bitta fayl orqali butun DB tuzilmasini boshqaradi.
+// Serverni ko'chirishda kerak bo'ladigani: shu fayl + migrations/ papkasi.
+// Yangi serverda: DATABASE_URL ni sozlab, `npx prisma migrate deploy` ni ishga tushirish kifoya.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  telegramId   BigInt   @unique @map("telegram_id")
+  name         String
+  username     String?
+  phone        String?
+  role         Role     @default(USER)
+  examReadiness Int     @default(0) @map("exam_readiness")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}

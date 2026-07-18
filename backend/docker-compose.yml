@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tezprava
+      POSTGRES_PASSWORD: tezprava
+      POSTGRES_DB: tezprava
+    ports:
+      - "5432:5432"
+    volumes:
+      - tezprava_pg_data:/var/lib/postgresql/data
+
+volumes:
+  tezprava_pg_data:
