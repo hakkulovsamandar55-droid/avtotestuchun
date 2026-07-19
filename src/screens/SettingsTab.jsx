@@ -1,8 +1,32 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { Bell, HelpCircle, Send, ChevronRight, ShieldCheck } from "lucide-react";
+import { Bell, HelpCircle, Send, ChevronRight, ShieldCheck, Crown } from "lucide-react";
 import { ACCENT_FROM } from "../theme";
 import LanguageSwitcher from "../components/LanguageSwitcher";
+
+function PremiumRow({ onClick }) {
+  const { t } = useTranslation();
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-3 rounded-2xl px-4 py-3.5 text-left shadow-sm active:scale-[0.99] transition-transform"
+      style={{
+        background: "linear-gradient(90deg, #F5C542, #E0A62E, #C9982B)",
+      }}
+    >
+      <div className="w-9 h-9 rounded-full bg-white/25 flex items-center justify-center shrink-0">
+        <Crown size={18} color="#3B2C00" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-extrabold text-[#3B2C00] text-sm">
+          {t("settings.premium")}
+        </p>
+        <p className="text-[#5C4600] text-xs">{t("settings.premiumSubtitle")}</p>
+      </div>
+      <ChevronRight size={18} color="#3B2C00" />
+    </button>
+  );
+}
 
 function SettingsRow({ icon: Icon, label, value }) {
   return (
@@ -18,7 +42,7 @@ function SettingsRow({ icon: Icon, label, value }) {
 }
 
 // 3c-EKRAN: "Sozlamalar" bo'limi
-export default function SettingsTab({ user, onOpenAdmin }) {
+export default function SettingsTab({ user, onOpenAdmin, onOpenPremium }) {
   const { t } = useTranslation();
   const isAdmin = user?.role === "ADMIN";
 
@@ -44,6 +68,7 @@ export default function SettingsTab({ user, onOpenAdmin }) {
       </div>
 
       <div className="mt-3 space-y-3">
+        <PremiumRow onClick={onOpenPremium} />
         <LanguageSwitcher variant="row" />
         <SettingsRow
           icon={Bell}

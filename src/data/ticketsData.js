@@ -7,6 +7,7 @@ import { SIGNS } from "./signsData";
 export const TOTAL_TICKETS = 60;
 export const QUESTIONS_PER_TICKET = 20;
 export const EXAM_TIME_SECONDS = 25 * 60; // 25 daqiqa — imtihon rejimidagi vaqt
+export const EXAM_MAX_MISTAKES = 2; // shuncha xatodan keyin imtihon avtomatik tugaydi
 
 // Savol shakli: { id, text, image?: sign kodi, options: [3 ta variant], correct: to'g'ri variant indeksi }
 
@@ -367,6 +368,27 @@ export function getTicketQuestions(ticketNumber) {
   if (ticketNumber === 1) return TICKET_1_QUESTIONS;
 
   const rand = seededRandom(ticketNumber * 7919);
+  const allNames = SIGNS.map((s) => s.name);
+  const shuffledSigns = shuffleWithSeed(SIGNS, rand);
+  const shuffledGeneric = shuffleWithSeed(GENERIC_POOL, rand);
+
+  const signCount = 13;
+  const genericCount = QUESTIONS_PER_TICKET - signCount;
+
+  const signQuestions = shuffledSigns
+    .slice(0, signCount)
+    .map((sign) => buildSignQuestion(sign, allNames, rand));
+
+  const genericQuestions = shuffledGeneric
+    .slice(0, genericCount)
+    .map((item, idx) => buildGenericQuestion(item, idx));
+
+  return shuffleWithSeed([...signQuestions, ...genericQuestions], rand);
+}
+
+// Imtihon rejimi uchun — har chaqirilganda TASODIFIY 20 ta savol (barcha biletlar bazasidan aralashtirilib)
+export function getRandomExamQuestions() {
+  const rand = Math.random;
   const allNames = SIGNS.map((s) => s.name);
   const shuffledSigns = shuffleWithSeed(SIGNS, rand);
   const shuffledGeneric = shuffleWithSeed(GENERIC_POOL, rand);

@@ -15,7 +15,7 @@ import {
 import { ACCENT_FROM, ACCENT_TO } from "../theme";
 
 // 3a-EKRAN: "O'rganish" bo'limi — bosh sahifa
-export default function HomeTab({ onOpenTickets, onOpenSigns }) {
+export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam }) {
   const { t } = useTranslation();
 
   const menuItems = [
@@ -124,7 +124,10 @@ export default function HomeTab({ onOpenTickets, onOpenSigns }) {
             </p>
           </div>
         </div>
-        <div className="rounded-3xl p-5 bg-white border border-gray-100 flex flex-col justify-between h-36 shadow-sm">
+        <button
+          onClick={onOpenExam}
+          className="rounded-3xl p-5 bg-white border border-gray-100 flex flex-col justify-between h-36 shadow-sm text-left active:scale-[0.98] transition-transform"
+        >
           <div className="w-9 h-9 rounded-full bg-amber-50 flex items-center justify-center">
             <Play size={15} color="#F59E0B" fill="#F59E0B" />
           </div>
@@ -136,7 +139,7 @@ export default function HomeTab({ onOpenTickets, onOpenSigns }) {
               {t("home.examModeSubtitle")}
             </p>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Menu list */}
