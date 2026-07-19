@@ -1,11 +1,37 @@
 import React from "react";
 
-// Yo'l belgisi ikonkasi — shakl (uchburchak/doira/kvadrat/olmos) + soddalashtirilgan piktogramma
+// Har bir kod uchun rasm faylini avtomatik topib oladi (src/assets/signs/<code>.png)
+// Fayl mavjud bo'lmagan kodlar uchun pastdagi chizilgan SVG piktogramma ishlatiladi.
+const signImages = import.meta.glob("../assets/signs/*.png", {
+  eager: true,
+  import: "default",
+});
+const IMAGE_BY_CODE = {};
+for (const path in signImages) {
+  const code = path.split("/").pop().replace(".png", "");
+  IMAGE_BY_CODE[code] = signImages[path];
+}
+
+// Yo'l belgisi ikonkasi — rasm mavjud bo'lsa haqiqiy rasm, bo'lmasa
+// shakl (uchburchak/doira/kvadrat/olmos) + soddalashtirilgan piktogramma
 // size: piksel o'lchami (kvadrat konteyner)
-export default function SignIcon({ shape, pic, size = 64 }) {
+export default function SignIcon({ code, shape, pic, size = 64 }) {
   const s = size;
   const cx = s / 2;
   const cy = s / 2;
+
+  const imageSrc = code ? IMAGE_BY_CODE[code] : undefined;
+  if (imageSrc) {
+    return (
+      <img
+        src={imageSrc}
+        alt={code}
+        width={s}
+        height={s}
+        style={{ width: s, height: s, objectFit: "contain" }}
+      />
+    );
+  }
 
   return (
     <svg width={s} height={s} viewBox={`0 0 ${s} ${s}`}>

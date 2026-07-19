@@ -135,7 +135,7 @@ export default function SignsScreen({ onBack }) {
                         key={s.code}
                         className="w-11 h-11 rounded-xl bg-gray-50 flex items-center justify-center"
                       >
-                        <SignIcon shape={s.shape} pic={s.pic} size={38} />
+                        <SignIcon code={s.code} shape={s.shape} pic={s.pic} size={38} />
                       </div>
                     ))}
                     {items.length > 4 && (
@@ -170,7 +170,7 @@ function SignRow({ sign, onClick }) {
       className="w-full flex items-center gap-3 rounded-2xl bg-white border border-gray-100 shadow-sm px-3.5 py-3 text-left"
     >
       <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center shrink-0">
-        <SignIcon shape={sign.shape} pic={sign.pic} size={40} />
+        <SignIcon code={sign.code} shape={sign.shape} pic={sign.pic} size={40} />
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-gray-900 text-sm truncate">
@@ -213,7 +213,7 @@ function CategoryView({ catKey, onBack, onSelectSign }) {
             className="rounded-2xl bg-white border border-gray-100 shadow-sm p-2.5 flex flex-col items-center gap-1.5 active:scale-95 transition-transform"
           >
             <div className="w-14 h-14 flex items-center justify-center">
-              <SignIcon shape={sign.shape} pic={sign.pic} size={56} />
+              <SignIcon code={sign.code} shape={sign.shape} pic={sign.pic} size={56} />
             </div>
             <p className="text-[10px] font-bold text-gray-400">{sign.code}</p>
             <p
@@ -265,7 +265,7 @@ function SignDetail({ sign, onBack }) {
         }}
       >
         <div className="w-32 h-32 mx-auto rounded-3xl bg-white flex items-center justify-center shadow-lg">
-          <SignIcon shape={sign.shape} pic={sign.pic} size={104} />
+          <SignIcon code={sign.code} shape={sign.shape} pic={sign.pic} size={104} />
         </div>
         <p className="text-white/80 text-xs font-bold tracking-wide mt-4 uppercase">
           {sign.code}
@@ -292,7 +292,7 @@ function SignDetail({ sign, onBack }) {
                 key={s.code}
                 className="rounded-xl bg-white border border-gray-100 shadow-sm p-2 flex flex-col items-center gap-1"
               >
-                <SignIcon shape={s.shape} pic={s.pic} size={40} />
+                <SignIcon code={s.code} shape={s.shape} pic={s.pic} size={40} />
                 <p className="text-[9px] font-bold text-gray-400">{s.code}</p>
               </button>
             ))}
