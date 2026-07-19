@@ -43,7 +43,7 @@ Bu loyiha shu maqsadda maxsus qilingan — hech qanday hostga qaramay ishlaydi:
 1. Kodni yangi serverga ko'chiring (`git clone` yoki fayllarni yuklash)
 2. `.env` faylni yangi server uchun to'ldiring (ayniqsa `DATABASE_URL`)
 3. `npm install`
-4. `npx prisma migrate deploy` — jadval tuzilmasini yangi bazada yaratadi
+4. `npx prisma db push` — jadval tuzilmasini bazada yaratadi (bu loyihada migration fayllar emas, to'g'ridan-to'g'ri sxema surilyapti — Render'dagi Build Command ham shuni ishlatishi kerak: `npm install && npx prisma generate && npx prisma db push`)
 5. `npm start`
 
 Eski bazadagi ma'lumotlarni ham ko'chirmoqchi bo'lsangiz:

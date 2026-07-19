@@ -7,3 +7,11 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
 }
+
+/* Taqiqlovchi (redCircle) yo'l belgilarida piktogramma oq fon ustida qora bo'lishi kerak */
+.sign-pic-dark [fill="#FFFFFF"] {
+  fill: #1f2937;
+}
+.sign-pic-dark [stroke="#FFFFFF"] {
+  stroke: #1f2937;
+}

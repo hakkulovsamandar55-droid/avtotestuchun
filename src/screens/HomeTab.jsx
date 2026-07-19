@@ -10,11 +10,12 @@ import {
   Bell,
   Trophy,
   Flame,
+  TrafficCone,
 } from "lucide-react";
 import { ACCENT_FROM, ACCENT_TO } from "../theme";
 
 // 3a-EKRAN: "O'rganish" bo'limi — bosh sahifa
-export default function HomeTab({ onOpenTickets }) {
+export default function HomeTab({ onOpenTickets, onOpenSigns }) {
   const { t } = useTranslation();
 
   const menuItems = [
@@ -25,6 +26,14 @@ export default function HomeTab({ onOpenTickets }) {
       bg: "#EEEBFF",
       fg: ACCENT_FROM,
       onClick: onOpenTickets,
+    },
+    {
+      icon: TrafficCone,
+      title: t("home.roadSigns"),
+      subtitle: t("home.roadSignsSubtitle"),
+      bg: "#FFE8E8",
+      fg: "#E4231C",
+      onClick: onOpenSigns,
     },
     {
       icon: Bookmark,

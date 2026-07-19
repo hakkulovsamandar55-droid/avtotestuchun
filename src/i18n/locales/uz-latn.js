@@ -30,6 +30,8 @@ export default {
     examModeSubtitle: "20 savol, 25 daqiqa",
     tickets: "Biletlar",
     ticketsSubtitle: "Barcha biletlar",
+    roadSigns: "Yo'l belgilari",
+    roadSignsSubtitle: "Barcha belgilarni o'rganing",
     savedQuestions: "Saqlangan savollar",
     savedQuestionsSubtitle: "Saqlagan barcha savollaringiz",
     topicTests: "Mavzuli testlar",
@@ -38,6 +40,24 @@ export default {
   tickets: {
     subtitle: "{{count}} ta bilet, har birida {{questions}} ta savol",
     ticketWord: "bilet",
+  },
+  signs: {
+    title: "Yo'l belgilari",
+    subtitle: "O'zbekiston Respublikasi yo'l belgilarining to'liq ro'yxati — {{count}} ta belgi",
+    searchPlaceholder: "Belgi nomini qidiring...",
+    noResults: "Hech narsa topilmadi",
+    signCount: "{{count}} ta belgi",
+    detailHint: "Bu belgi haqida batafsil ma'lumot va amal qilish qoidalari tez orada qo'shiladi.",
+    similarSigns: "Shu turkumdagi boshqa belgilar",
+    categories: {
+      warning: "Ogohlantiruvchi belgilar",
+      priority: "Imtiyozli belgilar",
+      prohibition: "Ta'qiqlovchi belgilar",
+      mandatory: "Buyuruvchi belgilar",
+      information: "Axborot-ishora belgilari",
+      service: "Servis belgilari",
+      additional: "Qo'shimcha axborot belgilari",
+    },
   },
   stats: {
     title: "Statistika",

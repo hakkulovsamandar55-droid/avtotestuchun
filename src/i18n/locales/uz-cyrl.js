@@ -30,6 +30,8 @@ export default {
     examModeSubtitle: "20 савол, 25 дақиқа",
     tickets: "Билетлар",
     ticketsSubtitle: "Барча билетлар",
+    roadSigns: "Йўл белгилари",
+    roadSignsSubtitle: "Барча белгиларни ўрганинг",
     savedQuestions: "Сақланган саволлар",
     savedQuestionsSubtitle: "Сақлаган барча саволларингиз",
     topicTests: "Мавзули тестлар",
@@ -38,6 +40,24 @@ export default {
   tickets: {
     subtitle: "{{count}} та билет, ҳар бирида {{questions}} та савол",
     ticketWord: "билет",
+  },
+  signs: {
+    title: "Йўл белгилари",
+    subtitle: "Ўзбекистон Республикаси йўл белгиларининг тўлиқ рўйхати — {{count}} та белги",
+    searchPlaceholder: "Белги номини қидиринг...",
+    noResults: "Ҳеч нарса топилмади",
+    signCount: "{{count}} та белги",
+    detailHint: "Бу белги ҳақида батафсил маълумот ва амал қилиш қоидалари тез орада қўшилади.",
+    similarSigns: "Шу туркумдаги бошқа белгилар",
+    categories: {
+      warning: "Огоҳлантирувчи белгилар",
+      priority: "Имтиёзли белгилар",
+      prohibition: "Тақиқловчи белгилар",
+      mandatory: "Буюрувчи белгилар",
+      information: "Ахборот-ишора белгилари",
+      service: "Сервис белгилари",
+      additional: "Қўшимча ахборот белгилари",
+    },
   },
   stats: {
     title: "Статистика",

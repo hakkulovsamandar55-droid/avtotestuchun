@@ -30,6 +30,8 @@ export default {
     examModeSubtitle: "20 вопросов, 25 минут",
     tickets: "Билеты",
     ticketsSubtitle: "Все билеты",
+    roadSigns: "Дорожные знаки",
+    roadSignsSubtitle: "Изучите все знаки",
     savedQuestions: "Сохранённые вопросы",
     savedQuestionsSubtitle: "Все ваши сохранённые вопросы",
     topicTests: "Тематические тесты",
@@ -38,6 +40,24 @@ export default {
   tickets: {
     subtitle: "{{count}} билетов, по {{questions}} вопросов в каждом",
     ticketWord: "билет",
+  },
+  signs: {
+    title: "Дорожные знаки",
+    subtitle: "Полный список дорожных знаков Республики Узбекистан — {{count}} знаков",
+    searchPlaceholder: "Поиск по названию знака...",
+    noResults: "Ничего не найдено",
+    signCount: "{{count}} знаков",
+    detailHint: "Подробная информация об этом знаке и правила его действия будут добавлены позже.",
+    similarSigns: "Другие знаки этой категории",
+    categories: {
+      warning: "Предупреждающие знаки",
+      priority: "Знаки приоритета",
+      prohibition: "Запрещающие знаки",
+      mandatory: "Предписывающие знаки",
+      information: "Информационно-указательные знаки",
+      service: "Знаки сервиса",
+      additional: "Знаки дополнительной информации",
+    },
   },
   stats: {
     title: "Статистика",
