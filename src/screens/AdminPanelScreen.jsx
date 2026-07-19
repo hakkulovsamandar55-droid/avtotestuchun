@@ -22,7 +22,7 @@ function readinessColor(percent) {
 
 function UserRow({ user }) {
   return (
-    <div className="w-full flex items-center gap-3 rounded-2xl bg-white border border-gray-100 shadow-sm px-4 py-3.5">
+    <div className="w-full flex items-center gap-3 rounded-2xl bg-card border border-card-border shadow-sm px-4 py-3.5">
       <div
         className="w-11 h-11 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
         style={{ background: `linear-gradient(135deg, ${ACCENT_FROM}, ${ACCENT_TO})` }}
@@ -30,8 +30,8 @@ function UserRow({ user }) {
         {initials(user.name)}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-bold text-gray-900 text-sm truncate">{user.name}</p>
-        <p className="text-gray-400 text-xs truncate">
+        <p className="font-bold text-text-main text-sm truncate">{user.name}</p>
+        <p className="text-text-muted text-xs truncate">
           {user.username ? `@${user.username}` : "—"}
           {user.phone ? ` · ${user.phone}` : ""}
         </p>
@@ -73,19 +73,19 @@ export default function AdminPanelScreen({ onBack }) {
   }, [query, tab]);
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-6 bg-[#F7F7FA] min-h-full animate-slide-in">
+    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-6 bg-app min-h-full">
       <div className="flex items-center gap-3 mb-4">
         <button
           onClick={onBack}
-          className="w-9 h-9 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center shrink-0"
+          className="w-9 h-9 rounded-full bg-card border border-card-border shadow-sm flex items-center justify-center shrink-0"
         >
-          <ChevronLeft size={20} color="#374151" />
+          <ChevronLeft size={20} color="var(--icon-muted)" />
         </button>
-        <h1 className="text-xl font-extrabold text-gray-900">{t("admin.title")}</h1>
+        <h1 className="text-xl font-extrabold text-text-main">{t("admin.title")}</h1>
       </div>
 
       {/* Tab almashtirgich */}
-      <div className="flex gap-2 mb-4 bg-white border border-gray-100 rounded-2xl p-1 shadow-sm">
+      <div className="flex gap-2 mb-4 bg-card border border-card-border rounded-2xl p-1 shadow-sm">
         {["users", "premium"].map((key) => (
           <button
             key={key}
@@ -114,12 +114,12 @@ export default function AdminPanelScreen({ onBack }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={t("admin.searchPlaceholder")}
-              className="w-full rounded-2xl bg-white border border-gray-100 shadow-sm pl-11 pr-10 py-3 text-sm text-gray-900 outline-none focus:border-gray-300"
+              className="w-full rounded-2xl bg-card border border-card-border shadow-sm pl-11 pr-10 py-3 text-sm text-text-main outline-none focus:border-gray-300"
             />
             {query && (
               <button
                 onClick={() => setQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center"
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-card-soft flex items-center justify-center"
               >
                 <X size={13} color="#6B7280" />
               </button>
@@ -132,7 +132,7 @@ export default function AdminPanelScreen({ onBack }) {
 
           {!error && (
             <>
-              <p className="text-gray-400 text-xs mb-3 ml-1">
+              <p className="text-text-muted text-xs mb-3 ml-1">
                 {loading
                   ? "..."
                   : t("admin.resultsCount", { count: users.length })}
@@ -143,7 +143,7 @@ export default function AdminPanelScreen({ onBack }) {
                   <UserRow key={user.id} user={user} />
                 ))}
                 {!loading && users.length === 0 && (
-                  <p className="text-center text-gray-400 text-sm mt-10">
+                  <p className="text-center text-text-muted text-sm mt-10">
                     {t("admin.noResults")}
                   </p>
                 )}
@@ -191,50 +191,50 @@ function PremiumEditor() {
   return (
     <div className="space-y-4 pb-4">
       {plans.map((plan) => (
-        <div key={plan.key} className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
-          <p className="font-extrabold text-gray-900 text-sm mb-3 uppercase tracking-wide">
+        <div key={plan.key} className="rounded-2xl bg-card border border-card-border shadow-sm p-4">
+          <p className="font-extrabold text-text-main text-sm mb-3 uppercase tracking-wide">
             {plan.key}
           </p>
 
-          <label className="block text-xs text-gray-400 mb-1">{t("admin.planName")}</label>
+          <label className="block text-xs text-text-muted mb-1">{t("admin.planName")}</label>
           <input
             value={plan.name}
             onChange={(e) => updatePlan(plan.key, "name", e.target.value)}
-            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm mb-3 outline-none focus:border-gray-400"
+            className="w-full rounded-xl border border-card-border bg-card-soft text-text-main px-3 py-2 text-sm mb-3 outline-none focus:border-gray-400"
           />
 
           <div className="flex gap-3 mb-3">
             <div className="flex-1">
-              <label className="block text-xs text-gray-400 mb-1">{t("admin.planPrice")}</label>
+              <label className="block text-xs text-text-muted mb-1">{t("admin.planPrice")}</label>
               <input
                 value={plan.price}
                 onChange={(e) => updatePlan(plan.key, "price", e.target.value)}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-gray-400"
+                className="w-full rounded-xl border border-card-border bg-card-soft text-text-main px-3 py-2 text-sm outline-none focus:border-gray-400"
               />
             </div>
             <div className="flex-1">
-              <label className="block text-xs text-gray-400 mb-1">{t("admin.planPeriod")}</label>
+              <label className="block text-xs text-text-muted mb-1">{t("admin.planPeriod")}</label>
               <input
                 value={plan.period}
                 onChange={(e) => updatePlan(plan.key, "period", e.target.value)}
-                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-gray-400"
+                className="w-full rounded-xl border border-card-border bg-card-soft text-text-main px-3 py-2 text-sm outline-none focus:border-gray-400"
               />
             </div>
           </div>
 
-          <label className="block text-xs text-gray-400 mb-1">{t("admin.planBadge")}</label>
+          <label className="block text-xs text-text-muted mb-1">{t("admin.planBadge")}</label>
           <input
             value={plan.badge}
             onChange={(e) => updatePlan(plan.key, "badge", e.target.value)}
-            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm mb-3 outline-none focus:border-gray-400"
+            className="w-full rounded-xl border border-card-border bg-card-soft text-text-main px-3 py-2 text-sm mb-3 outline-none focus:border-gray-400"
           />
 
-          <label className="block text-xs text-gray-400 mb-1">{t("admin.planFeatures")}</label>
+          <label className="block text-xs text-text-muted mb-1">{t("admin.planFeatures")}</label>
           <textarea
             value={plan.features.join("\n")}
             onChange={(e) => updateFeatures(plan.key, e.target.value)}
             rows={4}
-            className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-gray-400 resize-none"
+            className="w-full rounded-xl border border-card-border bg-card-soft text-text-main px-3 py-2 text-sm outline-none focus:border-gray-400 resize-none"
           />
         </div>
       ))}

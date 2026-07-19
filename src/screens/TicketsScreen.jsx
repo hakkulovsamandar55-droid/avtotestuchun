@@ -1,7 +1,6 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, Check } from "lucide-react";
-import { getTicketStatusMap } from "../utils/progressStore";
+import { ChevronLeft } from "lucide-react";
 
 const TOTAL_TICKETS = 60;
 const QUESTIONS_PER_TICKET = 20;
@@ -10,10 +9,9 @@ const QUESTIONS_PER_TICKET = 20;
 export default function TicketsScreen({ onBack, onSelectTicket }) {
   const { t } = useTranslation();
   const tickets = Array.from({ length: TOTAL_TICKETS }, (_, i) => i + 1);
-  const statusMap = getTicketStatusMap(TOTAL_TICKETS);
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-6 bg-[#0F1424] min-h-full animate-slide-in">
+    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-6 bg-[#0F1424] min-h-full">
       <div className="flex items-center gap-3 mb-1">
         <button
           onClick={onBack}
@@ -33,45 +31,20 @@ export default function TicketsScreen({ onBack, onSelectTicket }) {
       </p>
 
       <div className="grid grid-cols-4 gap-3">
-        {tickets.map((num) => {
-          const status = statusMap[num]; // undefined | "practicing" | "mastered"
-          const isMastered = status === "mastered";
-          const isPracticing = status === "practicing";
-
-          return (
-            <button
-              key={num}
-              onClick={() => onSelectTicket && onSelectTicket(num)}
-              className={`relative aspect-square rounded-2xl border flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform ${
-                isMastered
-                  ? "border-emerald-500/40 bg-emerald-500/[0.08]"
-                  : isPracticing
-                  ? "border-amber-500/40 bg-amber-500/[0.08]"
-                  : "border-white/10 bg-white/[0.04]"
-              }`}
-            >
-              {isMastered && (
-                <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center">
-                  <Check size={10} color="white" strokeWidth={3} />
-                </div>
-              )}
-              <span
-                className={`font-extrabold text-lg leading-none ${
-                  isMastered
-                    ? "text-emerald-400"
-                    : isPracticing
-                    ? "text-amber-400"
-                    : "text-orange-400"
-                }`}
-              >
-                {num}
-              </span>
-              <span className="text-gray-400 text-[11px] leading-none">
-                {t("tickets.ticketWord")}
-              </span>
-            </button>
-          );
-        })}
+        {tickets.map((num) => (
+          <button
+            key={num}
+            onClick={() => onSelectTicket && onSelectTicket(num)}
+            className="aspect-square rounded-2xl border border-white/10 bg-white/[0.04] flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform"
+          >
+            <span className="text-orange-400 font-extrabold text-lg leading-none">
+              {num}
+            </span>
+            <span className="text-gray-400 text-[11px] leading-none">
+              {t("tickets.ticketWord")}
+            </span>
+          </button>
+        ))}
       </div>
     </div>
   );

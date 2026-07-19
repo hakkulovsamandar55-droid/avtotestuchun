@@ -43,15 +43,3 @@ export const api = {
   searchUsers: (query) =>
     request(`/api/admin/users?query=${encodeURIComponent(query)}`),
 };
-
-// Hali backend/to'lov integratsiyasi ulanmagan tugmalar uchun:
-// bosilganda "hech narsa bo'lmayapti" taassurotini bermaslik uchun
-// Telegramning o'z native popup'ini ko'rsatadi (Telegramdan tashqarida — oddiy alert).
-export function showComingSoon(message) {
-  const tg = window.Telegram?.WebApp;
-  if (tg?.showAlert) {
-    tg.showAlert(message);
-  } else {
-    window.alert(message);
-  }
-}

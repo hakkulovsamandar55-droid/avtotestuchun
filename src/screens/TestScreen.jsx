@@ -4,7 +4,6 @@ import { ChevronLeft, Check, X, RotateCcw } from "lucide-react";
 import { getTicketQuestions } from "../data/ticketsData";
 import SignIcon from "../components/SignIcon";
 import { ACCENT_FROM, ACCENT_TO, ACCENT_WARM } from "../theme";
-import { recordTicketAttempt } from "../utils/progressStore";
 
 // Bilet testi ekrani — savol-javob oqimi, darhol fikr-mulohaza, va yakuniy natija
 export default function TestScreen({ ticketNumber, onExit }) {
@@ -37,8 +36,6 @@ export default function TestScreen({ ticketNumber, onExit }) {
     setAnswers(nextAnswers);
 
     if (isLast) {
-      const correctCount = nextAnswers.filter((a) => a.isCorrect).length;
-      recordTicketAttempt(ticketNumber, correctCount, total);
       setFinished(true);
     } else {
       setIndex((i) => i + 1);
@@ -81,7 +78,7 @@ export default function TestScreen({ ticketNumber, onExit }) {
   const progressPct = ((index + (selected !== null ? 1 : 0)) / total) * 100;
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-8 bg-[#0F1424] min-h-full text-white animate-slide-in">
+    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-8 bg-[#0F1424] min-h-full text-white">
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         <button
@@ -206,7 +203,7 @@ function ResultsView({ ticketNumber, answers, total, onRetry, onReview, onExit }
   const ringColor = tier === "excellent" ? "#34D399" : tier === "good" ? ACCENT_WARM : "#F87171";
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-8 bg-[#0F1424] min-h-full text-white flex flex-col animate-slide-in">
+    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-8 bg-[#0F1424] min-h-full text-white flex flex-col">
       <div className="flex items-center gap-3 mb-8">
         <button
           onClick={onExit}
@@ -269,7 +266,7 @@ function ReviewView({ ticketNumber, answers, questions, onBack }) {
   const { t } = useTranslation();
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-8 bg-[#0F1424] min-h-full text-white animate-slide-in">
+    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-8 bg-[#0F1424] min-h-full text-white">
       <div className="flex items-center gap-3 mb-5">
         <button
           onClick={onBack}

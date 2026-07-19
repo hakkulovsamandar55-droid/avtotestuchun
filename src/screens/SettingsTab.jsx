@@ -1,8 +1,8 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
-import { Bell, HelpCircle, Send, ChevronRight, ShieldCheck, Crown } from "lucide-react";
+import { Bell, HelpCircle, Send, ChevronRight, ShieldCheck, Crown, Check } from "lucide-react";
 import { ACCENT_FROM } from "../theme";
-import { showComingSoon } from "../api";
+import { useTheme } from "../ThemeContext";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 
 function PremiumRow({ onClick }) {
@@ -29,19 +29,66 @@ function PremiumRow({ onClick }) {
   );
 }
 
-function SettingsRow({ icon: Icon, label, value, onClick }) {
+function SettingsRow({ icon: Icon, label, value }) {
+  return (
+    <button className="w-full flex items-center gap-3 rounded-2xl bg-card border border-card-border shadow-sm px-4 py-3.5 text-left">
+      <Icon size={18} color="var(--icon-muted)" />
+      <span className="flex-1 font-medium text-text-main text-sm">
+        {label}
+      </span>
+      {value && <span className="text-text-muted text-sm">{value}</span>}
+      <ChevronRight size={18} color="var(--chevron)" />
+    </button>
+  );
+}
+
+// Har bir tema uchun kichik doiraviy preview — accent rangi va fon rangidan hosil bo'ladi
+function ThemeSwatch({ item, isActive, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 rounded-2xl bg-white border border-gray-100 shadow-sm px-4 py-3.5 text-left active:scale-[0.99] transition-transform"
+      className="flex flex-col items-center gap-1.5 shrink-0"
     >
-      <Icon size={18} color="#4B5563" />
-      <span className="flex-1 font-medium text-gray-900 text-sm">
-        {label}
-      </span>
-      {value && <span className="text-gray-400 text-sm">{value}</span>}
-      <ChevronRight size={18} color="#D1D5DB" />
+      <div
+        className="w-12 h-12 rounded-full flex items-center justify-center relative"
+        style={{
+          background: `linear-gradient(135deg, ${item.accentFrom}, ${item.accentTo})`,
+          boxShadow: isActive ? `0 0 0 2px var(--bg-app), 0 0 0 4px ${item.accentFrom}` : "none",
+        }}
+      >
+        <div
+          className="w-8 h-8 rounded-full"
+          style={{ backgroundColor: item.vars["--bg-app"] }}
+        />
+        {isActive && (
+          <span className="absolute inset-0 flex items-center justify-center">
+            <Check size={16} color={item.isDark ? "#FFFFFF" : "#111827"} strokeWidth={3} />
+          </span>
+        )}
+      </div>
+      <span className="text-[11px] font-medium text-text-muted">{item.label}</span>
     </button>
+  );
+}
+
+function ThemePickerRow() {
+  const { t } = useTranslation();
+  const { themeKey, setThemeKey, themeList } = useTheme();
+
+  return (
+    <div className="w-full rounded-2xl bg-card border border-card-border shadow-sm px-4 py-3.5">
+      <p className="font-medium text-text-main text-sm mb-3">{t("settings.theme")}</p>
+      <div className="flex gap-4 overflow-x-auto pb-1 -mx-1 px-1">
+        {themeList.map((item) => (
+          <ThemeSwatch
+            key={item.key}
+            item={item}
+            isActive={item.key === themeKey}
+            onClick={() => setThemeKey(item.key)}
+          />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -51,12 +98,12 @@ export default function SettingsTab({ user, onOpenAdmin, onOpenPremium }) {
   const isAdmin = user?.role === "ADMIN";
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-4 animate-fade-in">
-      <h1 className="text-xl font-extrabold text-gray-900 text-center mb-5">
+    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-4">
+      <h1 className="text-xl font-extrabold text-text-main text-center mb-5">
         {t("settings.title")}
       </h1>
 
-      <div className="rounded-3xl bg-white border border-gray-100 shadow-sm p-5 flex items-center gap-3">
+      <div className="rounded-3xl bg-card border border-card-border shadow-sm p-5 flex items-center gap-3">
         <div
           className="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-bold"
           style={{ backgroundColor: ACCENT_FROM }}
@@ -64,8 +111,8 @@ export default function SettingsTab({ user, onOpenAdmin, onOpenPremium }) {
           S
         </div>
         <div>
-          <p className="font-bold text-gray-900">{user?.name || "—"}</p>
-          <p className="text-gray-400 text-sm">
+          <p className="font-bold text-text-main">{user?.name || "—"}</p>
+          <p className="text-text-muted text-sm">
             {user?.username ? `@${user.username}` : ""}
           </p>
         </div>
@@ -74,17 +121,13 @@ export default function SettingsTab({ user, onOpenAdmin, onOpenPremium }) {
       <div className="mt-3 space-y-3">
         <PremiumRow onClick={onOpenPremium} />
         <LanguageSwitcher variant="row" />
+        <ThemePickerRow />
         <SettingsRow
           icon={Bell}
           label={t("settings.notifications")}
           value={t("settings.on")}
-          onClick={() => showComingSoon(t("settings.notificationsComingSoon"))}
         />
-        <SettingsRow
-          icon={HelpCircle}
-          label={t("settings.support")}
-          onClick={() => showComingSoon(t("settings.supportComingSoon"))}
-        />
+        <SettingsRow icon={HelpCircle} label={t("settings.support")} />
       </div>
 
       <div
@@ -105,13 +148,13 @@ export default function SettingsTab({ user, onOpenAdmin, onOpenPremium }) {
         <div className="mt-3">
           <button
             onClick={onOpenAdmin}
-            className="w-full flex items-center gap-3 rounded-2xl bg-white border border-gray-100 shadow-sm px-4 py-3.5 text-left"
+            className="w-full flex items-center gap-3 rounded-2xl bg-card border border-card-border shadow-sm px-4 py-3.5 text-left"
           >
-            <ShieldCheck size={18} color="#4B5563" />
-            <span className="flex-1 font-medium text-gray-900 text-sm">
+            <ShieldCheck size={18} color="var(--icon-muted)" />
+            <span className="flex-1 font-medium text-text-main text-sm">
               {t("settings.adminPanel")}
             </span>
-            <ChevronRight size={18} color="#D1D5DB" />
+            <ChevronRight size={18} color="var(--chevron)" />
           </button>
         </div>
       )}

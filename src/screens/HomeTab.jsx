@@ -13,13 +13,10 @@ import {
   TrafficCone,
 } from "lucide-react";
 import { ACCENT_FROM, ACCENT_TO } from "../theme";
-import { getOverallStats } from "../utils/progressStore";
-import { TOTAL_TICKETS } from "../data/ticketsData";
 
 // 3a-EKRAN: "O'rganish" bo'limi — bosh sahifa
-export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam, onOpenStats }) {
+export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam }) {
   const { t } = useTranslation();
-  const stats = getOverallStats(TOTAL_TICKETS);
 
   const menuItems = [
     {
@@ -55,50 +52,49 @@ export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam, onOpen
   ];
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-4 animate-fade-in">
+    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-gray-400 text-sm">{t("home.welcome")}</p>
-          <h1 className="text-2xl font-extrabold text-gray-900">
+          <p className="text-text-muted text-sm">{t("home.welcome")}</p>
+          <h1 className="text-2xl font-extrabold text-text-main">
             Samandar 👋
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-full bg-card-soft flex items-center justify-center">
             <Trophy size={16} color="#D97706" />
           </div>
-          <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
-            <Bell size={16} color="#4B5563" />
+          <div className="w-9 h-9 rounded-full bg-card-soft flex items-center justify-center">
+            <Bell size={16} color="var(--icon-muted)" />
           </div>
-          <div className="flex items-center gap-1 rounded-full bg-orange-50 px-3 py-2">
+          <div className="flex items-center gap-1 rounded-full bg-card-soft px-3 py-2">
             <Flame size={14} color="#F97316" />
             <span className="text-xs font-semibold text-orange-500">
-              {t("home.streakDays", { days: stats.streakDays })}
+              {t("home.streakDays", { days: 0 })}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Progress ko'rsatgich card */}
-      <button
-        onClick={onOpenStats}
-        className="w-full text-left mt-6 rounded-3xl p-5 text-white relative overflow-hidden active:scale-[0.98] transition-transform"
+      {/* AI ko'rsatgich card */}
+      <div
+        className="mt-6 rounded-3xl p-5 text-white relative overflow-hidden"
         style={{
           background: `linear-gradient(135deg, ${ACCENT_FROM}, ${ACCENT_TO})`,
         }}
       >
         <div className="flex items-center gap-1.5 text-xs font-bold tracking-wide uppercase text-white/80">
-          <Zap size={13} /> {t("home.progressHint")}
+          <Zap size={13} /> {t("home.aiHint")}
         </div>
         <p className="mt-1.5 text-sm font-semibold">
-          {t("home.readiness", { percent: stats.accuracy })}
+          {t("home.readiness", { percent: 0 })}
         </p>
         <div className="mt-4 grid grid-cols-4 gap-2 text-center">
           {[
-            [`${stats.accuracy}%`, t("home.overallAccuracy")],
-            [`${stats.coveragePct}%`, t("home.learningProgress")],
-            [`${stats.masteredPct}%`, t("home.masteredLevel")],
-            [stats.questionsAnswered, t("home.solvedCount")],
+            ["10%", t("home.passChance")],
+            ["0%", t("home.learningProgress")],
+            ["0%", t("home.examPassLevel")],
+            ["0%", t("home.ready")],
           ].map(([val, label]) => (
             <div key={label}>
               <p className="font-bold text-sm">{val}</p>
@@ -108,7 +104,7 @@ export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam, onOpen
             </div>
           ))}
         </div>
-      </button>
+      </div>
 
       {/* Two action cards */}
       <div className="grid grid-cols-2 gap-3 mt-5">
@@ -130,16 +126,16 @@ export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam, onOpen
         </div>
         <button
           onClick={onOpenExam}
-          className="rounded-3xl p-5 bg-white border border-gray-100 flex flex-col justify-between h-36 shadow-sm text-left active:scale-[0.98] transition-transform"
+          className="rounded-3xl p-5 bg-card border border-card-border flex flex-col justify-between h-36 shadow-sm text-left active:scale-[0.98] transition-transform"
         >
-          <div className="w-9 h-9 rounded-full bg-amber-50 flex items-center justify-center">
+          <div className="w-9 h-9 rounded-full bg-card-soft flex items-center justify-center">
             <Play size={15} color="#F59E0B" fill="#F59E0B" />
           </div>
           <div>
-            <p className="font-bold text-gray-900 leading-tight">
+            <p className="font-bold text-text-main leading-tight">
               {t("home.examMode")}
             </p>
-            <p className="text-gray-400 text-xs mt-0.5">
+            <p className="text-text-muted text-xs mt-0.5">
               {t("home.examModeSubtitle")}
             </p>
           </div>
@@ -152,7 +148,7 @@ export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam, onOpen
           <button
             key={title}
             onClick={onClick}
-            className="w-full flex items-center gap-3 rounded-2xl bg-white border border-gray-100 shadow-sm px-4 py-3.5 text-left"
+            className="w-full flex items-center gap-3 rounded-2xl bg-card border border-card-border shadow-sm px-4 py-3.5 text-left"
           >
             <div
               className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
@@ -161,10 +157,10 @@ export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam, onOpen
               <Icon size={18} color={fg} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-gray-900 text-sm">{title}</p>
-              <p className="text-gray-400 text-xs truncate">{subtitle}</p>
+              <p className="font-semibold text-text-main text-sm">{title}</p>
+              <p className="text-text-muted text-xs truncate">{subtitle}</p>
             </div>
-            <ChevronRight size={18} color="#D1D5DB" />
+            <ChevronRight size={18} color="var(--chevron)" />
           </button>
         ))}
       </div>

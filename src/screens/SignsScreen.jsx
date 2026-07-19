@@ -26,7 +26,6 @@ export default function SignsScreen({ onBack }) {
       <SignDetail
         sign={selectedSign}
         onBack={() => setSelectedSign(null)}
-        onSelectSign={setSelectedSign}
       />
     );
   }
@@ -42,19 +41,19 @@ export default function SignsScreen({ onBack }) {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-6 bg-[#F7F7FA] min-h-full animate-slide-in">
+    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-6 bg-app min-h-full">
       <div className="flex items-center gap-3 mb-1">
         <button
           onClick={onBack}
-          className="w-9 h-9 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center shrink-0"
+          className="w-9 h-9 rounded-full bg-card border border-card-border shadow-sm flex items-center justify-center shrink-0"
         >
-          <ChevronLeft size={20} color="#374151" />
+          <ChevronLeft size={20} color="var(--icon-muted)" />
         </button>
-        <h1 className="text-2xl font-extrabold text-gray-900">
+        <h1 className="text-2xl font-extrabold text-text-main">
           {t("signs.title")}
         </h1>
       </div>
-      <p className="text-gray-400 text-sm mt-1 mb-4 ml-12">
+      <p className="text-text-muted text-sm mt-1 mb-4 ml-12">
         {t("signs.subtitle", { count: TOTAL_SIGNS })}
       </p>
 
@@ -69,13 +68,13 @@ export default function SignsScreen({ onBack }) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t("signs.searchPlaceholder")}
-          className="w-full rounded-2xl bg-white border border-gray-100 shadow-sm pl-11 pr-10 py-3 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2"
+          className="w-full rounded-2xl bg-card border border-card-border shadow-sm pl-11 pr-10 py-3 text-sm text-text-main placeholder:text-[var(--text-secondary)] outline-none focus:ring-2"
           style={{ "--tw-ring-color": ACCENT_FROM }}
         />
         {query && (
           <button
             onClick={() => setQuery("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center"
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-card-soft flex items-center justify-center"
           >
             <X size={13} color="#6B7280" />
           </button>
@@ -86,7 +85,7 @@ export default function SignsScreen({ onBack }) {
       {query ? (
         <div className="mt-4 space-y-2">
           {results.length === 0 ? (
-            <p className="text-center text-gray-400 text-sm mt-10">
+            <p className="text-center text-text-muted text-sm mt-10">
               {t("signs.noResults")}
             </p>
           ) : (
@@ -111,7 +110,7 @@ export default function SignsScreen({ onBack }) {
                 <button
                   key={catKey}
                   onClick={() => setOpenCategory(catKey)}
-                  className="w-full text-left rounded-3xl bg-white border border-gray-100 shadow-sm p-4"
+                  className="w-full text-left rounded-3xl bg-card border border-card-border shadow-sm p-4"
                 >
                   <div className="flex items-center gap-3">
                     <div
@@ -121,26 +120,26 @@ export default function SignsScreen({ onBack }) {
                       <CategoryDot color={meta.color} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-gray-900 text-sm">
+                      <p className="font-bold text-text-main text-sm">
                         {t(`signs.categories.${catKey}`)}
                       </p>
-                      <p className="text-gray-400 text-xs mt-0.5">
+                      <p className="text-text-muted text-xs mt-0.5">
                         {t("signs.signCount", { count: items.length })}
                       </p>
                     </div>
-                    <ChevronRight size={18} color="#D1D5DB" />
+                    <ChevronRight size={18} color="var(--chevron)" />
                   </div>
                   <div className="flex items-center gap-2 mt-3 pl-0.5">
                     {preview.map((s) => (
                       <div
                         key={s.code}
-                        className="w-11 h-11 rounded-xl bg-gray-50 flex items-center justify-center"
+                        className="w-11 h-11 rounded-xl bg-card-soft flex items-center justify-center"
                       >
                         <SignIcon code={s.code} shape={s.shape} pic={s.pic} size={38} />
                       </div>
                     ))}
                     {items.length > 4 && (
-                      <div className="w-11 h-11 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 text-xs font-semibold">
+                      <div className="w-11 h-11 rounded-xl bg-card-soft flex items-center justify-center text-text-muted text-xs font-semibold">
                         +{items.length - 4}
                       </div>
                     )}
@@ -168,18 +167,18 @@ function SignRow({ sign, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 rounded-2xl bg-white border border-gray-100 shadow-sm px-3.5 py-3 text-left"
+      className="w-full flex items-center gap-3 rounded-2xl bg-card border border-card-border shadow-sm px-3.5 py-3 text-left"
     >
-      <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center shrink-0">
+      <div className="w-12 h-12 rounded-xl bg-card-soft flex items-center justify-center shrink-0">
         <SignIcon code={sign.code} shape={sign.shape} pic={sign.pic} size={40} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-gray-900 text-sm truncate">
+        <p className="font-semibold text-text-main text-sm truncate">
           {sign.name}
         </p>
-        <p className="text-gray-400 text-xs">{sign.code}</p>
+        <p className="text-text-muted text-xs">{sign.code}</p>
       </div>
-      <ChevronRight size={16} color="#D1D5DB" />
+      <ChevronRight size={16} color="var(--chevron)" />
     </button>
   );
 }
@@ -190,19 +189,19 @@ function CategoryView({ catKey, onBack, onSelectSign }) {
   const items = getSignsByCategory(catKey);
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-6 bg-[#F7F7FA] min-h-full animate-slide-in">
+    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-6 bg-app min-h-full">
       <div className="flex items-center gap-3 mb-1">
         <button
           onClick={onBack}
-          className="w-9 h-9 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center shrink-0"
+          className="w-9 h-9 rounded-full bg-card border border-card-border shadow-sm flex items-center justify-center shrink-0"
         >
-          <ChevronLeft size={20} color="#374151" />
+          <ChevronLeft size={20} color="var(--icon-muted)" />
         </button>
-        <h1 className="text-xl font-extrabold text-gray-900 leading-tight">
+        <h1 className="text-xl font-extrabold text-text-main leading-tight">
           {t(`signs.categories.${catKey}`)}
         </h1>
       </div>
-      <p className="text-gray-400 text-sm mt-1 mb-4 ml-12">
+      <p className="text-text-muted text-sm mt-1 mb-4 ml-12">
         {t("signs.signCount", { count: items.length })}
       </p>
 
@@ -211,14 +210,14 @@ function CategoryView({ catKey, onBack, onSelectSign }) {
           <button
             key={sign.code}
             onClick={() => onSelectSign(sign)}
-            className="rounded-2xl bg-white border border-gray-100 shadow-sm p-2.5 flex flex-col items-center gap-1.5 active:scale-95 transition-transform"
+            className="rounded-2xl bg-card border border-card-border shadow-sm p-2.5 flex flex-col items-center gap-1.5 active:scale-95 transition-transform"
           >
             <div className="w-14 h-14 flex items-center justify-center">
               <SignIcon code={sign.code} shape={sign.shape} pic={sign.pic} size={56} />
             </div>
-            <p className="text-[10px] font-bold text-gray-400">{sign.code}</p>
+            <p className="text-[10px] font-bold text-text-muted">{sign.code}</p>
             <p
-              className="text-[11px] font-medium text-gray-800 text-center leading-tight"
+              className="text-[11px] font-medium text-text-main text-center leading-tight"
               style={{
                 display: "-webkit-box",
                 WebkitLineClamp: 2,
@@ -235,7 +234,7 @@ function CategoryView({ catKey, onBack, onSelectSign }) {
   );
 }
 
-function SignDetail({ sign, onBack, onSelectSign }) {
+function SignDetail({ sign, onBack }) {
   const { t } = useTranslation();
   const meta = CATEGORY_META[sign.cat];
 
@@ -246,15 +245,15 @@ function SignDetail({ sign, onBack, onSelectSign }) {
   );
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-6 bg-[#F7F7FA] min-h-full animate-slide-in">
+    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-6 bg-app min-h-full">
       <div className="flex items-center gap-3 mb-4">
         <button
           onClick={onBack}
-          className="w-9 h-9 rounded-full bg-white border border-gray-100 shadow-sm flex items-center justify-center shrink-0"
+          className="w-9 h-9 rounded-full bg-card border border-card-border shadow-sm flex items-center justify-center shrink-0"
         >
-          <ChevronLeft size={20} color="#374151" />
+          <ChevronLeft size={20} color="var(--icon-muted)" />
         </button>
-        <p className="text-gray-400 text-sm font-medium">
+        <p className="text-text-muted text-sm font-medium">
           {t(`signs.categories.${sign.cat}`)}
         </p>
       </div>
@@ -276,26 +275,25 @@ function SignDetail({ sign, onBack, onSelectSign }) {
         </h2>
       </div>
 
-      <div className="mt-4 rounded-2xl bg-white border border-gray-100 shadow-sm p-4">
-        <p className="text-gray-500 text-sm leading-relaxed">
+      <div className="mt-4 rounded-2xl bg-card border border-card-border shadow-sm p-4">
+        <p className="text-text-muted text-sm leading-relaxed">
           {t("signs.detailHint")}
         </p>
       </div>
 
       {siblings.length > 0 && (
         <>
-          <p className="text-gray-500 text-sm font-semibold mt-5 mb-2.5">
+          <p className="text-text-muted text-sm font-semibold mt-5 mb-2.5">
             {t("signs.similarSigns")}
           </p>
           <div className="grid grid-cols-4 gap-2.5">
             {siblings.map((s) => (
               <button
                 key={s.code}
-                onClick={() => onSelectSign && onSelectSign(s)}
-                className="rounded-xl bg-white border border-gray-100 shadow-sm p-2 flex flex-col items-center gap-1 active:scale-95 transition-transform"
+                className="rounded-xl bg-card border border-card-border shadow-sm p-2 flex flex-col items-center gap-1"
               >
                 <SignIcon code={s.code} shape={s.shape} pic={s.pic} size={40} />
-                <p className="text-[9px] font-bold text-gray-400">{s.code}</p>
+                <p className="text-[9px] font-bold text-text-muted">{s.code}</p>
               </button>
             ))}
           </div>
