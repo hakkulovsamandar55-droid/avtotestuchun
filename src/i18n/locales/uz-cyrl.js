@@ -94,8 +94,10 @@ export default {
     language: "Тил",
     theme: "Мавзу",
     notifications: "Билдиришномалар",
+    notificationsComingSoon: "Билдиришнома созламалари тез орада қўшилади.",
     on: "Ёқилган",
     support: "Қўллаб-қувватлаш",
+    supportComingSoon: "Қўллаб-қувватлаш бўлими тез орада қўшилади.",
     channelTitle: "TezPrava Канали",
     channelSubtitle: "Telegram каналимизга обуна бўлинг",
     adminPanel: "Админ панел",
@@ -106,6 +108,7 @@ export default {
     title: "Премиум тарифлар",
     subtitle: "Ўзингизга мос тарифни танланг",
     select: "{{name}} тарифини танлаш",
+    comingSoon: "{{name}} тарифи учун тўлов тез орада қўшилади.",
     disclaimer: "Тарифлар ва нархлар администрация томонидан истаган вақтда янгиланиши мумкин.",
   },
   exam: {

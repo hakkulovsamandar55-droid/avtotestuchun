@@ -15,7 +15,7 @@ import {
 import { ACCENT_FROM, ACCENT_TO } from "../theme";
 
 // 3a-EKRAN: "O'rganish" bo'limi — bosh sahifa
-export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam }) {
+export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam, onOpenStats }) {
   const { t } = useTranslation();
 
   const menuItems = [
@@ -52,7 +52,7 @@ export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam }) {
   ];
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-4">
+    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-4 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-text-muted text-sm">{t("home.welcome")}</p>
@@ -77,8 +77,9 @@ export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam }) {
       </div>
 
       {/* AI ko'rsatgich card */}
-      <div
-        className="mt-6 rounded-3xl p-5 text-white relative overflow-hidden"
+      <button
+        onClick={onOpenStats}
+        className="w-full text-left mt-6 rounded-3xl p-5 text-white relative overflow-hidden active:scale-[0.98] transition-transform"
         style={{
           background: `linear-gradient(135deg, ${ACCENT_FROM}, ${ACCENT_TO})`,
         }}
@@ -104,7 +105,7 @@ export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam }) {
             </div>
           ))}
         </div>
-      </div>
+      </button>
 
       {/* Two action cards */}
       <div className="grid grid-cols-2 gap-3 mt-5">

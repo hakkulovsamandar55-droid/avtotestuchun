@@ -94,8 +94,10 @@ export default {
     language: "Язык",
     theme: "Тема",
     notifications: "Уведомления",
+    notificationsComingSoon: "Настройки уведомлений появятся в ближайшее время.",
     on: "Включены",
     support: "Поддержка",
+    supportComingSoon: "Раздел поддержки появится в ближайшее время.",
     channelTitle: "Канал TezPrava",
     channelSubtitle: "Подпишитесь на наш Telegram-канал",
     adminPanel: "Админ-панель",
@@ -106,6 +108,7 @@ export default {
     title: "Премиум тарифы",
     subtitle: "Выберите подходящий тариф",
     select: "Выбрать тариф {{name}}",
+    comingSoon: "Оплата тарифа {{name}} будет доступна в ближайшее время.",
     disclaimer: "Тарифы и цены могут быть изменены администрацией в любое время.",
   },
   exam: {

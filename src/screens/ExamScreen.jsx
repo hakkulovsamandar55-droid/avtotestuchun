@@ -105,7 +105,7 @@ export default function ExamScreen({ onExit }) {
   const isLowTime = timeLeft <= 120;
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-8 bg-[#0F1424] min-h-full text-white">
+    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-8 bg-[#0F1424] min-h-full text-white animate-slide-in">
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         <button
@@ -239,7 +239,7 @@ function ExamResults({ status, answers, total, timeLeft, onRetry, onReview, onEx
   }[status];
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-8 bg-[#0F1424] min-h-full text-white flex flex-col">
+    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-8 bg-[#0F1424] min-h-full text-white flex flex-col animate-slide-in">
       <div className="flex items-center gap-3 mb-8">
         <button
           onClick={onExit}
@@ -301,7 +301,7 @@ function ExamResults({ status, answers, total, timeLeft, onRetry, onReview, onEx
 function ExamReview({ answers, questions, onBack }) {
   const { t } = useTranslation();
   return (
-    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-8 bg-[#0F1424] min-h-full text-white">
+    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-8 bg-[#0F1424] min-h-full text-white animate-slide-in">
       <div className="flex items-center gap-3 mb-5">
         <button
           onClick={onBack}

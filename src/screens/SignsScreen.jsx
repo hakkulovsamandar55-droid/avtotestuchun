@@ -26,6 +26,7 @@ export default function SignsScreen({ onBack }) {
       <SignDetail
         sign={selectedSign}
         onBack={() => setSelectedSign(null)}
+        onSelectSign={setSelectedSign}
       />
     );
   }
@@ -41,7 +42,7 @@ export default function SignsScreen({ onBack }) {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-6 bg-app min-h-full">
+    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-6 bg-app min-h-full animate-slide-in">
       <div className="flex items-center gap-3 mb-1">
         <button
           onClick={onBack}
@@ -189,7 +190,7 @@ function CategoryView({ catKey, onBack, onSelectSign }) {
   const items = getSignsByCategory(catKey);
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-6 bg-app min-h-full">
+    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-6 bg-app min-h-full animate-slide-in">
       <div className="flex items-center gap-3 mb-1">
         <button
           onClick={onBack}
@@ -234,7 +235,7 @@ function CategoryView({ catKey, onBack, onSelectSign }) {
   );
 }
 
-function SignDetail({ sign, onBack }) {
+function SignDetail({ sign, onBack, onSelectSign }) {
   const { t } = useTranslation();
   const meta = CATEGORY_META[sign.cat];
 
@@ -245,7 +246,7 @@ function SignDetail({ sign, onBack }) {
   );
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-6 bg-app min-h-full">
+    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-6 bg-app min-h-full animate-slide-in">
       <div className="flex items-center gap-3 mb-4">
         <button
           onClick={onBack}
@@ -290,7 +291,8 @@ function SignDetail({ sign, onBack }) {
             {siblings.map((s) => (
               <button
                 key={s.code}
-                className="rounded-xl bg-card border border-card-border shadow-sm p-2 flex flex-col items-center gap-1"
+                onClick={() => onSelectSign && onSelectSign(s)}
+                className="rounded-xl bg-card border border-card-border shadow-sm p-2 flex flex-col items-center gap-1 active:scale-95 transition-transform"
               >
                 <SignIcon code={s.code} shape={s.shape} pic={s.pic} size={40} />
                 <p className="text-[9px] font-bold text-text-muted">{s.code}</p>

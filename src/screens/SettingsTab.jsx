@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Bell, HelpCircle, Send, ChevronRight, ShieldCheck, Crown, Check } from "lucide-react";
 import { ACCENT_FROM } from "../theme";
 import { useTheme } from "../ThemeContext";
+import { showComingSoon } from "../api";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 
 function PremiumRow({ onClick }) {
@@ -29,9 +30,12 @@ function PremiumRow({ onClick }) {
   );
 }
 
-function SettingsRow({ icon: Icon, label, value }) {
+function SettingsRow({ icon: Icon, label, value, onClick }) {
   return (
-    <button className="w-full flex items-center gap-3 rounded-2xl bg-card border border-card-border shadow-sm px-4 py-3.5 text-left">
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-3 rounded-2xl bg-card border border-card-border shadow-sm px-4 py-3.5 text-left active:scale-[0.99] transition-transform"
+    >
       <Icon size={18} color="var(--icon-muted)" />
       <span className="flex-1 font-medium text-text-main text-sm">
         {label}
@@ -98,7 +102,7 @@ export default function SettingsTab({ user, onOpenAdmin, onOpenPremium }) {
   const isAdmin = user?.role === "ADMIN";
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-4">
+    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-4 animate-fade-in">
       <h1 className="text-xl font-extrabold text-text-main text-center mb-5">
         {t("settings.title")}
       </h1>
@@ -126,8 +130,13 @@ export default function SettingsTab({ user, onOpenAdmin, onOpenPremium }) {
           icon={Bell}
           label={t("settings.notifications")}
           value={t("settings.on")}
+          onClick={() => showComingSoon(t("settings.notificationsComingSoon"))}
         />
-        <SettingsRow icon={HelpCircle} label={t("settings.support")} />
+        <SettingsRow
+          icon={HelpCircle}
+          label={t("settings.support")}
+          onClick={() => showComingSoon(t("settings.supportComingSoon"))}
+        />
       </div>
 
       <div

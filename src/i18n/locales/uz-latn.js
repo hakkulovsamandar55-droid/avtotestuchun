@@ -94,8 +94,10 @@ export default {
     language: "Til",
     theme: "Mavzu",
     notifications: "Bildirishnomalar",
+    notificationsComingSoon: "Bildirishnoma sozlamalari tez orada qo'shiladi.",
     on: "Yoqilgan",
     support: "Qo'llab-quvvatlash",
+    supportComingSoon: "Qo'llab-quvvatlash bo'limi tez orada qo'shiladi.",
     channelTitle: "TezPrava Kanali",
     channelSubtitle: "Telegram kanalimizga obuna bo'ling",
     adminPanel: "Admin panel",
@@ -106,6 +108,7 @@ export default {
     title: "Premium tariflar",
     subtitle: "O'zingizga mos tarifni tanlang",
     select: "{{name}} tarifini tanlash",
+    comingSoon: "{{name}} tarifi uchun to'lov tez orada qo'shiladi.",
     disclaimer: "Tariflar va narxlar administratsiya tomonidan istalgan vaqtda yangilanishi mumkin.",
   },
   exam: {

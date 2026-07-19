@@ -73,7 +73,7 @@ export default function AdminPanelScreen({ onBack }) {
   }, [query, tab]);
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-6 bg-app min-h-full">
+    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-6 bg-app min-h-full animate-slide-in">
       <div className="flex items-center gap-3 mb-4">
         <button
           onClick={onBack}
