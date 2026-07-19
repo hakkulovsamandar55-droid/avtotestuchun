@@ -2,6 +2,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 import { Bell, HelpCircle, Send, ChevronRight, ShieldCheck, Crown } from "lucide-react";
 import { ACCENT_FROM } from "../theme";
+import { showComingSoon } from "../api";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 
 function PremiumRow({ onClick }) {
@@ -28,9 +29,12 @@ function PremiumRow({ onClick }) {
   );
 }
 
-function SettingsRow({ icon: Icon, label, value }) {
+function SettingsRow({ icon: Icon, label, value, onClick }) {
   return (
-    <button className="w-full flex items-center gap-3 rounded-2xl bg-white border border-gray-100 shadow-sm px-4 py-3.5 text-left">
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-3 rounded-2xl bg-white border border-gray-100 shadow-sm px-4 py-3.5 text-left active:scale-[0.99] transition-transform"
+    >
       <Icon size={18} color="#4B5563" />
       <span className="flex-1 font-medium text-gray-900 text-sm">
         {label}
@@ -74,8 +78,13 @@ export default function SettingsTab({ user, onOpenAdmin, onOpenPremium }) {
           icon={Bell}
           label={t("settings.notifications")}
           value={t("settings.on")}
+          onClick={() => showComingSoon(t("settings.notificationsComingSoon"))}
         />
-        <SettingsRow icon={HelpCircle} label={t("settings.support")} />
+        <SettingsRow
+          icon={HelpCircle}
+          label={t("settings.support")}
+          onClick={() => showComingSoon(t("settings.supportComingSoon"))}
+        />
       </div>
 
       <div

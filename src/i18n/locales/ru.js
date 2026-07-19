@@ -93,6 +93,8 @@ export default {
     title: "Настройки",
     language: "Язык",
     notifications: "Уведомления",
+    notificationsComingSoon: "Настройки уведомлений появятся в ближайшее время.",
+    supportComingSoon: "Раздел поддержки появится в ближайшее время.",
     on: "Включены",
     support: "Поддержка",
     channelTitle: "Канал TezPrava",
@@ -105,6 +107,7 @@ export default {
     title: "Премиум тарифы",
     subtitle: "Выберите подходящий тариф",
     select: "Выбрать тариф {{name}}",
+    comingSoon: "Оплата тарифа {{name}} будет доступна в ближайшее время.",
     disclaimer: "Тарифы и цены могут быть изменены администрацией в любое время.",
   },
   exam: {

@@ -93,6 +93,8 @@ export default {
     title: "Sozlamalar",
     language: "Til",
     notifications: "Bildirishnomalar",
+    notificationsComingSoon: "Bildirishnoma sozlamalari tez orada qo'shiladi.",
+    supportComingSoon: "Qo'llab-quvvatlash bo'limi tez orada qo'shiladi.",
     on: "Yoqilgan",
     support: "Qo'llab-quvvatlash",
     channelTitle: "TezPrava Kanali",
@@ -105,6 +107,7 @@ export default {
     title: "Premium tariflar",
     subtitle: "O'zingizga mos tarifni tanlang",
     select: "{{name}} tarifini tanlash",
+    comingSoon: "{{name}} tarifi uchun to'lov tez orada qo'shiladi.",
     disclaimer: "Tariflar va narxlar administratsiya tomonidan istalgan vaqtda yangilanishi mumkin.",
   },
   exam: {

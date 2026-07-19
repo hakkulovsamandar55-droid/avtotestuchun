@@ -93,6 +93,8 @@ export default {
     title: "Созламалар",
     language: "Тил",
     notifications: "Билдиришномалар",
+    notificationsComingSoon: "Билдиришнома созламалари тез орада қўшилади.",
+    supportComingSoon: "Қўллаб-қувватлаш бўлими тез орада қўшилади.",
     on: "Ёқилган",
     support: "Қўллаб-қувватлаш",
     channelTitle: "TezPrava Канали",
@@ -105,6 +107,7 @@ export default {
     title: "Премиум тарифлар",
     subtitle: "Ўзингизга мос тарифни танланг",
     select: "{{name}} тарифини танлаш",
+    comingSoon: "{{name}} тарифи учун тўлов тез орада қўшилади.",
     disclaimer: "Тарифлар ва нархлар администрация томонидан истаган вақтда янгиланиши мумкин.",
   },
   exam: {

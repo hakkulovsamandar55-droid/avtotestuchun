@@ -26,6 +26,7 @@ export default function SignsScreen({ onBack }) {
       <SignDetail
         sign={selectedSign}
         onBack={() => setSelectedSign(null)}
+        onSelectSign={setSelectedSign}
       />
     );
   }
@@ -234,7 +235,7 @@ function CategoryView({ catKey, onBack, onSelectSign }) {
   );
 }
 
-function SignDetail({ sign, onBack }) {
+function SignDetail({ sign, onBack, onSelectSign }) {
   const { t } = useTranslation();
   const meta = CATEGORY_META[sign.cat];
 
@@ -290,7 +291,8 @@ function SignDetail({ sign, onBack }) {
             {siblings.map((s) => (
               <button
                 key={s.code}
-                className="rounded-xl bg-white border border-gray-100 shadow-sm p-2 flex flex-col items-center gap-1"
+                onClick={() => onSelectSign && onSelectSign(s)}
+                className="rounded-xl bg-white border border-gray-100 shadow-sm p-2 flex flex-col items-center gap-1 active:scale-95 transition-transform"
               >
                 <SignIcon code={s.code} shape={s.shape} pic={s.pic} size={40} />
                 <p className="text-[9px] font-bold text-gray-400">{s.code}</p>

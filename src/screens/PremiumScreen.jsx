@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, Check, Crown, Sparkles } from "lucide-react";
 import { loadPremiumPlans } from "../data/premiumData";
+import { showComingSoon } from "../api";
 import { ACCENT_FROM, ACCENT_TO } from "../theme";
 
 const PLAN_STYLE = {
@@ -125,6 +126,11 @@ export default function PremiumScreen({ onBack }) {
               </div>
 
               <button
+                onClick={() =>
+                  showComingSoon(
+                    t("premium.comingSoon", { name: plan.name })
+                  )
+                }
                 className="w-full mt-5 rounded-2xl py-3 font-bold text-sm active:scale-[0.98] transition-transform"
                 style={{
                   background: style.buttonBg,
