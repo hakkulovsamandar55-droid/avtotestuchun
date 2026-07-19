@@ -4,6 +4,7 @@ import { ChevronLeft, Check, X, RotateCcw } from "lucide-react";
 import { getTicketQuestions } from "../data/ticketsData";
 import SignIcon from "../components/SignIcon";
 import { ACCENT_FROM, ACCENT_TO, ACCENT_WARM } from "../theme";
+import { recordTicketAttempt } from "../utils/progressStore";
 
 // Bilet testi ekrani — savol-javob oqimi, darhol fikr-mulohaza, va yakuniy natija
 export default function TestScreen({ ticketNumber, onExit }) {
@@ -36,6 +37,8 @@ export default function TestScreen({ ticketNumber, onExit }) {
     setAnswers(nextAnswers);
 
     if (isLast) {
+      const correctCount = nextAnswers.filter((a) => a.isCorrect).length;
+      recordTicketAttempt(ticketNumber, correctCount, total);
       setFinished(true);
     } else {
       setIndex((i) => i + 1);

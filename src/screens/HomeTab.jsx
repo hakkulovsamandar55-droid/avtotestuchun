@@ -13,10 +13,13 @@ import {
   TrafficCone,
 } from "lucide-react";
 import { ACCENT_FROM, ACCENT_TO } from "../theme";
+import { getOverallStats } from "../utils/progressStore";
+import { TOTAL_TICKETS } from "../data/ticketsData";
 
 // 3a-EKRAN: "O'rganish" bo'limi — bosh sahifa
 export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam, onOpenStats }) {
   const { t } = useTranslation();
+  const stats = getOverallStats(TOTAL_TICKETS);
 
   const menuItems = [
     {
@@ -70,13 +73,13 @@ export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam, onOpen
           <div className="flex items-center gap-1 rounded-full bg-orange-50 px-3 py-2">
             <Flame size={14} color="#F97316" />
             <span className="text-xs font-semibold text-orange-500">
-              {t("home.streakDays", { days: 0 })}
+              {t("home.streakDays", { days: stats.streakDays })}
             </span>
           </div>
         </div>
       </div>
 
-      {/* AI ko'rsatgich card */}
+      {/* Progress ko'rsatgich card */}
       <button
         onClick={onOpenStats}
         className="w-full text-left mt-6 rounded-3xl p-5 text-white relative overflow-hidden active:scale-[0.98] transition-transform"
@@ -85,17 +88,17 @@ export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam, onOpen
         }}
       >
         <div className="flex items-center gap-1.5 text-xs font-bold tracking-wide uppercase text-white/80">
-          <Zap size={13} /> {t("home.aiHint")}
+          <Zap size={13} /> {t("home.progressHint")}
         </div>
         <p className="mt-1.5 text-sm font-semibold">
-          {t("home.readiness", { percent: 0 })}
+          {t("home.readiness", { percent: stats.accuracy })}
         </p>
         <div className="mt-4 grid grid-cols-4 gap-2 text-center">
           {[
-            ["10%", t("home.passChance")],
-            ["0%", t("home.learningProgress")],
-            ["0%", t("home.examPassLevel")],
-            ["0%", t("home.ready")],
+            [`${stats.accuracy}%`, t("home.overallAccuracy")],
+            [`${stats.coveragePct}%`, t("home.learningProgress")],
+            [`${stats.masteredPct}%`, t("home.masteredLevel")],
+            [stats.questionsAnswered, t("home.solvedCount")],
           ].map(([val, label]) => (
             <div key={label}>
               <p className="font-bold text-sm">{val}</p>
