@@ -41,6 +41,23 @@ export default {
     subtitle: "{{count}} та билет, ҳар бирида {{questions}} та савол",
     ticketWord: "билет",
   },
+  test: {
+    ticketTitle: "{{num}}-билет",
+    questionOf: "{{current}} / {{total}}-савол",
+    next: "Кейинги савол",
+    finish: "Якунлаш",
+    correctAnswers: "{{correct}} / {{total}} тўғри жавоб",
+    reviewTitle: "Жавобларни кўриб чиқиш",
+    yourAnswer: "Сизнинг жавобингиз",
+    correctAnswer: "Тўғри жавоб",
+    retry: "Қайта уриниш",
+    backToTickets: "Билетларга қайтиш",
+    tier: {
+      excellent: "Ажойиб натижа! Сиз бу билетга тайёрсиз.",
+      good: "Яхши натижа — яна бироз машқ қилинг.",
+      weak: "Бу билет мавзуларини яна бир бор такрорланг.",
+    },
+  },
   signs: {
     title: "Йўл белгилари",
     subtitle: "Ўзбекистон Республикаси йўл белгиларининг тўлиқ рўйхати — {{count}} та белги",

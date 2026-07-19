@@ -41,6 +41,23 @@ export default {
     subtitle: "{{count}} билетов, по {{questions}} вопросов в каждом",
     ticketWord: "билет",
   },
+  test: {
+    ticketTitle: "Билет {{num}}",
+    questionOf: "Вопрос {{current}} из {{total}}",
+    next: "Следующий вопрос",
+    finish: "Завершить",
+    correctAnswers: "{{correct}} / {{total}} правильных",
+    reviewTitle: "Просмотреть ответы",
+    yourAnswer: "Ваш ответ",
+    correctAnswer: "Правильный ответ",
+    retry: "Пройти заново",
+    backToTickets: "Вернуться к билетам",
+    tier: {
+      excellent: "Отличный результат! Вы готовы к этому билету.",
+      good: "Хороший результат — немного потренируйтесь ещё.",
+      weak: "Рекомендуем повторить темы этого билета.",
+    },
+  },
   signs: {
     title: "Дорожные знаки",
     subtitle: "Полный список дорожных знаков Республики Узбекистан — {{count}} знаков",

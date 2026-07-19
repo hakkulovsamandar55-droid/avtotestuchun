@@ -4,6 +4,7 @@ import HomeTab from "./HomeTab";
 import StatsTab from "./StatsTab";
 import SettingsTab from "./SettingsTab";
 import TicketsScreen from "./TicketsScreen";
+import TestScreen from "./TestScreen";
 import SignsScreen from "./SignsScreen";
 import AdminPanelScreen from "./AdminPanelScreen";
 
@@ -11,13 +12,28 @@ import AdminPanelScreen from "./AdminPanelScreen";
 export default function MainApp({ user }) {
   const [active, setActive] = useState("home");
   const [showTickets, setShowTickets] = useState(false);
+  const [activeTicket, setActiveTicket] = useState(null);
   const [showSigns, setShowSigns] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+
+  if (activeTicket !== null) {
+    return (
+      <div className="flex flex-col h-full">
+        <TestScreen
+          ticketNumber={activeTicket}
+          onExit={() => setActiveTicket(null)}
+        />
+      </div>
+    );
+  }
 
   if (showTickets) {
     return (
       <div className="flex flex-col h-full">
-        <TicketsScreen onBack={() => setShowTickets(false)} />
+        <TicketsScreen
+          onBack={() => setShowTickets(false)}
+          onSelectTicket={(num) => setActiveTicket(num)}
+        />
       </div>
     );
   }

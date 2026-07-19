@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronLeft } from "lucide-react";
 
 const TOTAL_TICKETS = 60;
-const QUESTIONS_PER_TICKET = 10;
+const QUESTIONS_PER_TICKET = 20;
 
 // Biletlar ekrani — 1 dan 60 gacha bilet kartochkalari, tungi (dark) uslub
 export default function TicketsScreen({ onBack, onSelectTicket }) {

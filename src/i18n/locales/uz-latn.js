@@ -41,6 +41,23 @@ export default {
     subtitle: "{{count}} ta bilet, har birida {{questions}} ta savol",
     ticketWord: "bilet",
   },
+  test: {
+    ticketTitle: "{{num}}-bilet",
+    questionOf: "{{current}} / {{total}}-savol",
+    next: "Keyingi savol",
+    finish: "Yakunlash",
+    correctAnswers: "{{correct}} / {{total}} to'g'ri javob",
+    reviewTitle: "Javoblarni ko'rib chiqish",
+    yourAnswer: "Sizning javobingiz",
+    correctAnswer: "To'g'ri javob",
+    retry: "Qayta urinish",
+    backToTickets: "Biletlarga qaytish",
+    tier: {
+      excellent: "Ajoyib natija! Siz bu biletga tayyorsiz.",
+      good: "Yaxshi natija — yana biroz mashq qiling.",
+      weak: "Bu bilet mavzularini yana bir bor takrorlang.",
+    },
+  },
   signs: {
     title: "Yo'l belgilari",
     subtitle: "O'zbekiston Respublikasi yo'l belgilarining to'liq ro'yxati — {{count}} ta belgi",
