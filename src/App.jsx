@@ -14,7 +14,7 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen w-full overflow-hidden bg-[#0B0B14]">
+    <div className="h-screen w-full overflow-hidden bg-[#0B0B14] dark:bg-[#0B0B14]">
       {stage === "login" && <LoginScreen onLogin={handleLogin} />}
       {stage === "loading" && <LoadingScreen onDone={() => setStage("app")} />}
       {stage === "app" && <MainApp user={user} />}

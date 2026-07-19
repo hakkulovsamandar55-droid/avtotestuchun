@@ -1,0 +1,92 @@
+// 5 ta tema ta'rifi: har biri CSS custom properties to'plamini beradi.
+// Har bir ekran shu o'zgaruvchilardan foydalanadi (bg-app, bg-card, text-primary va h.k.)
+
+export const THEMES = {
+  light: {
+    label: "Light",
+    isDark: false,
+    accentFrom: "#6C5CE7",
+    accentTo: "#A855F7",
+    vars: {
+      "--bg-app": "#F7F7FA",
+      "--bg-card": "#FFFFFF",
+      "--bg-card-soft": "#F9FAFB",
+      "--border-card": "#F3F4F6",
+      "--text-primary": "#111827",
+      "--text-secondary": "#9CA3AF",
+      "--icon-muted": "#4B5563",
+      "--chevron": "#D1D5DB",
+      "--shadow-card": "0 1px 2px rgba(0,0,0,0.04)",
+    },
+  },
+  dark: {
+    label: "Dark",
+    isDark: true,
+    accentFrom: "#6C5CE7",
+    accentTo: "#A855F7",
+    vars: {
+      "--bg-app": "#0B0B14",
+      "--bg-card": "rgba(255,255,255,0.04)",
+      "--bg-card-soft": "rgba(255,255,255,0.06)",
+      "--border-card": "rgba(255,255,255,0.10)",
+      "--text-primary": "#FFFFFF",
+      "--text-secondary": "#9CA3AF",
+      "--icon-muted": "#D1D5DB",
+      "--chevron": "rgba(255,255,255,0.35)",
+      "--shadow-card": "none",
+    },
+  },
+  pink: {
+    label: "Pushti",
+    isDark: false,
+    accentFrom: "#EC4899",
+    accentTo: "#F472B6",
+    vars: {
+      "--bg-app": "#FDF2F8",
+      "--bg-card": "#FFFFFF",
+      "--bg-card-soft": "#FCE7F3",
+      "--border-card": "#FBCFE8",
+      "--text-primary": "#831843",
+      "--text-secondary": "#BE7A9A",
+      "--icon-muted": "#9D174D",
+      "--chevron": "#F0ABC4",
+      "--shadow-card": "0 1px 2px rgba(236,72,153,0.08)",
+    },
+  },
+  amber: {
+    label: "Sariq",
+    isDark: false,
+    accentFrom: "#F59E0B",
+    accentTo: "#FBBF24",
+    vars: {
+      "--bg-app": "#FFFBEB",
+      "--bg-card": "#FFFFFF",
+      "--bg-card-soft": "#FEF3C7",
+      "--border-card": "#FDE68A",
+      "--text-primary": "#78350F",
+      "--text-secondary": "#B4894C",
+      "--icon-muted": "#92400E",
+      "--chevron": "#F3D48A",
+      "--shadow-card": "0 1px 2px rgba(245,158,11,0.08)",
+    },
+  },
+  crimson: {
+    label: "Qizil-qora",
+    isDark: true,
+    accentFrom: "#DC2626",
+    accentTo: "#F87171",
+    vars: {
+      "--bg-app": "#120607",
+      "--bg-card": "rgba(220,38,38,0.06)",
+      "--bg-card-soft": "rgba(220,38,38,0.10)",
+      "--border-card": "rgba(248,113,113,0.18)",
+      "--text-primary": "#FEF2F2",
+      "--text-secondary": "#D19999",
+      "--icon-muted": "#FCA5A5",
+      "--chevron": "rgba(248,113,113,0.4)",
+      "--shadow-card": "none",
+    },
+  },
+};
+
+export const THEME_ORDER = ["light", "dark", "pink", "amber", "crimson"];
