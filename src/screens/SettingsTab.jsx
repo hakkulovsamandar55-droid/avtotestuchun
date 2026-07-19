@@ -47,7 +47,7 @@ export default function SettingsTab({ user, onOpenAdmin, onOpenPremium }) {
   const isAdmin = user?.role === "ADMIN";
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-4">
+    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-4 animate-fade-in">
       <h1 className="text-xl font-extrabold text-gray-900 text-center mb-5">
         {t("settings.title")}
       </h1>

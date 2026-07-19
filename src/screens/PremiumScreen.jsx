@@ -35,7 +35,7 @@ export default function PremiumScreen({ onBack }) {
   }, []);
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-8 bg-[#0F1424] min-h-full text-white">
+    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-8 bg-[#0F1424] min-h-full text-white animate-slide-in">
       <div className="flex items-center gap-3 mb-1">
         <button
           onClick={onBack}

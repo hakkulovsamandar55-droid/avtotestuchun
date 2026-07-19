@@ -52,7 +52,7 @@ export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam }) {
   ];
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-4">
+    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-4 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-gray-400 text-sm">{t("home.welcome")}</p>

@@ -8,6 +8,33 @@ body {
     "Helvetica Neue", Arial, sans-serif;
 }
 
+/* Barcha bosiladigan elementlarda mobil brauzer "tap highlight" ni olib tashlash
+   va harakatlarni silliqroq qilish */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+/* Telegram Mini App'ning o'z tepa paneli (Close / menyu tugmalari) ilova
+   ichidagi orqaga tugmasi va sarlavha bilan bir-biriga tushib qolmasligi
+   uchun xavfsiz tepa masofa. Har bir ekran sarlavhasida shu class ishlatiladi. */
+.tp-safe-top {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 3.25rem);
+}
+
+/* Bilet/premium panellarida scroll qilganda o'ng tomonda chiqadigan
+   xunuk oq/kulrang scrollbar chizig'ini yashirish (mobil ilovada kerak emas,
+   scroll gesture baribir ishlayveradi) */
+.overflow-y-auto {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.overflow-y-auto::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Opera */
+}
+
 /* Taqiqlovchi (redCircle) yo'l belgilarida piktogramma oq fon ustida qora bo'lishi kerak */
 .sign-pic-dark [fill="#FFFFFF"] {
   fill: #1f2937;

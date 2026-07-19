@@ -78,7 +78,7 @@ export default function TestScreen({ ticketNumber, onExit }) {
   const progressPct = ((index + (selected !== null ? 1 : 0)) / total) * 100;
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-8 bg-[#0F1424] min-h-full text-white">
+    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-8 bg-[#0F1424] min-h-full text-white animate-slide-in">
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         <button
@@ -203,7 +203,7 @@ function ResultsView({ ticketNumber, answers, total, onRetry, onReview, onExit }
   const ringColor = tier === "excellent" ? "#34D399" : tier === "good" ? ACCENT_WARM : "#F87171";
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-8 bg-[#0F1424] min-h-full text-white flex flex-col">
+    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-8 bg-[#0F1424] min-h-full text-white flex flex-col animate-slide-in">
       <div className="flex items-center gap-3 mb-8">
         <button
           onClick={onExit}
@@ -266,7 +266,7 @@ function ReviewView({ ticketNumber, answers, questions, onBack }) {
   const { t } = useTranslation();
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-8 bg-[#0F1424] min-h-full text-white">
+    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-8 bg-[#0F1424] min-h-full text-white animate-slide-in">
       <div className="flex items-center gap-3 mb-5">
         <button
           onClick={onBack}

@@ -11,7 +11,7 @@ export default function TicketsScreen({ onBack, onSelectTicket }) {
   const tickets = Array.from({ length: TOTAL_TICKETS }, (_, i) => i + 1);
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-6 bg-[#0F1424] min-h-full">
+    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-6 bg-[#0F1424] min-h-full animate-slide-in">
       <div className="flex items-center gap-3 mb-1">
         <button
           onClick={onBack}

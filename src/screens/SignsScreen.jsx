@@ -41,7 +41,7 @@ export default function SignsScreen({ onBack }) {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-6 bg-[#F7F7FA] min-h-full">
+    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-6 bg-[#F7F7FA] min-h-full animate-slide-in">
       <div className="flex items-center gap-3 mb-1">
         <button
           onClick={onBack}
@@ -189,7 +189,7 @@ function CategoryView({ catKey, onBack, onSelectSign }) {
   const items = getSignsByCategory(catKey);
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-6 bg-[#F7F7FA] min-h-full">
+    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-6 bg-[#F7F7FA] min-h-full animate-slide-in">
       <div className="flex items-center gap-3 mb-1">
         <button
           onClick={onBack}
@@ -245,7 +245,7 @@ function SignDetail({ sign, onBack }) {
   );
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 pt-5 pb-6 bg-[#F7F7FA] min-h-full">
+    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-6 bg-[#F7F7FA] min-h-full animate-slide-in">
       <div className="flex items-center gap-3 mb-4">
         <button
           onClick={onBack}
