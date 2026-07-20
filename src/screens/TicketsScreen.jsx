@@ -1,11 +1,9 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft } from "lucide-react";
+import { TOTAL_TICKETS, QUESTIONS_PER_TICKET } from "../data/ticketsData";
 
-const TOTAL_TICKETS = 60;
-const QUESTIONS_PER_TICKET = 20;
-
-// Biletlar ekrani — 1 dan 60 gacha bilet kartochkalari, tungi (dark) uslub
+// Biletlar ekrani — 1 dan 61 gacha bilet kartochkalari, tungi (dark) uslub
 export default function TicketsScreen({ onBack, onSelectTicket }) {
   const { t } = useTranslation();
   const tickets = Array.from({ length: TOTAL_TICKETS }, (_, i) => i + 1);

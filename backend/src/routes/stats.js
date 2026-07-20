@@ -8,7 +8,7 @@ export const statsRouter = Router();
 // Ushbu bo'limdagi barcha endpointlar login qilingan foydalanuvchini talab qiladi
 statsRouter.use(requireAuth);
 
-const TOTAL_TICKETS = 60; // src/data/ticketsData.js dagi TOTAL_TICKETS bilan mos
+const TOTAL_TICKETS = 61; // src/data/ticketsData.js dagi TOTAL_TICKETS bilan mos
 
 // POST /api/stats/attempt — bilet testi yoki imtihon yakunlanganda natijani saqlaydi
 statsRouter.post("/attempt", asyncHandler(async (req, res) => {

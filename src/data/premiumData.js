@@ -12,7 +12,7 @@ export const DEFAULT_PREMIUM_PLANS = [
     period: "oy",
     badge: "",
     features: [
-      "Barcha 60 ta bilet — cheklovsiz",
+      "Barcha 61 ta bilet — cheklovsiz",
       "Kunlik 1 marta imtihon rejimi",
       "Reklamasiz interfeys",
     ],
