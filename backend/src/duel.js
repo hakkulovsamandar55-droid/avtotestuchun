@@ -8,18 +8,27 @@ import { getRandomExamQuestions } from "./data/ticketsData.js";
 // Ikkita foydalanuvchi bir xil 20 ta savolni bir vaqtda yechadi.
 // G'olib: kamroq xato qilgan, teng bo'lsa — tezroq tugatgan.
 //
+// Ikki xil topilish usuli bor:
+//   1) Tasodifiy raqib — umumiy navbat (waitingQueue), birinchi kelgan ikkovi juftlanadi.
+//   2) Do'st bilan lobby — bitta foydalanuvchi 6 xonali kod bilan lobby yaratadi,
+//      do'sti shu kodni kiritib qo'shiladi (yoki Telegram havolasi orqali).
+//
 // MUHIM CHEKLOV: barcha holat xotirada (in-memory) saqlanadi — server qayta
 // ishga tushsa yoki bir nechta instansiyada ishlasa (masalan Render'da
-// avtomatik scaling yoqilsa), duel holati yo'qoladi. Hozircha bitta
+// avtomatik scaling yoqilsa), duel/lobby holati yo'qoladi. Hozircha bitta
 // instansiya uchun yetarli; kelajakda ko'proq foydalanuvchi bo'lsa, Redis
 // kabi umumiy xotira kerak bo'ladi.
 
 const DUEL_DURATION_MS = 3 * 60 * 1000; // 3 daqiqa
 const QUESTIONS_COUNT = 20;
+const LOBBY_TTL_MS = 10 * 60 * 1000; // 10 daqiqa ichida qo'shilmasa, lobby o'chadi
 
 const waitingQueue = []; // { socket, userId, name }
 const activeDuels = new Map(); // duelId -> session
 const socketToDuel = new Map(); // socket.id -> duelId
+
+const lobbies = new Map(); // code -> { hostSocket, hostUserId, hostName, timer }
+const socketToLobby = new Map(); // socket.id -> code
 
 function publicQuestion(q, idx) {
   // "correct" javobni clientga yubormaymiz — aks holda tarmoq orqali
@@ -30,6 +39,23 @@ function publicQuestion(q, idx) {
 function removeFromQueue(socketId) {
   const idx = waitingQueue.findIndex((w) => w.socket.id === socketId);
   if (idx !== -1) waitingQueue.splice(idx, 1);
+}
+
+function generateLobbyCode() {
+  // 6 xonali raqamli kod — og'zaki aytish/yozish oson bo'lsin uchun faqat raqamlar
+  let code;
+  do {
+    code = String(Math.floor(100000 + Math.random() * 900000));
+  } while (lobbies.has(code));
+  return code;
+}
+
+function destroyLobby(code) {
+  const lobby = lobbies.get(code);
+  if (!lobby) return;
+  clearTimeout(lobby.timer);
+  socketToLobby.delete(lobby.hostSocket.id);
+  lobbies.delete(code);
 }
 
 function computeScore(player) {
@@ -157,6 +183,7 @@ export function initDuelSocket(httpServer) {
       // Ism topilmasa ham duelga xalaqit bermasin — standart ism bilan davom etadi
     }
 
+    // --- Tasodifiy raqib qidirish (matchmaking) ---
     socket.on("duel:join_queue", () => {
       // Bir xil foydalanuvchi ikki marta navbatga tushib qolmasin
       removeFromQueue(socket.id);
@@ -174,6 +201,57 @@ export function initDuelSocket(httpServer) {
 
     socket.on("duel:leave_queue", () => {
       removeFromQueue(socket.id);
+    });
+
+    // --- Do'st bilan lobby ---
+    socket.on("duel:create_lobby", () => {
+      if (socketToDuel.has(socket.id)) return; // allaqachon duelda
+      // Foydalanuvchining eski lobbysi bo'lsa — tozalab, yangisini ochamiz
+      const existingCode = socketToLobby.get(socket.id);
+      if (existingCode) destroyLobby(existingCode);
+
+      const code = generateLobbyCode();
+      const timer = setTimeout(() => {
+        const lobby = lobbies.get(code);
+        if (lobby && lobby.hostSocket.connected) {
+          lobby.hostSocket.emit("duel:lobby_expired");
+        }
+        destroyLobby(code);
+      }, LOBBY_TTL_MS);
+
+      lobbies.set(code, { hostSocket: socket, hostUserId: userId, hostName: name, timer });
+      socketToLobby.set(socket.id, code);
+
+      socket.emit("duel:lobby_created", { code });
+    });
+
+    socket.on("duel:cancel_lobby", () => {
+      const code = socketToLobby.get(socket.id);
+      if (code) destroyLobby(code);
+    });
+
+    socket.on("duel:join_lobby", ({ code }) => {
+      const cleanCode = String(code || "").trim();
+      const lobby = lobbies.get(cleanCode);
+
+      if (!lobby) {
+        socket.emit("duel:lobby_error", { reason: "not_found" });
+        return;
+      }
+      if (lobby.hostUserId === userId) {
+        socket.emit("duel:lobby_error", { reason: "self" });
+        return;
+      }
+      if (socketToDuel.has(socket.id) || !lobby.hostSocket.connected) {
+        socket.emit("duel:lobby_error", { reason: "unavailable" });
+        return;
+      }
+
+      destroyLobby(cleanCode);
+      createDuel(
+        { socket: lobby.hostSocket, userId: lobby.hostUserId, name: lobby.hostName },
+        { socket, userId, name }
+      );
     });
 
     socket.on("duel:answer", ({ duelId, questionIndex, chosenIndex }) => {
@@ -220,6 +298,10 @@ export function initDuelSocket(httpServer) {
 
     socket.on("disconnect", () => {
       removeFromQueue(socket.id);
+
+      const lobbyCode = socketToLobby.get(socket.id);
+      if (lobbyCode) destroyLobby(lobbyCode);
+
       const duelId = socketToDuel.get(socket.id);
       if (!duelId) return;
       const session = activeDuels.get(duelId);

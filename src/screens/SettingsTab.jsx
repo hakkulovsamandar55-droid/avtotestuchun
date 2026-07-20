@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Bell, HelpCircle, Send, ChevronRight, ShieldCheck, Crown, Check } from "lucide-react";
 import { ACCENT_FROM } from "../theme";
@@ -78,6 +78,18 @@ function ThemeSwatch({ item, isActive, onClick }) {
 function ThemePickerRow() {
   const { t } = useTranslation();
   const { themeKey, setThemeKey, themeList } = useTheme();
+  // Bosilgan swatch darhol qo'llanmaydi — avval "tanlangan" holatga o'tadi,
+  // faqat "Qo'llash" tugmasi bosilganda haqiqiy tema almashadi.
+  const [pendingKey, setPendingKey] = useState(null);
+  const displayedKey = pendingKey ?? themeKey;
+  const hasPendingChange = pendingKey !== null && pendingKey !== themeKey;
+
+  function applyTheme() {
+    if (pendingKey && pendingKey !== themeKey) {
+      setThemeKey(pendingKey);
+    }
+    setPendingKey(null);
+  }
 
   return (
     <div className="w-full rounded-2xl bg-card border border-card-border shadow-sm px-4 py-3.5">
@@ -87,11 +99,20 @@ function ThemePickerRow() {
           <ThemeSwatch
             key={item.key}
             item={item}
-            isActive={item.key === themeKey}
-            onClick={() => setThemeKey(item.key)}
+            isActive={item.key === displayedKey}
+            onClick={() => setPendingKey(item.key)}
           />
         ))}
       </div>
+      {hasPendingChange && (
+        <button
+          onClick={applyTheme}
+          className="w-full mt-3.5 rounded-xl py-2.5 font-bold text-white text-sm active:scale-[0.98] transition-transform"
+          style={{ background: "linear-gradient(90deg, var(--accent-from), var(--accent-to))" }}
+        >
+          {t("settings.applyTheme")}
+        </button>
+      )}
     </div>
   );
 }

@@ -6,7 +6,7 @@
 // 1-bilet: qo'lda tayyorlangan haqiqiy YHQ uslubidagi demo savollar (2026-yil me'yorlariga mos)
 // 2-60 biletlar: yo'l belgilari bazasidan avtomatik, biletga xos (seed asosida) generatsiya qilinadi
 
-import { SIGNS } from "./signsData";
+import { SIGNS } from "./signsData.js";
 
 export const TOTAL_TICKETS = 60;
 export const QUESTIONS_PER_TICKET = 20;
