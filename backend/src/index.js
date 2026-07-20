@@ -1,8 +1,11 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import { createServer } from "http";
 import { authRouter } from "./routes/auth.js";
 import { adminRouter } from "./routes/admin.js";
+import { statsRouter } from "./routes/stats.js";
+import { initDuelSocket } from "./duel.js";
 
 for (const key of ["BOT_TOKEN", "JWT_SECRET", "DATABASE_URL"]) {
   if (!process.env[key]) {
@@ -18,6 +21,7 @@ app.use(express.json());
 app.get("/health", (_req, res) => res.json({ ok: true }));
 app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/stats", statsRouter);
 
 // Umumiy xatolarni ushlash — parolsiz stack-trace'ni foydalanuvchiga chiqarmaslik uchun
 app.use((err, _req, res, _next) => {
@@ -25,5 +29,9 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ error: "Server xatosi" });
 });
 
+// Duel (jonli musobaqa) rejimi uchun Socket.io xuddi shu HTTP server ustida ishlaydi
+const httpServer = createServer(app);
+initDuelSocket(httpServer);
+
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Backend ${PORT}-portda ishlayapti`));
+httpServer.listen(PORT, () => console.log(`Backend ${PORT}-portda ishlayapti (HTTP + duel socket)`));

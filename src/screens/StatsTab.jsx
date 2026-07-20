@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Zap, ListChecks, Trophy, Flame } from "lucide-react";
 import { ACCENT_FROM } from "../theme";
+import { api } from "../api";
 
 function StatCard({ icon: Icon, iconBg, iconFg, value, label }) {
   return (
@@ -21,6 +22,31 @@ function StatCard({ icon: Icon, iconBg, iconFg, value, label }) {
 // 3b-EKRAN: "Statistika" bo'limi
 export default function StatsTab() {
   const { t } = useTranslation();
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    api
+      .getMyStats()
+      .then(setStats)
+      .catch(() => setStats(null));
+  }, []);
+
+  const s = stats || {
+    accuracy: 0,
+    solved: 0,
+    completedTickets: 0,
+    streakDays: 0,
+    examReadiness: 0,
+    passChance: 0,
+    learnedQuestionsPct: 0,
+    masteryQualityPct: 0,
+    examResultsPct: 0,
+  };
+
+  const readinessColor =
+    s.examReadiness >= 70 ? "text-emerald-500" : s.examReadiness >= 40 ? "text-amber-500" : "text-red-500";
+  const readinessBar =
+    s.examReadiness >= 70 ? "bg-emerald-400" : s.examReadiness >= 40 ? "bg-amber-400" : "bg-red-400";
 
   return (
     <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-4 animate-fade-in">
@@ -33,28 +59,28 @@ export default function StatsTab() {
           icon={Zap}
           iconBg="#EEEBFF"
           iconFg={ACCENT_FROM}
-          value="0%"
+          value={`${s.accuracy}%`}
           label={t("stats.accuracy")}
         />
         <StatCard
           icon={Flame}
           iconBg="#FFF3DC"
           iconFg="#F59E0B"
-          value={t("home.streakDays", { days: 0 })}
+          value={t("home.streakDays", { days: s.streakDays })}
           label={t("stats.streak")}
         />
         <StatCard
           icon={ListChecks}
           iconBg="#E7F9EF"
           iconFg="#10B981"
-          value="0"
+          value={String(s.solved)}
           label={t("stats.solved")}
         />
         <StatCard
           icon={Trophy}
           iconBg="#F1F2F4"
           iconFg="#6B7280"
-          value="0"
+          value={String(s.completedTickets)}
           label={t("stats.completed")}
         />
       </div>
@@ -68,28 +94,30 @@ export default function StatsTab() {
             </p>
           </div>
         </div>
-        <p className="text-center text-5xl font-extrabold text-red-500 mt-4">
-          0%
+        <p className={`text-center text-5xl font-extrabold mt-4 ${readinessColor}`}>
+          {s.examReadiness}%
         </p>
-        <p className="text-center text-red-500 text-sm font-medium mt-1">
-          {t("stats.needsPreparation")}
+        <p className={`text-center text-sm font-medium mt-1 ${readinessColor}`}>
+          {s.examReadiness >= 70
+            ? t("stats.readyLabel")
+            : t("stats.needsPreparation")}
         </p>
 
         <div className="mt-5 space-y-4">
           {[
-            [t("stats.passChance"), "10%", "text-red-500", 10],
-            [t("stats.learnedQuestions"), "0%", "text-indigo-600", 0],
-            [t("stats.masteryQuality"), "0%", "text-amber-500", 0],
-            [t("stats.examResults"), "0%", "text-emerald-500", 0],
-          ].map(([label, val, color, pct]) => (
+            [t("stats.passChance"), s.passChance],
+            [t("stats.learnedQuestions"), s.learnedQuestionsPct],
+            [t("stats.masteryQuality"), s.masteryQualityPct],
+            [t("stats.examResults"), s.examResultsPct],
+          ].map(([label, pct]) => (
             <div key={label}>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-text-muted">{label}</span>
-                <span className={`font-bold ${color}`}>{val}</span>
+                <span className="font-bold text-text-main">{pct}%</span>
               </div>
               <div className="h-1.5 rounded-full bg-card-soft mt-1.5 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-red-400"
+                  className={`h-full rounded-full ${readinessBar}`}
                   style={{ width: `${Math.max(pct, 4)}%` }}
                 />
               </div>

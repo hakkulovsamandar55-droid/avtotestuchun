@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, Check, X, RotateCcw } from "lucide-react";
 import { getTicketQuestions } from "../data/ticketsData";
+import { api } from "../api";
 import SignIcon from "../components/SignIcon";
 import { ACCENT_FROM, ACCENT_TO, ACCENT_WARM } from "../theme";
 
@@ -37,6 +38,20 @@ export default function TestScreen({ ticketNumber, onExit }) {
 
     if (isLast) {
       setFinished(true);
+      const correctCount = nextAnswers.filter((a) => a.isCorrect).length;
+      const pct = Math.round((correctCount / total) * 100);
+      api
+        .recordAttempt({
+          type: "TICKET",
+          ticketNumber,
+          correctCount,
+          totalCount: total,
+          passed: pct >= 70,
+        })
+        .catch(() => {
+          // Statistika saqlanmasa ham, natija ekranda ko'rsatilishda davom etadi —
+          // foydalanuvchi internetsiz yoki tizimga kirmagan bo'lishi mumkin.
+        });
     } else {
       setIndex((i) => i + 1);
       setSelected(null);

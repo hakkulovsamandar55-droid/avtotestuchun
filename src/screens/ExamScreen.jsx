@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, Check, X, RotateCcw, Timer, AlertTriangle } from "lucide-react";
 import { getRandomExamQuestions, EXAM_TIME_SECONDS, EXAM_MAX_MISTAKES } from "../data/ticketsData";
+import { api } from "../api";
 import SignIcon from "../components/SignIcon";
 import { ACCENT_FROM, ACCENT_TO, ACCENT_WARM } from "../theme";
 
@@ -42,6 +43,23 @@ export default function ExamScreen({ onExit }) {
   }, [timeLeft, status]);
 
   useEffect(() => () => clearTimeout(advanceTimer.current), []);
+
+  // Imtihon tugaganda (o'tdi/yiqildi/vaqt tugadi) natijani bir marta serverga yuboradi
+  useEffect(() => {
+    if (status === "playing") return;
+    const correctCount = answers.filter((a) => a.isCorrect).length;
+    api
+      .recordAttempt({
+        type: "EXAM",
+        correctCount,
+        totalCount: total,
+        passed: status === "passed",
+      })
+      .catch(() => {
+        // Statistika saqlanmasa ham natija ekranda ko'rsatiladi
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
 
   function commitAnswer(optIdx) {
     if (selected !== null || status !== "playing") return;

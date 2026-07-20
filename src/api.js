@@ -42,6 +42,9 @@ export const api = {
     request("/api/auth/telegram", { method: "POST", body: { initData }, auth: false }),
   searchUsers: (query) =>
     request(`/api/admin/users?query=${encodeURIComponent(query)}`),
+  recordAttempt: (attempt) =>
+    request("/api/stats/attempt", { method: "POST", body: attempt }),
+  getMyStats: () => request("/api/stats/me"),
 };
 
 // Hali backend/to'lov integratsiyasi ulanmagan tugmalar uchun:

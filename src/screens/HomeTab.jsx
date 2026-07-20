@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Zap,
@@ -11,12 +11,29 @@ import {
   Trophy,
   Flame,
   TrafficCone,
+  Swords,
 } from "lucide-react";
 import { ACCENT_FROM, ACCENT_TO } from "../theme";
+import { api } from "../api";
 
 // 3a-EKRAN: "O'rganish" bo'limi — bosh sahifa
-export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam, onOpenStats }) {
+export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam, onOpenStats, onOpenDuel }) {
   const { t } = useTranslation();
+  const [stats, setStats] = useState(null);
+
+  useEffect(() => {
+    api
+      .getMyStats()
+      .then(setStats)
+      .catch(() => setStats(null));
+  }, []);
+
+  const s = stats || {
+    passChance: 0,
+    learnedQuestionsPct: 0,
+    examResultsPct: 0,
+    examReadiness: 0,
+  };
 
   const menuItems = [
     {
@@ -88,14 +105,14 @@ export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam, onOpen
           <Zap size={13} /> {t("home.aiHint")}
         </div>
         <p className="mt-1.5 text-sm font-semibold">
-          {t("home.readiness", { percent: 0 })}
+          {t("home.readiness", { percent: s.examReadiness })}
         </p>
         <div className="mt-4 grid grid-cols-4 gap-2 text-center">
           {[
-            ["10%", t("home.passChance")],
-            ["0%", t("home.learningProgress")],
-            ["0%", t("home.examPassLevel")],
-            ["0%", t("home.ready")],
+            [`${s.passChance}%`, t("home.passChance")],
+            [`${s.learnedQuestionsPct}%`, t("home.learningProgress")],
+            [`${s.examResultsPct}%`, t("home.examPassLevel")],
+            [`${s.examReadiness}%`, t("home.ready")],
           ].map(([val, label]) => (
             <div key={label}>
               <p className="font-bold text-sm">{val}</p>
@@ -165,6 +182,22 @@ export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam, onOpen
           </button>
         ))}
       </div>
+
+      {/* Duel rejimi */}
+      <button
+        onClick={onOpenDuel}
+        className="w-full mt-3 flex items-center gap-3 rounded-2xl px-4 py-3.5 text-left active:scale-[0.98] transition-transform"
+        style={{ background: "linear-gradient(90deg, #1F2937, #111827)" }}
+      >
+        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+          <Swords size={18} color="#F5C542" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-white text-sm">{t("home.duel")}</p>
+          <p className="text-white/60 text-xs truncate">{t("home.duelSubtitle")}</p>
+        </div>
+        <ChevronRight size={18} color="rgba(255,255,255,0.4)" />
+      </button>
     </div>
   );
 }

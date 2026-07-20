@@ -9,6 +9,7 @@ import ExamScreen from "./ExamScreen";
 import SignsScreen from "./SignsScreen";
 import AdminPanelScreen from "./AdminPanelScreen";
 import PremiumScreen from "./PremiumScreen";
+import DuelScreen from "./DuelScreen";
 
 // 3-EKRAN: login+loading dan keyingi asosiy ilova — 3 bo'lim + pastki nav
 export default function MainApp({ user }) {
@@ -19,6 +20,7 @@ export default function MainApp({ user }) {
   const [showSigns, setShowSigns] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showPremium, setShowPremium] = useState(false);
+  const [showDuel, setShowDuel] = useState(false);
 
   if (showExam) {
     return (
@@ -32,6 +34,14 @@ export default function MainApp({ user }) {
     return (
       <div className="flex flex-col h-full">
         <PremiumScreen onBack={() => setShowPremium(false)} />
+      </div>
+    );
+  }
+
+  if (showDuel) {
+    return (
+      <div className="flex flex-col h-full">
+        <DuelScreen onExit={() => setShowDuel(false)} />
       </div>
     );
   }
@@ -82,6 +92,7 @@ export default function MainApp({ user }) {
           onOpenSigns={() => setShowSigns(true)}
           onOpenExam={() => setShowExam(true)}
           onOpenStats={() => setActive("stats")}
+          onOpenDuel={() => setShowDuel(true)}
         />
       )}
       {active === "stats" && <StatsTab />}
