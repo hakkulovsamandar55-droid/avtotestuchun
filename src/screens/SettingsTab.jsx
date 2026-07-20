@@ -3,8 +3,42 @@ import { useTranslation } from "react-i18next";
 import { Bell, HelpCircle, Send, ChevronRight, ShieldCheck, Crown, Check } from "lucide-react";
 import { ACCENT_FROM } from "../theme";
 import { useTheme } from "../ThemeContext";
-import { showComingSoon } from "../api";
+import { api, showComingSoon } from "../api";
 import LanguageSwitcher from "../components/LanguageSwitcher";
+
+// Bildirishnoma yoqilgan/o'chirilganini ko'rsatuvchi kichik svitch (checkbox emas,
+// mavjud SettingsRow uslubiga mos qilib qo'lda chizilgan)
+function ToggleSwitch({ on }) {
+  return (
+    <span
+      className="w-10 h-6 rounded-full relative shrink-0 transition-colors"
+      style={{ backgroundColor: on ? ACCENT_FROM : "var(--border-card)" }}
+    >
+      <span
+        className="absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all"
+        style={{ left: on ? "18px" : "2px" }}
+      />
+    </span>
+  );
+}
+
+// Bell qatori — Mini App ichida yoqilsa/o'chirilsa backendga saqlanadi,
+// bot (bot/ papkasi) shu flag orqali kimga eslatma yuborishni aniqlaydi.
+function NotificationsRow({ enabled, onToggle }) {
+  const { t } = useTranslation();
+  return (
+    <button
+      onClick={onToggle}
+      className="w-full flex items-center gap-3 rounded-2xl bg-card border border-card-border shadow-sm px-4 py-3.5 text-left active:scale-[0.99] transition-transform"
+    >
+      <Bell size={18} color="var(--icon-muted)" />
+      <span className="flex-1 font-medium text-text-main text-sm">
+        {t("settings.notifications")}
+      </span>
+      <ToggleSwitch on={enabled} />
+    </button>
+  );
+}
 
 function PremiumRow({ onClick }) {
   const { t } = useTranslation();
@@ -163,6 +197,23 @@ export default function SettingsTab({ user, onOpenAdmin, onOpenPremium }) {
   const { t } = useTranslation();
   const isAdmin = user?.role === "ADMIN";
   const isPremium = Boolean(user?.isPremium) || isAdmin;
+  const [notifOn, setNotifOn] = useState(user?.notificationsEnabled !== false);
+  const [notifBusy, setNotifBusy] = useState(false);
+
+  async function handleToggleNotifications() {
+    if (notifBusy) return;
+    const next = !notifOn;
+    setNotifOn(next); // optimistik yangilash
+    setNotifBusy(true);
+    try {
+      await api.toggleNotifications(next);
+    } catch (e) {
+      setNotifOn(!next); // muvaffaqiyatsiz bo'lsa orqaga qaytarish
+      showComingSoon(t("settings.notificationsError"));
+    } finally {
+      setNotifBusy(false);
+    }
+  }
 
   return (
     <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-4 animate-fade-in">
@@ -189,12 +240,7 @@ export default function SettingsTab({ user, onOpenAdmin, onOpenPremium }) {
         <PremiumRow onClick={onOpenPremium} />
         <LanguageSwitcher variant="row" />
         <ThemePickerRow isPremium={isPremium} />
-        <SettingsRow
-          icon={Bell}
-          label={t("settings.notifications")}
-          value={t("settings.on")}
-          onClick={() => showComingSoon(t("settings.notificationsComingSoon"))}
-        />
+        <NotificationsRow enabled={notifOn} onToggle={handleToggleNotifications} />
         <SettingsRow
           icon={HelpCircle}
           label={t("settings.support")}

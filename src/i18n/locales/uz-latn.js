@@ -136,6 +136,7 @@ export default {
     applyTheme: "Qo'llash",
     notifications: "Bildirishnomalar",
     notificationsComingSoon: "Bildirishnoma sozlamalari tez orada qo'shiladi.",
+    notificationsError: "Saqlanmadi. Qaytadan urinib ko'ring.",
     on: "Yoqilgan",
     support: "Qo'llab-quvvatlash",
     supportComingSoon: "Qo'llab-quvvatlash bo'limi tez orada qo'shiladi.",

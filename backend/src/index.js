@@ -5,6 +5,7 @@ import { createServer } from "http";
 import { authRouter } from "./routes/auth.js";
 import { adminRouter } from "./routes/admin.js";
 import { statsRouter } from "./routes/stats.js";
+import { notificationsRouter } from "./routes/notifications.js";
 import { initDuelSocket } from "./duel.js";
 
 for (const key of ["BOT_TOKEN", "JWT_SECRET", "DATABASE_URL"]) {
@@ -33,6 +34,7 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
 app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/stats", statsRouter);
+app.use("/api/notifications", notificationsRouter);
 
 // Umumiy xatolarni ushlash — parolsiz stack-trace'ni foydalanuvchiga chiqarmaslik uchun
 app.use((err, _req, res, _next) => {

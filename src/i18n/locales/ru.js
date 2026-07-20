@@ -136,6 +136,7 @@ export default {
     applyTheme: "Применить",
     notifications: "Уведомления",
     notificationsComingSoon: "Настройки уведомлений появятся в ближайшее время.",
+    notificationsError: "Не удалось сохранить. Попробуйте ещё раз.",
     on: "Включены",
     support: "Поддержка",
     supportComingSoon: "Раздел поддержки появится в ближайшее время.",

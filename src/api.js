@@ -49,6 +49,8 @@ export const api = {
   recordAttempt: (attempt) =>
     request("/api/stats/attempt", { method: "POST", body: attempt }),
   getMyStats: () => request("/api/stats/me"),
+  toggleNotifications: (enabled) =>
+    request("/api/notifications/toggle", { method: "PATCH", body: { enabled } }),
 };
 
 // Hali backend/to'lov integratsiyasi ulanmagan tugmalar uchun:

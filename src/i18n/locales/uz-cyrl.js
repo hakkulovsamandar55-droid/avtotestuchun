@@ -136,6 +136,7 @@ export default {
     applyTheme: "Қўллаш",
     notifications: "Билдиришномалар",
     notificationsComingSoon: "Билдиришнома созламалари тез орада қўшилади.",
+    notificationsError: "Сақланмади. Қайта уриниб кўринг.",
     on: "Ёқилган",
     support: "Қўллаб-қувватлаш",
     supportComingSoon: "Қўллаб-қувватлаш бўлими тез орада қўшилади.",

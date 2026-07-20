@@ -33,6 +33,7 @@ export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam, onOpen
     learnedQuestionsPct: 0,
     examResultsPct: 0,
     examReadiness: 0,
+    streakDays: 0,
   };
 
   const menuItems = [
@@ -87,7 +88,7 @@ export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam, onOpen
           <div className="flex items-center gap-1 rounded-full bg-card-soft px-3 py-2">
             <Flame size={14} color="#F97316" />
             <span className="text-xs font-semibold text-orange-500">
-              {t("home.streakDays", { days: 0 })}
+              {t("home.streakDays", { days: s.streakDays })}
             </span>
           </div>
         </div>
