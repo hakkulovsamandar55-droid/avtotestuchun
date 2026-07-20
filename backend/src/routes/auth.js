@@ -2,6 +2,7 @@ import { Router } from "express";
 import { prisma } from "../db.js";
 import { verifyTelegramInitData } from "../telegramAuth.js";
 import { signToken } from "../authMiddleware.js";
+import { asyncHandler } from "../asyncHandler.js";
 
 export const authRouter = Router();
 
@@ -12,7 +13,7 @@ const ADMIN_IDS = (process.env.ADMIN_TELEGRAM_IDS || "")
   .map((s) => s.trim())
   .filter(Boolean);
 
-authRouter.post("/telegram", async (req, res) => {
+authRouter.post("/telegram", asyncHandler(async (req, res) => {
   const { initData } = req.body;
 
   const result = verifyTelegramInitData(initData, process.env.BOT_TOKEN);
@@ -52,4 +53,4 @@ authRouter.post("/telegram", async (req, res) => {
       examReadiness: user.examReadiness,
     },
   });
-});
+}));

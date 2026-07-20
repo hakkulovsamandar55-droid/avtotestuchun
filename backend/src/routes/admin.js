@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../db.js";
 import { requireAuth, requireAdmin } from "../authMiddleware.js";
+import { asyncHandler } from "../asyncHandler.js";
 
 export const adminRouter = Router();
 
@@ -9,7 +10,7 @@ export const adminRouter = Router();
 adminRouter.use(requireAuth, requireAdmin);
 
 // GET /api/admin/users?query=ism-yoki-username-yoki-telefon
-adminRouter.get("/users", async (req, res) => {
+adminRouter.get("/users", asyncHandler(async (req, res) => {
   const query = (req.query.query || "").trim();
 
   const users = await prisma.user.findMany({
@@ -36,4 +37,4 @@ adminRouter.get("/users", async (req, res) => {
   });
 
   res.json({ users, count: users.length });
-});
+}));

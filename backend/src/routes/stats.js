@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../db.js";
 import { requireAuth } from "../authMiddleware.js";
+import { asyncHandler } from "../asyncHandler.js";
 
 export const statsRouter = Router();
 
@@ -10,7 +11,7 @@ statsRouter.use(requireAuth);
 const TOTAL_TICKETS = 60; // src/data/ticketsData.js dagi TOTAL_TICKETS bilan mos
 
 // POST /api/stats/attempt — bilet testi yoki imtihon yakunlanganda natijani saqlaydi
-statsRouter.post("/attempt", async (req, res) => {
+statsRouter.post("/attempt", asyncHandler(async (req, res) => {
   const { type, ticketNumber, correctCount, totalCount, passed } = req.body;
 
   if (!["TICKET", "EXAM"].includes(type)) {
@@ -41,10 +42,10 @@ statsRouter.post("/attempt", async (req, res) => {
   });
 
   res.json({ attempt });
-});
+}));
 
 // GET /api/stats/me — real statistikani hisoblab qaytaradi
-statsRouter.get("/me", async (req, res) => {
+statsRouter.get("/me", asyncHandler(async (req, res) => {
   const userId = req.auth.sub;
   const attempts = await prisma.attempt.findMany({
     where: { userId },
@@ -135,4 +136,4 @@ statsRouter.get("/me", async (req, res) => {
     masteryQualityPct,
     examResultsPct,
   });
-});
+}));

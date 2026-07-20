@@ -14,6 +14,17 @@ for (const key of ["BOT_TOKEN", "JWT_SECRET", "DATABASE_URL"]) {
   }
 }
 
+// Xavfsizlik chorasi: kutilmagan (masalan DB) xatolar butun serverni
+// qulatib qo'ymasin — buning o'rniga faqat logga yoziladi. Aks holda bitta
+// route'dagi ushlanmagan xato butun ilovani (shu jumladan Duel socket'ni)
+// to'xtatib qo'yishi mumkin edi.
+process.on("unhandledRejection", (reason) => {
+  console.error("Ushlanmagan promise xatosi:", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("Ushlanmagan xato:", err);
+});
+
 const app = express();
 app.use(cors());
 app.use(express.json());
