@@ -16,6 +16,11 @@ enum Role {
   ADMIN
 }
 
+enum AttemptType {
+  TICKET
+  EXAM
+}
+
 model User {
   id           Int      @id @default(autoincrement())
   telegramId   BigInt   @unique @map("telegram_id")
@@ -23,9 +28,29 @@ model User {
   username     String?
   phone        String?
   role         Role     @default(USER)
+  isPremium    Boolean  @default(false) @map("is_premium")
   examReadiness Int     @default(0) @map("exam_readiness")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
+  attempts     Attempt[]
 
   @@map("users")
+}
+
+// Har bir yakunlangan bilet testi yoki imtihon urinishi shu yerga yoziladi.
+// Statistika (aniqlik, streak, imtihonga tayyorgarlik) shu jadvaldan hisoblanadi.
+model Attempt {
+  id           Int         @id @default(autoincrement())
+  userId       Int         @map("user_id")
+  user         User        @relation(fields: [userId], references: [id])
+  type         AttemptType
+  ticketNumber Int?        @map("ticket_number") // TICKET uchun bilet raqami, EXAM uchun null
+  correctCount Int         @map("correct_count")
+  totalCount   Int         @map("total_count")
+  passed       Boolean
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  @@map("attempts")
+  @@index([userId])
+  @@index([userId, createdAt])
 }
