@@ -30,9 +30,6 @@ model User {
   role         Role     @default(USER)
   isPremium    Boolean  @default(false) @map("is_premium")
   examReadiness Int     @default(0) @map("exam_readiness")
-  // Foydalanuvchi Sozlamalar > Bildirishnomalar orqali yoqib/o'chiradi.
-  // Python bot (bot/ papkasi) shu ustunni o'qib, kimga eslatma yuborishni aniqlaydi.
-  notificationsEnabled Boolean @default(true) @map("notifications_enabled")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
   attempts     Attempt[]

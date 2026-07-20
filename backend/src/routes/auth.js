@@ -53,7 +53,6 @@ authRouter.post("/telegram", asyncHandler(async (req, res) => {
       role: user.role,
       isPremium: user.isPremium,
       examReadiness: user.examReadiness,
-      notificationsEnabled: user.notificationsEnabled,
     },
   });
 }));

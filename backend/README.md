@@ -73,3 +73,9 @@ har safar botga kirganda avtomatik `ADMIN` roliga o'tadi. Boshqa yo'l —
 | `/health` | GET | Server ishlayotganini tekshirish |
 | `/api/auth/telegram` | POST | `{ initData }` qabul qiladi, `{ token, user }` qaytaradi |
 | `/api/admin/users?query=...` | GET | Faqat admin, `Authorization: Bearer <token>` kerak |
+| `/api/stats/attempt` | POST | Login kerak. `{ type: "TICKET"\|"EXAM", ticketNumber?, correctCount, totalCount, passed }` — bilet testi yoki imtihon yakunlanganda natijani saqlaydi |
+| `/api/stats/me` | GET | Login kerak. Foydalanuvchining haqiqiy statistikasini (aniqlik, streak, imtihonga tayyorgarlik va h.k.) hisoblab qaytaradi |
+
+`Attempt` jadvali yangi qo'shildi — Render'dagi build command allaqachon
+`npx prisma db push` ishlatgani uchun keyingi deploy'da jadval avtomatik
+yaratiladi, qo'shimcha qadam kerak emas.

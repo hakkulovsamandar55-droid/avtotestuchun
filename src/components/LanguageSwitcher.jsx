@@ -28,11 +28,11 @@ export default function LanguageSwitcher({ variant = "row" }) {
 
   const Dropdown = () => (
     <div
-      className={`absolute z-30 mt-2 w-56 rounded-2xl overflow-hidden shadow-xl ${
+      className={`absolute z-30 mt-2 w-56 rounded-2xl overflow-hidden shadow-xl right-0 ${
         variant === "dark"
           ? "bg-[#17171F] border border-white/10"
-          : "bg-white border border-gray-100"
-      } ${variant === "dark" ? "right-0" : "right-0"}`}
+          : "bg-card border border-card-border"
+      }`}
     >
       {LANGUAGES.map(({ code, nativeKey }) => {
         const active = i18n.language === code;
@@ -43,14 +43,14 @@ export default function LanguageSwitcher({ variant = "row" }) {
             className={`w-full flex items-center justify-between px-4 py-3 text-sm text-left transition-colors ${
               variant === "dark"
                 ? "text-white/80 hover:bg-white/5"
-                : "text-gray-700 hover:bg-gray-50"
+                : "text-text-main hover:bg-card-soft"
             }`}
           >
             <span>{t(`languageNames.${nativeKey}`)}</span>
             {active && (
               <Check
                 size={16}
-                color={variant === "dark" ? "#A855F7" : "#6C5CE7"}
+                color={variant === "dark" ? "#A855F7" : "var(--accent-from)"}
               />
             )}
           </button>
@@ -78,13 +78,13 @@ export default function LanguageSwitcher({ variant = "row" }) {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center gap-3 rounded-2xl bg-white border border-gray-100 shadow-sm px-4 py-3.5 text-left"
+        className="w-full flex items-center gap-3 rounded-2xl bg-card border border-card-border shadow-sm px-4 py-3.5 text-left"
       >
-        <Globe size={18} color="#4B5563" />
-        <span className="flex-1 font-medium text-gray-900 text-sm">
+        <Globe size={18} color="var(--icon-muted)" />
+        <span className="flex-1 font-medium text-text-main text-sm">
           {t("settings.language")}
         </span>
-        <span className="text-gray-400 text-sm">{currentLabel}</span>
+        <span className="text-text-muted text-sm">{currentLabel}</span>
       </button>
       {open && <Dropdown />}
     </div>
