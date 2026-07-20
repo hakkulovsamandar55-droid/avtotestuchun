@@ -272,7 +272,7 @@ function ExamResults({ status, answers, total, timeLeft, onRetry, onReview, onEx
         <div
           className="w-40 h-40 rounded-full flex items-center justify-center"
           style={{
-            background: `conic-gradient(${config.color} ${(correctCount / total) * 100}%, rgba(255,255,255,0.08) 0)`,
+            background: `conic-gradient(${config.color} ${(correctCount / total) * 100}%, rgba(255,255,255,0.08) ${(correctCount / total) * 100}%)`,
           }}
         >
           <div className="w-32 h-32 rounded-full bg-[#0F1424] flex flex-col items-center justify-center">
