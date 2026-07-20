@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, Search, X, Save, Check } from "lucide-react";
+import { ChevronLeft, Search, X, Save, Check, ShieldCheck, ShieldOff, Crown, XCircle } from "lucide-react";
 import { ACCENT_FROM, ACCENT_TO } from "../theme";
 import { api } from "../api";
 import { DEFAULT_PREMIUM_PLANS, loadPremiumPlans, savePremiumPlans } from "../data/premiumData";
@@ -20,30 +20,119 @@ function readinessColor(percent) {
   return "#DC2626";
 }
 
-function UserRow({ user }) {
+// Kichik toggle-tugma: bosilganda tegishli backend so'rovi yuboriladi.
+// `busy` paytida bosib bo'lmaydi (ikki marta ustma-ust yuborilmasligi uchun).
+function AdminActionButton({ active, activeLabel, inactiveLabel, activeIcon: ActiveIcon, inactiveIcon: InactiveIcon, onClick, busy, disabled }) {
   return (
-    <div className="w-full flex items-center gap-3 rounded-2xl bg-card border border-card-border shadow-sm px-4 py-3.5">
-      <div
-        className="w-11 h-11 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
-        style={{ background: `linear-gradient(135deg, ${ACCENT_FROM}, ${ACCENT_TO})` }}
-      >
-        {initials(user.name)}
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-bold text-text-main text-sm truncate">{user.name}</p>
-        <p className="text-text-muted text-xs truncate">
-          {user.username ? `@${user.username}` : "—"}
-          {user.phone ? ` · ${user.phone}` : ""}
-        </p>
-      </div>
-      <div className="text-right shrink-0">
-        <span
-          className="text-xs font-bold"
-          style={{ color: readinessColor(user.examReadiness) }}
+    <button
+      onClick={onClick}
+      disabled={busy || disabled}
+      className="flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold transition-transform active:scale-[0.97] disabled:opacity-50"
+      style={
+        active
+          ? { background: "var(--bg-card-soft)", color: "var(--text-secondary)", border: "1px solid var(--border-card)" }
+          : { background: `linear-gradient(90deg, ${ACCENT_FROM}, ${ACCENT_TO})`, color: "white" }
+      }
+    >
+      {active ? <InactiveIcon size={13} /> : <ActiveIcon size={13} />}
+      {active ? inactiveLabel : activeLabel}
+    </button>
+  );
+}
+
+function UserRow({ user, onChange }) {
+  const { t } = useTranslation();
+  const [busyRole, setBusyRole] = useState(false);
+  const [busyPremium, setBusyPremium] = useState(false);
+  const [error, setError] = useState("");
+
+  const isAdmin = user.role === "ADMIN";
+
+  async function toggleRole() {
+    setError("");
+    setBusyRole(true);
+    try {
+      const nextRole = isAdmin ? "USER" : "ADMIN";
+      const { user: updated } = await api.setUserRole(user.id, nextRole);
+      onChange({ ...user, ...updated });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusyRole(false);
+    }
+  }
+
+  async function togglePremium() {
+    setError("");
+    setBusyPremium(true);
+    try {
+      const { user: updated } = await api.setUserPremium(user.id, !user.isPremium);
+      onChange({ ...user, ...updated });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusyPremium(false);
+    }
+  }
+
+  return (
+    <div className="w-full rounded-2xl bg-card border border-card-border shadow-sm px-4 py-3.5">
+      <div className="flex items-center gap-3">
+        <div
+          className="w-11 h-11 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
+          style={{ background: `linear-gradient(135deg, ${ACCENT_FROM}, ${ACCENT_TO})` }}
         >
-          {user.examReadiness}%
-        </span>
+          {initials(user.name)}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-text-main text-sm truncate flex items-center gap-1.5">
+            {user.name}
+            {isAdmin && <ShieldCheck size={13} color={ACCENT_FROM} />}
+            {user.isPremium && <Crown size={13} color="#E0A62E" />}
+          </p>
+          <p className="text-text-muted text-xs truncate">
+            {user.username ? `@${user.username}` : "—"}
+            {user.phone ? ` · ${user.phone}` : ""}
+          </p>
+        </div>
+        <div className="text-right shrink-0">
+          <span
+            className="text-xs font-bold"
+            style={{ color: readinessColor(user.examReadiness) }}
+          >
+            {user.examReadiness}%
+          </span>
+        </div>
       </div>
+
+      {user.isSuperAdmin ? (
+        <p className="text-[11px] text-text-muted mt-3 text-center">
+          {t("admin.superAdminLocked")}
+        </p>
+      ) : (
+        <div className="flex gap-2 mt-3">
+          <AdminActionButton
+            active={isAdmin}
+            activeLabel={t("admin.makeAdmin")}
+            inactiveLabel={t("admin.removeAdmin")}
+            activeIcon={ShieldCheck}
+            inactiveIcon={ShieldOff}
+            onClick={toggleRole}
+            busy={busyRole}
+          />
+          <AdminActionButton
+            active={user.isPremium}
+            activeLabel={t("admin.givePremium")}
+            inactiveLabel={t("admin.removePremium")}
+            activeIcon={Crown}
+            inactiveIcon={XCircle}
+            onClick={togglePremium}
+            busy={busyPremium}
+          />
+        </div>
+      )}
+
+      {error && <p className="text-[11px] text-red-500 mt-2 text-center">{error}</p>}
     </div>
   );
 }
@@ -140,7 +229,13 @@ export default function AdminPanelScreen({ onBack }) {
 
               <div className="space-y-2.5">
                 {users.map((user) => (
-                  <UserRow key={user.id} user={user} />
+                  <UserRow
+                    key={user.id}
+                    user={user}
+                    onChange={(updated) =>
+                      setUsers((prev) => prev.map((u) => (u.id === updated.id ? { ...u, ...updated } : u)))
+                    }
+                  />
                 ))}
                 {!loading && users.length === 0 && (
                   <p className="text-center text-text-muted text-sm mt-10">

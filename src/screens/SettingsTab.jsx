@@ -46,72 +46,113 @@ function SettingsRow({ icon: Icon, label, value, onClick }) {
   );
 }
 
-// Har bir tema uchun kichik doiraviy preview — accent rangi va fon rangidan hosil bo'ladi
-function ThemeSwatch({ item, isActive, onClick }) {
+// Light / Dark uchun katta tanlov tugmasi (mockup'dagi ikkita pill kabi)
+function ThemeModePill({ item, isActive, onClick }) {
+  const isDarkPill = item.key === "dark";
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-center gap-1.5 shrink-0"
+      className="flex-1 h-11 rounded-xl font-bold text-sm flex items-center justify-center transition-transform active:scale-[0.98]"
+      style={{
+        background: isDarkPill ? "#18181F" : "#FFFFFF",
+        color: isDarkPill ? "#FFFFFF" : "#111827",
+        border: isActive
+          ? `2px solid ${item.accentFrom}`
+          : "2px solid var(--border-card)",
+      }}
     >
-      <div
-        className="w-12 h-12 rounded-full flex items-center justify-center relative"
-        style={{
-          background: `linear-gradient(135deg, ${item.accentFrom}, ${item.accentTo})`,
-          boxShadow: isActive ? `0 0 0 2px var(--bg-app), 0 0 0 4px ${item.accentFrom}` : "none",
-        }}
-      >
-        <div
-          className="w-8 h-8 rounded-full"
-          style={{ backgroundColor: item.vars["--bg-app"] }}
-        />
-        {isActive && (
-          <span className="absolute inset-0 flex items-center justify-center">
-            <Check size={16} color={item.isDark ? "#FFFFFF" : "#111827"} strokeWidth={3} />
-          </span>
-        )}
-      </div>
-      <span className="text-[11px] font-medium text-text-muted">{item.label}</span>
+      {item.label}
     </button>
   );
 }
 
-function ThemePickerRow() {
+// Qolgan ranglar uchun ro'yxat qatori — chapda to'liq rang doirasi, o'ngda nom,
+// tanlangan bo'lsa oxirida check, premium bo'lsa toj belgisi
+function ThemeColorRow({ item, isActive, isLocked, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-3 py-2.5 active:opacity-70 transition-opacity"
+    >
+      <span
+        className="w-7 h-7 rounded-full shrink-0"
+        style={{
+          backgroundColor: item.accentFrom,
+          boxShadow: isActive ? `0 0 0 2px var(--bg-card), 0 0 0 4px ${item.accentFrom}` : "none",
+        }}
+      />
+      <span className="flex-1 text-left text-sm font-medium text-text-main">
+        {item.label}
+      </span>
+      {isLocked && <Crown size={15} color="#E0A62E" />}
+      {isActive && <Check size={17} color="var(--accent-from)" strokeWidth={3} />}
+    </button>
+  );
+}
+
+function ThemePickerRow({ isPremium }) {
   const { t } = useTranslation();
   const { themeKey, setThemeKey, themeList } = useTheme();
-  // Bosilgan swatch darhol qo'llanmaydi — avval "tanlangan" holatga o'tadi,
-  // faqat "Qo'llash" tugmasi bosilganda haqiqiy tema almashadi.
-  const [pendingKey, setPendingKey] = useState(null);
-  const displayedKey = pendingKey ?? themeKey;
-  const hasPendingChange = pendingKey !== null && pendingKey !== themeKey;
+  const [open, setOpen] = useState(false);
 
-  function applyTheme() {
-    if (pendingKey && pendingKey !== themeKey) {
-      setThemeKey(pendingKey);
+  const modePills = themeList.filter((it) => it.key === "light" || it.key === "dark");
+  const colorOptions = themeList.filter((it) => it.key !== "light" && it.key !== "dark");
+  const activeItem = themeList.find((it) => it.key === themeKey);
+
+  function choose(key, locked) {
+    if (locked) {
+      showComingSoon(t("settings.premium"));
+      return;
     }
-    setPendingKey(null);
+    setThemeKey(key);
   }
 
   return (
     <div className="w-full rounded-2xl bg-card border border-card-border shadow-sm px-4 py-3.5">
-      <p className="font-medium text-text-main text-sm mb-3">{t("settings.theme")}</p>
-      <div className="flex gap-4 overflow-x-auto pb-1 -mx-1 px-1">
-        {themeList.map((item) => (
-          <ThemeSwatch
-            key={item.key}
-            item={item}
-            isActive={item.key === displayedKey}
-            onClick={() => setPendingKey(item.key)}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between"
+      >
+        <span className="font-medium text-text-main text-sm">{t("settings.theme")}</span>
+        <span className="flex items-center gap-2">
+          <span
+            className="w-4 h-4 rounded-full"
+            style={{ backgroundColor: activeItem?.accentFrom }}
           />
-        ))}
-      </div>
-      {hasPendingChange && (
-        <button
-          onClick={applyTheme}
-          className="w-full mt-3.5 rounded-xl py-2.5 font-bold text-white text-sm active:scale-[0.98] transition-transform"
-          style={{ background: "linear-gradient(90deg, var(--accent-from), var(--accent-to))" }}
-        >
-          {t("settings.applyTheme")}
-        </button>
+          <ChevronRight
+            size={16}
+            color="var(--chevron)"
+            className="transition-transform"
+            style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)" }}
+          />
+        </span>
+      </button>
+
+      {open && (
+        <div className="mt-3.5 pt-3.5 border-t border-card-border">
+          <div className="flex gap-3">
+            {modePills.map((item) => (
+              <ThemeModePill
+                key={item.key}
+                item={item}
+                isActive={item.key === themeKey}
+                onClick={() => choose(item.key, false)}
+              />
+            ))}
+          </div>
+
+          <div className="mt-1 divide-y divide-card-border">
+            {colorOptions.map((item) => (
+              <ThemeColorRow
+                key={item.key}
+                item={item}
+                isActive={item.key === themeKey}
+                isLocked={!isPremium}
+                onClick={() => choose(item.key, !isPremium)}
+              />
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -121,6 +162,7 @@ function ThemePickerRow() {
 export default function SettingsTab({ user, onOpenAdmin, onOpenPremium }) {
   const { t } = useTranslation();
   const isAdmin = user?.role === "ADMIN";
+  const isPremium = Boolean(user?.isPremium) || isAdmin;
 
   return (
     <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-4 animate-fade-in">
@@ -146,7 +188,7 @@ export default function SettingsTab({ user, onOpenAdmin, onOpenPremium }) {
       <div className="mt-3 space-y-3">
         <PremiumRow onClick={onOpenPremium} />
         <LanguageSwitcher variant="row" />
-        <ThemePickerRow />
+        <ThemePickerRow isPremium={isPremium} />
         <SettingsRow
           icon={Bell}
           label={t("settings.notifications")}

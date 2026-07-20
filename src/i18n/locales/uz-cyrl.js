@@ -184,6 +184,11 @@ export default {
     planFeatures: "Имкониятлар (ҳар бири янги қаторда)",
     save: "Сақлаш",
     saved: "Сақланди",
+    makeAdmin: "Админ қилиш",
+    removeAdmin: "Админ ҳуқуқини олиш",
+    givePremium: "Премиум бериш",
+    removePremium: "Премиумни олиш",
+    superAdminLocked: "Бош админ — бу ердан ўзгартириб бўлмайди",
   },
   languageNames: {
     uz_latn: "O'zbekcha (lotin)",

@@ -30,15 +30,16 @@ authRouter.post("/telegram", asyncHandler(async (req, res) => {
     update: {
       name: [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" "),
       username: tgUser.username || null,
-      // Admin ro'yxatida bo'lsa, har kirishda ADMIN bo'lib turadi;
-      // aks holda mavjud rol saqlanib qoladi (avval qo'lda ADMIN qilingan bo'lsa ham buzilmaydi).
-      ...(isAdmin ? { role: "ADMIN" } : {}),
+      // Admin ro'yxatida bo'lsa, har kirishda ADMIN va Premium bo'lib turadi
+      // (barcha cheklovlar olib tashlanadi); aks holda mavjud holat saqlanadi.
+      ...(isAdmin ? { role: "ADMIN", isPremium: true } : {}),
     },
     create: {
       telegramId,
       name: [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" "),
       username: tgUser.username || null,
       role: isAdmin ? "ADMIN" : "USER",
+      isPremium: isAdmin,
     },
   });
 
@@ -50,6 +51,7 @@ authRouter.post("/telegram", asyncHandler(async (req, res) => {
       name: user.name,
       username: user.username,
       role: user.role,
+      isPremium: user.isPremium,
       examReadiness: user.examReadiness,
     },
   });

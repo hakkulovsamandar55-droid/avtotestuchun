@@ -42,6 +42,10 @@ export const api = {
     request("/api/auth/telegram", { method: "POST", body: { initData }, auth: false }),
   searchUsers: (query) =>
     request(`/api/admin/users?query=${encodeURIComponent(query)}`),
+  setUserRole: (id, role) =>
+    request(`/api/admin/users/${id}/role`, { method: "PATCH", body: { role } }),
+  setUserPremium: (id, isPremium) =>
+    request(`/api/admin/users/${id}/premium`, { method: "PATCH", body: { isPremium } }),
   recordAttempt: (attempt) =>
     request("/api/stats/attempt", { method: "POST", body: attempt }),
   getMyStats: () => request("/api/stats/me"),

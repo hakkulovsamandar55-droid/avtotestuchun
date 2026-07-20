@@ -184,6 +184,11 @@ export default {
     planFeatures: "Возможности (каждая с новой строки)",
     save: "Сохранить",
     saved: "Сохранено",
+    makeAdmin: "Сделать админом",
+    removeAdmin: "Забрать права админа",
+    givePremium: "Дать Премиум",
+    removePremium: "Забрать Премиум",
+    superAdminLocked: "Главный админ — изменить отсюда нельзя",
   },
   languageNames: {
     uz_latn: "O'zbekcha (lotin)",
