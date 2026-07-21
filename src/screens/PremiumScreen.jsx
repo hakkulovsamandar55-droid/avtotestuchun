@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, Check, Crown, Sparkles } from "lucide-react";
 import { loadPremiumPlans } from "../data/premiumData";
-import { showComingSoon } from "../api";
 import { ACCENT_FROM, ACCENT_TO } from "../theme";
 
 const PLAN_STYLE = {
@@ -27,7 +26,7 @@ const PLAN_STYLE = {
 };
 
 // Premium tariflar ekrani — Lite / Pro / VIP kartalari, ma'lumotlar admin paneldan boshqariladi
-export default function PremiumScreen({ onBack }) {
+export default function PremiumScreen({ onBack, onSelectPlan }) {
   const { t } = useTranslation();
   const [plans, setPlans] = useState([]);
 
@@ -126,11 +125,7 @@ export default function PremiumScreen({ onBack }) {
               </div>
 
               <button
-                onClick={() =>
-                  showComingSoon(
-                    t("premium.comingSoon", { name: plan.name })
-                  )
-                }
+                onClick={() => onSelectPlan?.(plan)}
                 className="w-full mt-5 rounded-2xl py-3 font-bold text-sm active:scale-[0.98] transition-transform"
                 style={{
                   background: style.buttonBg,

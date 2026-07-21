@@ -3,6 +3,7 @@ import { prisma } from "../db.js";
 import { verifyTelegramInitData } from "../telegramAuth.js";
 import { signToken } from "../authMiddleware.js";
 import { asyncHandler } from "../asyncHandler.js";
+import { logActivity, notifyAllAdmins } from "../services/activity.js";
 
 export const authRouter = Router();
 
@@ -25,11 +26,14 @@ authRouter.post("/telegram", asyncHandler(async (req, res) => {
   const telegramId = BigInt(tgUser.id);
   const isAdmin = ADMIN_IDS.includes(String(tgUser.id));
 
+  const existing = await prisma.user.findUnique({ where: { telegramId } });
+
   const user = await prisma.user.upsert({
     where: { telegramId },
     update: {
       name: [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" "),
       username: tgUser.username || null,
+      lastOnlineAt: new Date(),
       // Admin ro'yxatida bo'lsa, har kirishda ADMIN va Premium bo'lib turadi
       // (barcha cheklovlar olib tashlanadi); aks holda mavjud holat saqlanadi.
       ...(isAdmin ? { role: "ADMIN", isPremium: true } : {}),
@@ -40,8 +44,25 @@ authRouter.post("/telegram", asyncHandler(async (req, res) => {
       username: tgUser.username || null,
       role: isAdmin ? "ADMIN" : "USER",
       isPremium: isAdmin,
+      lastOnlineAt: new Date(),
     },
   });
+
+  // Bloklangan foydalanuvchi kira olmaydi
+  if (user.isBlocked) {
+    return res.status(403).json({ error: "Hisobingiz bloklangan. Yordam uchun administratorga murojaat qiling." });
+  }
+
+  if (!existing) {
+    await logActivity(user.id, "REGISTERED", "Ro'yxatdan o'tdi");
+    await notifyAllAdmins({
+      type: "NEW_REGISTRATION",
+      title: "Yangi ro'yxatdan o'tish",
+      body: user.name,
+      linkType: "user",
+      linkId: user.id,
+    });
+  }
 
   const token = signToken(user);
   res.json({
@@ -52,7 +73,10 @@ authRouter.post("/telegram", asyncHandler(async (req, res) => {
       username: user.username,
       role: user.role,
       isPremium: user.isPremium,
+      premiumPlan: user.premiumPlan,
+      premiumExpiresAt: user.premiumExpiresAt,
       examReadiness: user.examReadiness,
+      isSuperAdmin: isAdmin,
     },
   });
 }));

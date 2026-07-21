@@ -10,6 +10,8 @@ import SignsScreen from "./SignsScreen";
 import AdminPanelScreen from "./AdminPanelScreen";
 import PremiumScreen from "./PremiumScreen";
 import DuelScreen from "./DuelScreen";
+import SupportChatScreen from "./SupportChatScreen";
+import PaymentScreen from "./PaymentScreen";
 
 // 3-EKRAN: login+loading dan keyingi asosiy ilova — 3 bo'lim + pastki nav
 export default function MainApp({ user }) {
@@ -21,6 +23,8 @@ export default function MainApp({ user }) {
   const [showAdmin, setShowAdmin] = useState(false);
   const [showPremium, setShowPremium] = useState(false);
   const [showDuel, setShowDuel] = useState(false);
+  const [showSupport, setShowSupport] = useState(false);
+  const [paymentPlan, setPaymentPlan] = useState(null);
 
   if (showExam) {
     return (
@@ -31,9 +35,32 @@ export default function MainApp({ user }) {
   }
 
   if (showPremium) {
+    if (paymentPlan) {
+      return (
+        <div className="flex flex-col h-full">
+          <PaymentScreen
+            plan={paymentPlan}
+            onBack={() => setPaymentPlan(null)}
+            onOpenSupport={() => {
+              setPaymentPlan(null);
+              setShowPremium(false);
+              setShowSupport(true);
+            }}
+          />
+        </div>
+      );
+    }
     return (
       <div className="flex flex-col h-full">
-        <PremiumScreen onBack={() => setShowPremium(false)} />
+        <PremiumScreen onBack={() => setShowPremium(false)} onSelectPlan={setPaymentPlan} />
+      </div>
+    );
+  }
+
+  if (showSupport) {
+    return (
+      <div className="flex flex-col h-full">
+        <SupportChatScreen onBack={() => setShowSupport(false)} />
       </div>
     );
   }
@@ -79,7 +106,11 @@ export default function MainApp({ user }) {
   if (showAdmin) {
     return (
       <div className="flex flex-col h-full">
-        <AdminPanelScreen onBack={() => setShowAdmin(false)} />
+        <AdminPanelScreen
+          onBack={() => setShowAdmin(false)}
+          currentUserId={user?.id}
+          isSuperAdmin={Boolean(user?.isSuperAdmin)}
+        />
       </div>
     );
   }
@@ -101,6 +132,7 @@ export default function MainApp({ user }) {
           user={user}
           onOpenAdmin={() => setShowAdmin(true)}
           onOpenPremium={() => setShowPremium(true)}
+          onOpenSupport={() => setShowSupport(true)}
         />
       )}
       <BottomNav active={active} setActive={setActive} />

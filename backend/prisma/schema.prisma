@@ -21,20 +21,107 @@ enum AttemptType {
   EXAM
 }
 
+enum ConversationStatus {
+  OPEN
+  CLOSED
+}
+
+enum SenderType {
+  USER
+  ADMIN
+}
+
+// PENDING — OCR bosqichidan o'tdi (ogohlantirish bilan yoki yo'q), admin tekshiruvini kutmoqda.
+// Faollashtirish HAR DOIM admin tasdig'i orqali — OCR hech qachon o'zi APPROVED qilmaydi.
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum NotificationType {
+  SUPPORT_MESSAGE
+  PAYMENT_REQUEST
+  PREMIUM_EXPIRING
+  NEW_REGISTRATION
+}
+
+// User Profile'dagi vertikal timeline shu turlardan quriladi
+enum ActivityType {
+  REGISTERED
+  TEST_COMPLETED
+  PREMIUM_GRANTED
+  PREMIUM_EXTENDED
+  PREMIUM_EXPIRED
+  DISCOUNT_GRANTED
+  PAYMENT_SUBMITTED
+  PAYMENT_APPROVED
+  PAYMENT_REJECTED
+  SUPPORT_MESSAGE
+  BLOCKED
+  UNBLOCKED
+  MADE_ADMIN
+  REMOVED_ADMIN
+}
+
+// Har bir admin amali shu yerga yoziladi — kim, nimani, kimga qildi
+enum AdminLogAction {
+  PREMIUM_GRANTED
+  PREMIUM_REMOVED
+  PREMIUM_EXTENDED
+  DISCOUNT_GRANTED
+  DISCOUNT_REMOVED
+  USER_BLOCKED
+  USER_UNBLOCKED
+  ADMIN_GRANTED
+  ADMIN_REMOVED
+  ACCOUNT_DELETED
+  PAYMENT_APPROVED
+  PAYMENT_REJECTED
+  SUPPORT_REPLIED
+  SUPPORT_CLOSED
+  SUPPORT_REOPENED
+  BROADCAST_SENT
+}
+
+enum BroadcastAudience {
+  ALL
+  PREMIUM
+  VIP
+  BLOCKED
+  SELECTED
+}
+
 model User {
-  id           Int      @id @default(autoincrement())
-  telegramId   BigInt   @unique @map("telegram_id")
-  name         String
-  username     String?
-  phone        String?
-  role         Role     @default(USER)
-  isPremium    Boolean  @default(false) @map("is_premium")
-  examReadiness Int     @default(0) @map("exam_readiness")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-  attempts     Attempt[]
+  id            Int      @id @default(autoincrement())
+  telegramId    BigInt   @unique @map("telegram_id")
+  name          String
+  username      String?
+  phone         String?
+  role          Role     @default(USER)
+  isPremium     Boolean  @default(false) @map("is_premium")
+  premiumPlan   String?   @map("premium_plan")
+  premiumStartedAt DateTime? @map("premium_started_at")
+  premiumExpiresAt DateTime? @map("premium_expires_at")
+  examReadiness Int      @default(0) @map("exam_readiness")
+  isBlocked     Boolean  @default(false) @map("is_blocked")
+  blockedReason String?  @map("blocked_reason")
+  lastOnlineAt  DateTime? @map("last_online_at")
+  avatarUrl     String?  @map("avatar_url")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  attempts      Attempt[]
+
+  conversation      Conversation?
+  paymentRequests    PaymentRequest[]
+  discount           Discount?
+  activities          ActivityLog[]
+  adminActionsTaken   AdminLog[] @relation("AdminActor")
+  notifications       Notification[]
 
   @@map("users")
+  @@index([isPremium])
+  @@index([isBlocked])
 }
 
 // Har bir yakunlangan bilet testi yoki imtihon urinishi shu yerga yoziladi.
@@ -53,4 +140,136 @@ model Attempt {
   @@map("attempts")
   @@index([userId])
   @@index([userId, createdAt])
+}
+
+// Har bir foydalanuvchi bittagina suhbat "tredi"ga ega (real vaqt chat kabi),
+// ichida ko'p SupportMessage bo'ladi — ro'yxat va qidiruv shu orqali sodda bo'ladi.
+model Conversation {
+  id             Int                @id @default(autoincrement())
+  userId         Int                @unique @map("user_id")
+  user           User               @relation(fields: [userId], references: [id])
+  status         ConversationStatus @default(OPEN)
+  unreadForAdmin Int                @default(0) @map("unread_for_admin")
+  unreadForUser  Int                @default(0) @map("unread_for_user")
+  lastMessageAt  DateTime?          @map("last_message_at")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  messages       SupportMessage[]
+
+  @@map("conversations")
+  @@index([status, lastMessageAt])
+}
+
+model SupportMessage {
+  id             Int          @id @default(autoincrement())
+  conversationId Int          @map("conversation_id")
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  sender         SenderType
+  text           String?
+  imageUrl       String?      @map("image_url")
+  isRead         Boolean      @default(false) @map("is_read")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@map("support_messages")
+  @@index([conversationId, createdAt])
+}
+
+// Har bir chek yuklash shu yerga yoziladi. OCR ma'lumotlari saqlanadi va
+// admin ko'rib chiqishini tezlashtiradi, lekin ular hech qachon avtomatik
+// tasdiqlashga olib kelmaydi — status har doim admin qarori bilan o'zgaradi.
+model PaymentRequest {
+  id              Int           @id @default(autoincrement())
+  userId          Int           @map("user_id")
+  user            User          @relation(fields: [userId], references: [id])
+  planKey         String        @map("plan_key")
+  planName        String        @map("plan_name")
+  amount          Int
+  originalAmount  Int           @map("original_amount")
+  discountPercent Int           @default(0) @map("discount_percent")
+  receiptImageUrl String        @map("receipt_image_url")
+  receiptHash     String        @map("receipt_hash")
+  status          PaymentStatus @default(PENDING)
+
+  ocrExtractedText   String?   @map("ocr_extracted_text")
+  ocrExtractedAmount Int?      @map("ocr_extracted_amount")
+  ocrExtractedCard   String?   @map("ocr_extracted_card")
+  ocrExtractedDate   DateTime? @map("ocr_extracted_date")
+  ocrWarnings        String?   @map("ocr_warnings")
+  ocrConfidence      Int?      @map("ocr_confidence")
+
+  rejectionReason String?   @map("rejection_reason")
+  reviewedById    Int?      @map("reviewed_by_id")
+  reviewedAt      DateTime? @map("reviewed_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@map("payment_requests")
+  @@index([status, ocrConfidence])
+  @@index([receiptHash])
+  @@index([userId])
+}
+
+model Discount {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @unique @map("user_id")
+  user      User      @relation(fields: [userId], references: [id])
+  percent   Int
+  expiresAt DateTime? @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@map("discounts")
+}
+
+model ActivityLog {
+  id        Int          @id @default(autoincrement())
+  userId    Int          @map("user_id")
+  user      User         @relation(fields: [userId], references: [id])
+  type      ActivityType
+  message   String
+  metadata  String?
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  @@map("activity_logs")
+  @@index([userId, createdAt])
+}
+
+model AdminLog {
+  id           Int            @id @default(autoincrement())
+  actorId      Int            @map("actor_id")
+  actor        User           @relation("AdminActor", fields: [actorId], references: [id])
+  action       AdminLogAction
+  targetUserId Int?           @map("target_user_id")
+  targetLabel  String?        @map("target_label")
+  details      String?
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  @@map("admin_logs")
+  @@index([createdAt])
+  @@index([actorId])
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  userId    Int              @map("user_id")
+  user      User             @relation(fields: [userId], references: [id])
+  type      NotificationType
+  title     String
+  body      String?
+  isRead    Boolean          @default(false) @map("is_read")
+  linkType  String?          @map("link_type")
+  linkId    Int?             @map("link_id")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  @@map("notifications")
+  @@index([userId, isRead])
+}
+
+model BroadcastMessage {
+  id        Int               @id @default(autoincrement())
+  text      String
+  audience  BroadcastAudience
+  sentCount Int               @default(0) @map("sent_count")
+  createdAt DateTime          @default(now()) @map("created_at")
+
+  @@map("broadcast_messages")
 }

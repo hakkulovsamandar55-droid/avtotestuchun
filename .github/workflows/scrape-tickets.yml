@@ -1,0 +1,49 @@
+name: Bilet scraping (test-avto.uz)
+
+# Faqat qo'lda ishga tushiriladi — GitHub'da "Actions" bo'limidan
+# "Run workflow" tugmasi orqali. Kompyuteringiz o'chiq bo'lsa ham
+# GitHub'ning o'z serverida davom etadi.
+on:
+  workflow_dispatch:
+    inputs:
+      start:
+        description: "Boshlanadigan bilet raqami"
+        required: false
+        default: "1"
+      end:
+        description: "Tugaydigan bilet raqami"
+        required: false
+        default: "122"
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    # 122 ta bilet * 10 savol ancha vaqt olishi mumkin (taxminan 1-2 soat) —
+    # GitHub'ning standart runnerlarida bir ishga 6 soatgacha vaqt bor.
+    timeout-minutes: 240
+
+    steps:
+      - name: Kodni olish
+        uses: actions/checkout@v4
+
+      - name: Python o'rnatish
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Scraping ishga tushirish
+        working-directory: scripts
+        run: |
+          chmod +x scrape_avtotest.sh make_pdf.sh
+          ./scrape_avtotest.sh "${{ inputs.start }}" "${{ inputs.end }}"
+
+      - name: PDF yasash
+        working-directory: scripts
+        run: ./make_pdf.sh
+
+      - name: Natijalarni saqlash (yuklab olish uchun)
+        uses: actions/upload-artifact@v4
+        with:
+          name: avtotest-natijalar
+          path: scripts/output/
+          retention-days: 14

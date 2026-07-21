@@ -1,9 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, Search, X, Save, Check, ShieldCheck, ShieldOff, Crown, XCircle } from "lucide-react";
+import { ChevronLeft, Search, X, Save, Check, ShieldCheck, Crown } from "lucide-react";
 import { ACCENT_FROM, ACCENT_TO } from "../theme";
 import { api } from "../api";
 import { DEFAULT_PREMIUM_PLANS, loadPremiumPlans, savePremiumPlans } from "../data/premiumData";
+import UserProfileScreen from "./admin/UserProfileScreen";
+import AdminSupportTab from "./admin/AdminSupportTab";
+import AdminPaymentsTab from "./admin/AdminPaymentsTab";
+import AdminBroadcastTab from "./admin/AdminBroadcastTab";
+import AdminLogTab from "./admin/AdminLogTab";
+import NotificationsBell from "./admin/NotificationsBell";
 
 function initials(name) {
   return (name || "?")
@@ -20,131 +26,50 @@ function readinessColor(percent) {
   return "#DC2626";
 }
 
-// Kichik toggle-tugma: bosilganda tegishli backend so'rovi yuboriladi.
-// `busy` paytida bosib bo'lmaydi (ikki marta ustma-ust yuborilmasligi uchun).
-function AdminActionButton({ active, activeLabel, inactiveLabel, activeIcon: ActiveIcon, inactiveIcon: InactiveIcon, onClick, busy, disabled }) {
+// Spec 2-bo'lim: to'g'ridan-to'g'ri harakat tugmalari olib tashlandi —
+// qatorni bosish endi to'liq User Profile sahifasini ochadi.
+function UserRow({ user, onClick }) {
   return (
     <button
       onClick={onClick}
-      disabled={busy || disabled}
-      className="flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold transition-transform active:scale-[0.97] disabled:opacity-50"
-      style={
-        active
-          ? { background: "var(--bg-card-soft)", color: "var(--text-secondary)", border: "1px solid var(--border-card)" }
-          : { background: `linear-gradient(90deg, ${ACCENT_FROM}, ${ACCENT_TO})`, color: "white" }
-      }
+      className="w-full flex items-center gap-3 rounded-2xl bg-card border border-card-border shadow-sm px-4 py-3.5 text-left active:scale-[0.99] transition-transform"
     >
-      {active ? <InactiveIcon size={13} /> : <ActiveIcon size={13} />}
-      {active ? inactiveLabel : activeLabel}
+      <div
+        className="w-11 h-11 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
+        style={{ background: `linear-gradient(135deg, ${ACCENT_FROM}, ${ACCENT_TO})` }}
+      >
+        {initials(user.name)}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-bold text-text-main text-sm truncate flex items-center gap-1.5">
+          {user.name}
+          {user.role === "ADMIN" && <ShieldCheck size={13} color={ACCENT_FROM} />}
+          {user.isPremium && <Crown size={13} color="#E0A62E" />}
+        </p>
+        <p className="text-text-muted text-xs truncate">
+          {user.username ? `@${user.username}` : "—"}
+          {user.phone ? ` · ${user.phone}` : ""}
+        </p>
+      </div>
+      <div className="text-right shrink-0">
+        <span className="text-xs font-bold" style={{ color: readinessColor(user.examReadiness) }}>
+          {user.examReadiness}%
+        </span>
+      </div>
     </button>
   );
 }
 
-function UserRow({ user, onChange }) {
+// Admin panel — foydalanuvchilar, premium tariflar, qo'llab-quvvatlash, to'lovlar,
+// ommaviy xabar va admin jurnali. Foydalanuvchi qatorini bosish to'liq profilni ochadi.
+export default function AdminPanelScreen({ onBack, currentUserId, isSuperAdmin }) {
   const { t } = useTranslation();
-  const [busyRole, setBusyRole] = useState(false);
-  const [busyPremium, setBusyPremium] = useState(false);
-  const [error, setError] = useState("");
-
-  const isAdmin = user.role === "ADMIN";
-
-  async function toggleRole() {
-    setError("");
-    setBusyRole(true);
-    try {
-      const nextRole = isAdmin ? "USER" : "ADMIN";
-      const { user: updated } = await api.setUserRole(user.id, nextRole);
-      onChange({ ...user, ...updated });
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusyRole(false);
-    }
-  }
-
-  async function togglePremium() {
-    setError("");
-    setBusyPremium(true);
-    try {
-      const { user: updated } = await api.setUserPremium(user.id, !user.isPremium);
-      onChange({ ...user, ...updated });
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusyPremium(false);
-    }
-  }
-
-  return (
-    <div className="w-full rounded-2xl bg-card border border-card-border shadow-sm px-4 py-3.5">
-      <div className="flex items-center gap-3">
-        <div
-          className="w-11 h-11 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
-          style={{ background: `linear-gradient(135deg, ${ACCENT_FROM}, ${ACCENT_TO})` }}
-        >
-          {initials(user.name)}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-text-main text-sm truncate flex items-center gap-1.5">
-            {user.name}
-            {isAdmin && <ShieldCheck size={13} color={ACCENT_FROM} />}
-            {user.isPremium && <Crown size={13} color="#E0A62E" />}
-          </p>
-          <p className="text-text-muted text-xs truncate">
-            {user.username ? `@${user.username}` : "—"}
-            {user.phone ? ` · ${user.phone}` : ""}
-          </p>
-        </div>
-        <div className="text-right shrink-0">
-          <span
-            className="text-xs font-bold"
-            style={{ color: readinessColor(user.examReadiness) }}
-          >
-            {user.examReadiness}%
-          </span>
-        </div>
-      </div>
-
-      {user.isSuperAdmin ? (
-        <p className="text-[11px] text-text-muted mt-3 text-center">
-          {t("admin.superAdminLocked")}
-        </p>
-      ) : (
-        <div className="flex gap-2 mt-3">
-          <AdminActionButton
-            active={isAdmin}
-            activeLabel={t("admin.makeAdmin")}
-            inactiveLabel={t("admin.removeAdmin")}
-            activeIcon={ShieldCheck}
-            inactiveIcon={ShieldOff}
-            onClick={toggleRole}
-            busy={busyRole}
-          />
-          <AdminActionButton
-            active={user.isPremium}
-            activeLabel={t("admin.givePremium")}
-            inactiveLabel={t("admin.removePremium")}
-            activeIcon={Crown}
-            inactiveIcon={XCircle}
-            onClick={togglePremium}
-            busy={busyPremium}
-          />
-        </div>
-      )}
-
-      {error && <p className="text-[11px] text-red-500 mt-2 text-center">{error}</p>}
-    </div>
-  );
-}
-
-// Admin panel — foydalanuvchilarni haqiqiy backenddan qidirish + Premium tariflarni boshqarish
-export default function AdminPanelScreen({ onBack }) {
-  const { t } = useTranslation();
-  const [tab, setTab] = useState("users"); // users | premium
+  const [tab, setTab] = useState("users"); // users | premium | support | payments | broadcast | logs
   const [query, setQuery] = useState("");
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [profileUserId, setProfileUserId] = useState(null);
 
   useEffect(() => {
     if (tab !== "users") return;
@@ -161,6 +86,33 @@ export default function AdminPanelScreen({ onBack }) {
     return () => clearTimeout(handle);
   }, [query, tab]);
 
+  // Bildirishnomadan bosilganda mos ekranni ochish (masalan to'lov -> to'lovlar tabi)
+  function handleNotificationLink(linkType, linkId) {
+    if (linkType === "user") {
+      setProfileUserId(linkId);
+    } else if (linkType === "payment") {
+      setTab("payments");
+    } else if (linkType === "conversation") {
+      setTab("support");
+    }
+  }
+
+  if (profileUserId != null) {
+    return (
+      <UserProfileScreen
+        userId={profileUserId}
+        onBack={() => setProfileUserId(null)}
+        onOpenChat={() => {
+          setProfileUserId(null);
+          setTab("support");
+        }}
+        isSuperAdmin={isSuperAdmin}
+      />
+    );
+  }
+
+  const TABS = ["users", "premium", "support", "payments", "broadcast", "logs"];
+
   return (
     <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-6 bg-app min-h-full animate-slide-in">
       <div className="flex items-center gap-3 mb-4">
@@ -170,20 +122,21 @@ export default function AdminPanelScreen({ onBack }) {
         >
           <ChevronLeft size={20} color="var(--icon-muted)" />
         </button>
-        <h1 className="text-xl font-extrabold text-text-main">{t("admin.title")}</h1>
+        <h1 className="text-xl font-extrabold text-text-main flex-1">{t("admin.title")}</h1>
+        <NotificationsBell onOpenLink={handleNotificationLink} />
       </div>
 
-      {/* Tab almashtirgich */}
-      <div className="flex gap-2 mb-4 bg-card border border-card-border rounded-2xl p-1 shadow-sm">
-        {["users", "premium"].map((key) => (
+      {/* Tab almashtirgich — 6 ta bo'lim bo'lgani uchun gorizontal skroll */}
+      <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1 -mx-1 px-1">
+        {TABS.map((key) => (
           <button
             key={key}
             onClick={() => setTab(key)}
-            className="flex-1 rounded-xl py-2 text-sm font-semibold transition-colors"
+            className="shrink-0 rounded-xl px-3.5 py-2 text-xs font-semibold transition-colors whitespace-nowrap"
             style={
               tab === key
                 ? { background: `linear-gradient(90deg, ${ACCENT_FROM}, ${ACCENT_TO})`, color: "white" }
-                : { color: "#6B7280" }
+                : { background: "var(--bg-card-soft)", color: "var(--text-secondary)", border: "1px solid var(--border-card)" }
             }
           >
             {t(`admin.tab.${key}`)}
@@ -232,9 +185,7 @@ export default function AdminPanelScreen({ onBack }) {
                   <UserRow
                     key={user.id}
                     user={user}
-                    onChange={(updated) =>
-                      setUsers((prev) => prev.map((u) => (u.id === updated.id ? { ...u, ...updated } : u)))
-                    }
+                    onClick={() => setProfileUserId(user.id)}
                   />
                 ))}
                 {!loading && users.length === 0 && (
@@ -249,6 +200,10 @@ export default function AdminPanelScreen({ onBack }) {
       )}
 
       {tab === "premium" && <PremiumEditor />}
+      {tab === "support" && <AdminSupportTab onOpenProfile={setProfileUserId} />}
+      {tab === "payments" && <AdminPaymentsTab />}
+      {tab === "broadcast" && <AdminBroadcastTab />}
+      {tab === "logs" && <AdminLogTab />}
     </div>
   );
 }

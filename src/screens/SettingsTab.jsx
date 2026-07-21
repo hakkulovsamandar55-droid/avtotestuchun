@@ -159,7 +159,7 @@ function ThemePickerRow({ isPremium }) {
 }
 
 // 3c-EKRAN: "Sozlamalar" bo'limi
-export default function SettingsTab({ user, onOpenAdmin, onOpenPremium }) {
+export default function SettingsTab({ user, onOpenAdmin, onOpenPremium, onOpenSupport }) {
   const { t } = useTranslation();
   const isAdmin = user?.role === "ADMIN";
   const isPremium = Boolean(user?.isPremium) || isAdmin;
@@ -192,7 +192,7 @@ export default function SettingsTab({ user, onOpenAdmin, onOpenPremium }) {
         <SettingsRow
           icon={HelpCircle}
           label={t("settings.support")}
-          onClick={() => showComingSoon(t("settings.supportComingSoon"))}
+          onClick={onOpenSupport}
         />
       </div>
 
