@@ -70,7 +70,6 @@ enum ActivityType {
   SCHOOL_DISABLED
   SCHOOL_DELETED
 }
-}
 
 // Har bir admin amali shu yerga yoziladi — kim, nimani, kimga qildi
 enum AdminLogAction {
@@ -555,47 +554,4 @@ model Invitation {
 model Homework {
   id       Int          @id @default(autoincrement())
   schoolId Int          @map("school_id")
-  school   School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  groupId  Int          @map("group_id") // homework har doim guruhga tayinlanadi
-  group    Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
-
-  createdById Int       @map("created_by_id") // o'qituvchi
-  title    String
-  type     HomeworkType
-
-  // Turi bo'yicha qo'shimcha parametrlar — JSON, chunki har xil turda har xil
-  // shakl kerak (masalan TICKETS uchun bilet raqamlari ro'yxati, SIGNS uchun
-  // belgi kodlari). Alohida jadval yaratish ortiqcha murakkablik bo'lardi.
-  params   String       @default("{}")
-
-  minScore Int?         @map("min_score") // masalan 80 (%) — ixtiyoriy
-  deadline DateTime
-
-  createdAt DateTime    @default(now()) @map("created_at")
-
-  submissions HomeworkSubmission[]
-
-  @@map("school_homeworks")
-  @@index([groupId])
-  @@index([schoolId, deadline])
-}
-
-model HomeworkSubmission {
-  id           Int                       @id @default(autoincrement())
-  homeworkId   Int                       @map("homework_id")
-  homework     Homework                  @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
-  membershipId Int                       @map("membership_id") // talabaning shu maktabdagi a'zoligi
-  membership   Membership                @relation(fields: [membershipId], references: [id], onDelete: Cascade)
-
-  status       HomeworkSubmissionStatus  @default(PENDING)
-  score        Int?                      // % — mos keladigan Attempt/ExamAttempt dan olinadi
-  attemptId    Int?                      @map("attempt_id") // mashq: Attempt.id ga bog'lanish (ixtiyoriy, izlash uchun)
-  examAttemptId Int?                     @map("exam_attempt_id") // rasmiy imtihon: ExamAttempt.id ga bog'lanish
-
-  completedAt  DateTime?                 @map("completed_at")
-  createdAt    DateTime                  @default(now()) @map("created_at")
-
-  @@map("school_homework_submissions")
-  @@unique([homeworkId, membershipId]) // bitta talaba uchun bitta homework = bitta submission yozuvi
-  @@index([membershipId, status])
-}
+  school   School       @relation(fiel
