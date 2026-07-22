@@ -64,6 +64,12 @@ enum ActivityType {
   REMOVED_ADMIN
   REFERRAL_JOINED
   REFERRAL_REWARD_GIVEN
+  SCHOOL_CREATED
+  SCHOOL_JOINED
+  SCHOOL_APPROVED
+  SCHOOL_DISABLED
+  SCHOOL_DELETED
+}
 }
 
 // Har bir admin amali shu yerga yoziladi — kim, nimani, kimga qildi
