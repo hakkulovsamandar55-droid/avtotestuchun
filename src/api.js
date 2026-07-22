@@ -70,8 +70,12 @@ export function resolveUploadUrl(relativeUrl) {
 export const api = {
   loginWithTelegram: (initData) =>
     request("/api/auth/telegram", { method: "POST", body: { initData }, auth: false }),
-  searchUsers: (query) =>
-    request(`/api/admin/users?query=${encodeURIComponent(query)}`),
+  searchUsers: (query, filters = []) => {
+    const params = new URLSearchParams();
+    if (query) params.set("query", query);
+    if (filters.length > 0) params.set("filters", filters.join(","));
+    return request(`/api/admin/users?${params.toString()}`);
+  },
   setUserRole: (id, role) =>
     request(`/api/admin/users/${id}/role`, { method: "PATCH", body: { role } }),
   setUserPremium: (id, isPremium, extra = {}) =>
@@ -82,6 +86,8 @@ export const api = {
     request(`/api/admin/users/${id}/block`, { method: "PATCH", body: { blocked, reason } }),
   deleteUser: (id) => request(`/api/admin/users/${id}`, { method: "DELETE" }),
   getUserProfile: (id) => request(`/api/admin/users/${id}/profile`),
+  setUserNotes: (id, notes) =>
+    request(`/api/admin/users/${id}/notes`, { method: "PATCH", body: { notes } }),
   setUserDiscount: (id, percent, expiresAt) =>
     request(`/api/admin/users/${id}/discount`, { method: "PATCH", body: { percent, expiresAt } }),
   removeUserDiscount: (id) => request(`/api/admin/users/${id}/discount`, { method: "DELETE" }),
@@ -118,6 +124,9 @@ export const api = {
 
   // To'lovlar — admin
   getPayments: (status) => request(`/api/admin/payments${status ? `?status=${status}` : ""}`),
+  getPaymentSettings: () => request("/api/admin/payments/settings"),
+  updatePaymentSettings: (cardNumber, cardOwner) =>
+    request("/api/admin/payments/settings", { method: "PATCH", body: { cardNumber, cardOwner } }),
   approvePayment: (id) => request(`/api/admin/payments/${id}/approve`, { method: "POST" }),
   rejectPayment: (id, reason) =>
     request(`/api/admin/payments/${id}/reject`, { method: "POST", body: { reason } }),

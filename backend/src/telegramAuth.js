@@ -49,5 +49,9 @@ export function verifyTelegramInitData(initData, botToken, maxAgeSeconds = 86400
     return { ok: false, reason: "foydalanuvchi ma'lumoti yo'q" };
   }
 
-  return { ok: true, user };
+  // Telegram referral havolasi orqali ochilgan bo'lsa (t.me/bot/app?startapp=KOD),
+  // bu qiymat shu yerda keladi — ro'yxatdan o'tishda taklif qiluvchini aniqlash uchun.
+  const startParam = params.get("start_param") || null;
+
+  return { ok: true, user, startParam };
 }

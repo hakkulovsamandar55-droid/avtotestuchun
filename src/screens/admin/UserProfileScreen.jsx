@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ChevronLeft, ShieldCheck, ShieldOff, Crown, XCircle, Ban, CheckCircle2,
-  MessageCircle, Trash2, Percent, Clock, CreditCard,
+  MessageCircle, Trash2, Percent, Clock, CreditCard, Check,
 } from "lucide-react";
 import { ACCENT_FROM, ACCENT_TO } from "../../theme";
 import { api } from "../../api";
@@ -15,6 +15,53 @@ function initials(name) {
 function fmtDate(iso) {
   if (!iso) return "—";
   return new Date(iso).toLocaleDateString();
+}
+
+// Faqat adminlar ko'radigan shaxsiy eslatma — foydalanuvchiga hech qachon ko'rsatilmaydi.
+// Alohida "Saqlash" tugmasi bilan (har harfda so'rov yubormaslik uchun).
+function AdminNotesBox({ userId, initialNotes }) {
+  const { t } = useTranslation();
+  const [notes, setNotes] = useState(initialNotes || "");
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  async function handleSave() {
+    setBusy(true);
+    try {
+      await api.setUserNotes(userId, notes);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1500);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl bg-card border border-card-border shadow-sm p-4 mb-3">
+      <textarea
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        placeholder={t("admin.profile.notesPlaceholder")}
+        rows={3}
+        className="w-full rounded-xl border border-card-border bg-card-soft text-text-main px-3 py-2.5 text-xs outline-none focus:border-gray-400 resize-none mb-2"
+      />
+      <div className="flex items-center justify-between">
+        {saved ? (
+          <span className="text-green-600 text-[11px] font-semibold flex items-center gap-1">
+            <Check size={12} /> {t("admin.saved")}
+          </span>
+        ) : <span />}
+        <button
+          onClick={handleSave}
+          disabled={busy}
+          className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+          style={{ background: `linear-gradient(90deg, ${ACCENT_FROM}, ${ACCENT_TO})` }}
+        >
+          {t("admin.save")}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function StatCell({ label, value, color }) {
@@ -74,6 +121,8 @@ const TIMELINE_ICONS = {
   UNBLOCKED: "🔓",
   MADE_ADMIN: "🛡️",
   REMOVED_ADMIN: "🛡️",
+  REFERRAL_JOINED: "🤝",
+  REFERRAL_REWARD_GIVEN: "🎁",
 };
 
 // Admin tomoni: bitta foydalanuvchining to'liq profili — umumiy, statistika,
@@ -114,7 +163,7 @@ export default function UserProfileScreen({ userId, onBack, onOpenChat, isSuperA
     );
   }
 
-  const { general, statistics, premium, discount, payments, timeline } = profile;
+  const { general, statistics, premium, discount, referral, payments, timeline } = profile;
   const isAdmin = general.role === "ADMIN";
 
   return (
@@ -211,6 +260,27 @@ export default function UserProfileScreen({ userId, onBack, onOpenChat, isSuperA
         )}
       </div>
 
+      {/* REFERRAL */}
+      <p className="text-text-muted text-xs font-semibold uppercase tracking-wide mb-2 ml-1">{t("admin.profile.referralTitle")}</p>
+      <div className="rounded-2xl bg-card border border-card-border shadow-sm p-4 mb-3">
+        <InfoRow label={t("admin.profile.referralCode")} value={referral.code || "—"} />
+        <InfoRow
+          label={t("admin.profile.referredBy")}
+          value={referral.referredBy ? `${referral.referredBy.name}${referral.referredBy.username ? ` (@${referral.referredBy.username})` : ""}` : t("admin.profile.noReferrer")}
+        />
+        <InfoRow label={t("admin.profile.referralsCount")} value={referral.referralsCount} />
+        {referral.referrals.length > 0 && (
+          <div className="mt-2 pt-2 border-t border-card-border space-y-1.5">
+            {referral.referrals.map((r) => (
+              <div key={r.id} className="flex items-center justify-between">
+                <span className="text-text-main text-xs truncate">{r.name}{r.username ? ` (@${r.username})` : ""}</span>
+                {r.isPremium && <Crown size={12} color="#E0A62E" className="shrink-0" />}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* HARAKAT TUGMALARI */}
       <p className="text-text-muted text-xs font-semibold uppercase tracking-wide mb-2 ml-1">Amallar</p>
       {general.isSuperAdmin ? (
@@ -304,6 +374,10 @@ export default function UserProfileScreen({ userId, onBack, onOpenChat, isSuperA
       )}
 
       {error && <p className="text-red-500 text-xs text-center mb-4">{error}</p>}
+
+      {/* ADMIN NOTES */}
+      <p className="text-text-muted text-xs font-semibold uppercase tracking-wide mb-2 ml-1">{t("admin.profile.notesTitle")}</p>
+      <AdminNotesBox userId={userId} initialNotes={general.adminNotes} />
 
       {/* TIMELINE */}
       <p className="text-text-muted text-xs font-semibold uppercase tracking-wide mb-2 ml-1">{t("admin.profile.timelineTitle")}</p>

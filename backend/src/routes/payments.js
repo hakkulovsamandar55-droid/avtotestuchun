@@ -16,6 +16,24 @@ function planPrice(planKey) {
   return Number(String(plan.price).replace(/\D/g, ""));
 }
 
+// Karta ma'lumotlari endi .env emas, DB orqali boshqariladi — admin panelda
+// istalgan vaqt o'zgartiriladi, deploy shart emas. Birinchi so'rovda hali
+// sozlanmagan bo'lsa, .env dagi eski qiymatlar (agar bo'lsa) boshlang'ich
+// qiymat sifatida ishlatiladi — aks holda bo'sh qatorlar bilan yaratiladi.
+async function getPaymentSettings() {
+  let settings = await prisma.paymentSettings.findUnique({ where: { id: 1 } });
+  if (!settings) {
+    settings = await prisma.paymentSettings.create({
+      data: {
+        id: 1,
+        cardNumber: process.env.ADMIN_CARD_DISPLAY || process.env.ADMIN_CARD_NUMBERS?.split(",")[0] || "",
+        cardOwner: process.env.ADMIN_CARD_OWNER || "",
+      },
+    });
+  }
+  return settings;
+}
+
 function serializePayment(p) {
   return {
     id: p.id,
@@ -44,10 +62,8 @@ function serializePayment(p) {
 
 // GET /api/payments/card-info — admin karta ma'lumotlari (to'lov qilishdan oldin ko'rsatiladi)
 paymentsRouter.get("/card-info", requireAuth, asyncHandler(async (_req, res) => {
-  res.json({
-    cardNumber: process.env.ADMIN_CARD_DISPLAY || process.env.ADMIN_CARD_NUMBERS?.split(",")[0] || "",
-    cardOwner: process.env.ADMIN_CARD_OWNER || "",
-  });
+  const settings = await getPaymentSettings();
+  res.json({ cardNumber: settings.cardNumber, cardOwner: settings.cardOwner });
 }));
 
 // GET /api/payments/plan-price/:planKey — chegirma hisobga olingan yakuniy narx
@@ -104,8 +120,10 @@ paymentsRouter.post("/submit", requireAuth, uploadImage.single("receipt"), async
   const baseAmount = planPrice(planKey) ?? 0;
   const finalAmount = Math.round(baseAmount * (1 - discountPercent / 100));
 
+  const paymentSettings = await getPaymentSettings();
+
   // OCR — faqat ma'lumot ajratish + ogohlantirish, tasdiqlash EMAS (services/receiptOcr.js ga qarang)
-  const ocr = await analyzeReceipt(filePath, { expectedAmount: finalAmount });
+  const ocr = await analyzeReceipt(filePath, { expectedAmount: finalAmount, adminCardNumber: paymentSettings.cardNumber });
 
   const payment = await prisma.paymentRequest.create({
     data: {
@@ -145,6 +163,36 @@ paymentsRouter.post("/submit", requireAuth, uploadImage.single("receipt"), async
 
 const adminPayments = Router();
 adminPayments.use(requireAuth, requireAdmin);
+
+// GET /api/admin/payments/settings — joriy to'lov karta ma'lumotlari
+adminPayments.get("/settings", asyncHandler(async (_req, res) => {
+  const settings = await getPaymentSettings();
+  res.json({ cardNumber: settings.cardNumber, cardOwner: settings.cardOwner, updatedAt: settings.updatedAt });
+}));
+
+// PATCH /api/admin/payments/settings  { cardNumber, cardOwner }
+// Admin panel orqali karta ma'lumotlarini o'zgartirish — deploy yoki .env
+// tahriri shart emas, darhol kuchga kiradi (keyingi to'lov ekranlarida ham,
+// OCR solishtirishda ham).
+adminPayments.patch("/settings", asyncHandler(async (req, res) => {
+  const { cardNumber, cardOwner } = req.body;
+  if (!cardNumber || !cardNumber.trim()) {
+    return res.status(400).json({ error: "Karta raqami bo'sh bo'lmasligi kerak" });
+  }
+  if (!cardOwner || !cardOwner.trim()) {
+    return res.status(400).json({ error: "Karta egasi bo'sh bo'lmasligi kerak" });
+  }
+
+  const settings = await prisma.paymentSettings.upsert({
+    where: { id: 1 },
+    update: { cardNumber: cardNumber.trim(), cardOwner: cardOwner.trim(), updatedById: req.auth.sub },
+    create: { id: 1, cardNumber: cardNumber.trim(), cardOwner: cardOwner.trim(), updatedById: req.auth.sub },
+  });
+
+  await logAdminAction(req.auth.sub, "PAYMENT_SETTINGS_UPDATED", { details: cardNumber.trim() });
+
+  res.json({ cardNumber: settings.cardNumber, cardOwner: settings.cardOwner, updatedAt: settings.updatedAt });
+}));
 
 // GET /api/admin/payments?status=PENDING — eng kam ogohlantirishli (ochiq) cheklar tepada
 adminPayments.get("/", asyncHandler(async (req, res) => {

@@ -20,9 +20,11 @@ import { createWorker } from "tesseract.js";
 // Status har doim PENDING bo'lib qoladi, admin Approve/Reject bosgunicha.
 // ============================================================================
 
-// Ma'muriyat kartalari — .env dan, vergul bilan ajratilgan (masalan "8600 1234 5678 9012,9860 ...")
-function getAdminCards() {
-  return (process.env.ADMIN_CARD_NUMBERS || "")
+// Ma'muriyat kartasi endi tashqaridan (DB'dagi PaymentSettings orqali)
+// analyzeReceipt() ga uzatiladi — .env'ga bog'liqlik olib tashlandi, chunki
+// admin karta raqamini panel orqali istalgan vaqt o'zgartira oladi.
+function parseAdminCards(rawCardNumber) {
+  return (rawCardNumber || "")
     .split(",")
     .map((c) => c.replace(/\D/g, ""))
     .filter(Boolean);
@@ -139,7 +141,7 @@ function cardsMatch(extractedCard, adminCards) {
  *   extractedDate: Date|null, warnings: string[], confidence: number
  * }}
  */
-export async function analyzeReceipt(filePath, { expectedAmount } = {}) {
+export async function analyzeReceipt(filePath, { expectedAmount, adminCardNumber } = {}) {
   const warnings = [];
 
   const quality = await estimateImageQuality(filePath);
@@ -166,7 +168,7 @@ export async function analyzeReceipt(filePath, { expectedAmount } = {}) {
     warnings.push("matn_topilmadi");
   }
 
-  const adminCards = getAdminCards();
+  const adminCards = parseAdminCards(adminCardNumber);
   if (adminCards.length > 0 && !cardsMatch(extractedCard, adminCards)) {
     warnings.push("karta_mos_emas");
   }

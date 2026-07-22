@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { HelpCircle, Send, ChevronRight, ShieldCheck, Crown, Check } from "lucide-react";
 import { ACCENT_FROM } from "../theme";
 import { useTheme } from "../ThemeContext";
+import { useFontSize } from "../FontSizeContext";
 import { showComingSoon } from "../api";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 
@@ -158,6 +159,58 @@ function ThemePickerRow({ isPremium }) {
   );
 }
 
+// Shrift o'lchamini tanlash qatori — Aa harflari orqali kichik/o'rta/katta
+// tanlash, xuddi ThemePickerRow uslubida ochilib-yopiladi.
+function FontSizePickerRow() {
+  const { t } = useTranslation();
+  const { fontSizeKey, setFontSizeKey, fontSizeList } = useFontSize();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="w-full rounded-2xl bg-card border border-card-border shadow-sm px-4 py-3.5">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between"
+      >
+        <span className="font-medium text-text-main text-sm">{t("settings.fontSize")}</span>
+        <span className="flex items-center gap-2">
+          <span className="text-text-muted text-xs">{t(`settings.fontSizeOptions.${fontSizeKey}`)}</span>
+          <ChevronRight
+            size={16}
+            color="var(--chevron)"
+            className="transition-transform"
+            style={{ transform: open ? "rotate(90deg)" : "rotate(0deg)" }}
+          />
+        </span>
+      </button>
+
+      {open && (
+        <div className="mt-3.5 pt-3.5 border-t border-card-border flex gap-2.5">
+          {fontSizeList.map((item) => {
+            const isActive = item.key === fontSizeKey;
+            return (
+              <button
+                key={item.key}
+                onClick={() => setFontSizeKey(item.key)}
+                className="flex-1 flex flex-col items-center gap-1.5 rounded-xl py-3 transition-transform active:scale-[0.97]"
+                style={
+                  isActive
+                    ? { background: `linear-gradient(90deg, ${ACCENT_FROM}, ${ACCENT_FROM})`, color: "white" }
+                    : { background: "var(--bg-card-soft)", color: "var(--text-main)", border: "1px solid var(--border-card)" }
+                }
+              >
+                <span style={{ fontSize: `${item.rootPx}px`, lineHeight: 1 }} className="font-bold">Aa</span>
+                <span className="text-[10px] font-medium">{t(`settings.fontSizeOptions.${item.key}`)}</span>
+                {isActive && <Check size={11} />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // 3c-EKRAN: "Sozlamalar" bo'limi
 export default function SettingsTab({ user, onOpenAdmin, onOpenPremium, onOpenSupport }) {
   const { t } = useTranslation();
@@ -189,6 +242,7 @@ export default function SettingsTab({ user, onOpenAdmin, onOpenPremium, onOpenSu
         <PremiumRow onClick={onOpenPremium} />
         <LanguageSwitcher variant="row" />
         <ThemePickerRow isPremium={isPremium} />
+        <FontSizePickerRow />
         <SettingsRow
           icon={HelpCircle}
           label={t("settings.support")}

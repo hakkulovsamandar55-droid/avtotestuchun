@@ -5,6 +5,7 @@ import { ACCENT_FROM, ACCENT_TO } from "../theme";
 import { api } from "../api";
 import { DEFAULT_PREMIUM_PLANS, loadPremiumPlans, savePremiumPlans } from "../data/premiumData";
 import UserProfileScreen from "./admin/UserProfileScreen";
+import UserFiltersPanel from "./admin/UserFiltersPanel";
 import AdminSupportTab from "./admin/AdminSupportTab";
 import AdminPaymentsTab from "./admin/AdminPaymentsTab";
 import AdminBroadcastTab from "./admin/AdminBroadcastTab";
@@ -66,6 +67,7 @@ export default function AdminPanelScreen({ onBack, currentUserId, isSuperAdmin }
   const { t } = useTranslation();
   const [tab, setTab] = useState("users"); // users | premium | support | payments | broadcast | logs
   const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -77,14 +79,14 @@ export default function AdminPanelScreen({ onBack, currentUserId, isSuperAdmin }
       setLoading(true);
       setError("");
       api
-        .searchUsers(query)
+        .searchUsers(query, filters)
         .then((data) => setUsers(data.users))
         .catch((err) => setError(err.message))
         .finally(() => setLoading(false));
     }, 300); // qidiruvni har harfda emas, yozish to'xtaganda yuborish
 
     return () => clearTimeout(handle);
-  }, [query, tab]);
+  }, [query, filters, tab]);
 
   // Bildirishnomadan bosilganda mos ekranni ochish (masalan to'lov -> to'lovlar tabi)
   function handleNotificationLink(linkType, linkId) {
@@ -146,6 +148,8 @@ export default function AdminPanelScreen({ onBack, currentUserId, isSuperAdmin }
 
       {tab === "users" && (
         <>
+          <UserFiltersPanel selected={filters} onChange={setFilters} />
+
           <div className="relative mb-3">
             <Search
               size={18}

@@ -4,6 +4,7 @@ import { verifyTelegramInitData } from "../telegramAuth.js";
 import { signToken } from "../authMiddleware.js";
 import { asyncHandler } from "../asyncHandler.js";
 import { logActivity, notifyAllAdmins } from "../services/activity.js";
+import { generateUniqueReferralCode, resolveReferrer } from "../services/referral.js";
 
 export const authRouter = Router();
 
@@ -28,6 +29,15 @@ authRouter.post("/telegram", asyncHandler(async (req, res) => {
 
   const existing = await prisma.user.findUnique({ where: { telegramId } });
 
+  // Faqat YANGI foydalanuvchi uchun kerak — mavjud foydalanuvchining referral
+  // holatini keyingi kirishlarda qayta hisoblab/o'zgartirib bo'lmaydi.
+  let referrer = null;
+  let newReferralCode = null;
+  if (!existing) {
+    newReferralCode = await generateUniqueReferralCode();
+    referrer = await resolveReferrer(result.startParam, telegramId);
+  }
+
   const user = await prisma.user.upsert({
     where: { telegramId },
     update: {
@@ -45,6 +55,8 @@ authRouter.post("/telegram", asyncHandler(async (req, res) => {
       role: isAdmin ? "ADMIN" : "USER",
       isPremium: isAdmin,
       lastOnlineAt: new Date(),
+      referralCode: newReferralCode,
+      referredById: referrer?.id || null,
     },
   });
 
@@ -55,6 +67,9 @@ authRouter.post("/telegram", asyncHandler(async (req, res) => {
 
   if (!existing) {
     await logActivity(user.id, "REGISTERED", "Ro'yxatdan o'tdi");
+    if (referrer) {
+      await logActivity(referrer.id, "REFERRAL_JOINED", `Taklif qilingan foydalanuvchi qo'shildi: ${user.name}`);
+    }
     await notifyAllAdmins({
       type: "NEW_REGISTRATION",
       title: "Yangi ro'yxatdan o'tish",
@@ -77,6 +92,7 @@ authRouter.post("/telegram", asyncHandler(async (req, res) => {
       premiumExpiresAt: user.premiumExpiresAt,
       examReadiness: user.examReadiness,
       isSuperAdmin: isAdmin,
+      referralCode: user.referralCode,
     },
   });
 }));

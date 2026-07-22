@@ -24,21 +24,120 @@ adminRouter.use(requireAuth, requireAdmin);
 // ============================== FOYDALANUVCHILAR RO'YXATI ==============================
 
 // GET /api/admin/users?query=...
+// Kunning boshlanishi (00:00) — "bugun ro'yxatdan o'tgan/faol bo'lgan" kabi
+// filtrlar shu nuqtadan hisoblanadi.
+function startOfToday() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function daysAgo(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d;
+}
+
+// Spec 2-bo'lim: "Smart User Filters" — bir nechta filtr bir vaqtda
+// qo'llanishi mumkin (masalan Premium + Inactive 7 Days). Har bir filtr
+// mustaqil Prisma shart to'plami qaytaradi, keyin barchasi AND bilan
+// birlashtiriladi.
+function buildFilterConditions(filters) {
+  const conditions = [];
+
+  for (const key of filters) {
+    switch (key) {
+      case "premium":
+        conditions.push({ isPremium: true });
+        break;
+      case "free":
+        conditions.push({ isPremium: false });
+        break;
+      case "vip":
+        conditions.push({ isPremium: true, premiumPlan: "vip" });
+        break;
+      case "admin":
+        conditions.push({ role: "ADMIN" });
+        break;
+      case "blocked":
+        conditions.push({ isBlocked: true });
+        break;
+      case "registeredToday":
+        conditions.push({ createdAt: { gte: startOfToday() } });
+        break;
+      case "registeredThisWeek":
+        conditions.push({ createdAt: { gte: daysAgo(7) } });
+        break;
+      case "registeredThisMonth":
+        conditions.push({ createdAt: { gte: daysAgo(30) } });
+        break;
+      case "activeToday":
+        conditions.push({ lastOnlineAt: { gte: startOfToday() } });
+        break;
+      case "active3Days":
+        conditions.push({ lastOnlineAt: { gte: daysAgo(3) } });
+        break;
+      case "active7Days":
+        conditions.push({ lastOnlineAt: { gte: daysAgo(7) } });
+        break;
+      case "active30Days":
+        conditions.push({ lastOnlineAt: { gte: daysAgo(30) } });
+        break;
+      case "neverPurchasedPremium":
+        conditions.push({ paymentRequests: { none: { status: "APPROVED" } } });
+        break;
+      case "purchasedPremium":
+        conditions.push({ paymentRequests: { some: { status: "APPROVED" } } });
+        break;
+      case "referralUsers":
+        conditions.push({ referredById: { not: null } });
+        break;
+      // "Faollik" — yechilgan testlar soniga qarab taxminiy bo'lingan
+      // (30+ = yuqori, 1-29 = past). Ikkalasi ham pastda JS tomonida hisoblanadi,
+      // chunki _count bo'yicha to'g'ridan-to'g'ri WHERE shart qo'yish qulay emas.
+      case "highActivity":
+      case "lowActivity":
+        break;
+      // Imtihon sanasi keyingi 14 kun ichida bo'lgan foydalanuvchilar (onboarding'da kiritiladi)
+      case "examSoon": {
+        const in14Days = new Date();
+        in14Days.setDate(in14Days.getDate() + 14);
+        conditions.push({ examDate: { gte: new Date(), lte: in14Days } });
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  return conditions;
+}
+
 adminRouter.get("/users", asyncHandler(async (req, res) => {
   const query = (req.query.query || "").trim();
+  const filters = (req.query.filters || "")
+    .split(",")
+    .map((f) => f.trim())
+    .filter(Boolean);
 
-  const users = await prisma.user.findMany({
-    where: query
-      ? {
-          OR: [
-            { name: { contains: query, mode: "insensitive" } },
-            { username: { contains: query, mode: "insensitive" } },
-            { phone: { contains: query, mode: "insensitive" } },
-          ],
-        }
-      : undefined,
+  const searchCondition = query
+    ? {
+        OR: [
+          { name: { contains: query, mode: "insensitive" } },
+          { username: { contains: query, mode: "insensitive" } },
+          { phone: { contains: query, mode: "insensitive" } },
+        ],
+      }
+    : null;
+
+  const filterConditions = buildFilterConditions(filters);
+
+  const AND = [...(searchCondition ? [searchCondition] : []), ...filterConditions];
+
+  let users = await prisma.user.findMany({
+    where: AND.length > 0 ? { AND } : undefined,
     orderBy: { createdAt: "desc" },
-    take: 50,
+    take: filters.includes("highActivity") || filters.includes("lowActivity") ? 500 : 50,
     select: {
       id: true,
       telegramId: true,
@@ -51,13 +150,34 @@ adminRouter.get("/users", asyncHandler(async (req, res) => {
       isBlocked: true,
       avatarUrl: true,
       createdAt: true,
+      _count: { select: { attempts: true } },
     },
   });
 
+  // Faollik darajasi DB tomonida oson ifodalanmaydigan chegara bo'lgani uchun
+  // (yechilgan testlar soni), shu ikki filtr JS tomonida qo'llanadi.
+  if (filters.includes("highActivity")) {
+    users = users.filter((u) => u._count.attempts >= 30);
+  }
+  if (filters.includes("lowActivity")) {
+    users = users.filter((u) => u._count.attempts > 0 && u._count.attempts < 10);
+  }
+  users = users.slice(0, 50);
+
   res.json({
     users: users.map((u) => ({
-      ...u,
+      id: u.id,
       telegramId: u.telegramId.toString(),
+      name: u.name,
+      username: u.username,
+      phone: u.phone,
+      examReadiness: u.examReadiness,
+      role: u.role,
+      isPremium: u.isPremium,
+      isBlocked: u.isBlocked,
+      avatarUrl: u.avatarUrl,
+      createdAt: u.createdAt,
+      testsCompleted: u._count.attempts,
       isSuperAdmin: isSuperAdmin(u.telegramId),
     })),
     count: users.length,
@@ -75,6 +195,8 @@ adminRouter.get("/users/:id/profile", asyncHandler(async (req, res) => {
     include: {
       discount: true,
       conversation: { select: { id: true, status: true, unreadForAdmin: true } },
+      referredBy: { select: { id: true, name: true, username: true } },
+      referrals: { select: { id: true, name: true, username: true, isPremium: true, createdAt: true } },
     },
   });
   if (!user) return res.status(404).json({ error: "Foydalanuvchi topilmadi" });
@@ -117,6 +239,7 @@ adminRouter.get("/users/:id/profile", asyncHandler(async (req, res) => {
       blockedReason: user.blockedReason,
       registeredAt: user.createdAt,
       lastOnlineAt: user.lastOnlineAt,
+      adminNotes: user.adminNotes,
     },
     statistics: {
       testsCompleted,
@@ -140,6 +263,12 @@ adminRouter.get("/users/:id/profile", asyncHandler(async (req, res) => {
           isExpired: Boolean(user.discount.expiresAt && user.discount.expiresAt < new Date()),
         }
       : null,
+    referral: {
+      code: user.referralCode,
+      referredBy: user.referredBy ? { id: user.referredBy.id, name: user.referredBy.name, username: user.referredBy.username } : null,
+      referralsCount: user.referrals.length,
+      referrals: user.referrals.map((r) => ({ id: r.id, name: r.name, username: r.username, isPremium: r.isPremium, joinedAt: r.createdAt })),
+    },
     payments: payments.map((p) => ({
       id: p.id,
       planName: p.planName,
@@ -301,6 +430,26 @@ adminRouter.delete("/users/:id", asyncHandler(async (req, res) => {
   ]);
 
   res.json({ ok: true });
+}));
+
+// ============================== ADMIN NOTES ==============================
+
+// PATCH /api/admin/users/:id/notes  { notes }
+// Faqat adminlar orasida ko'rinadigan shaxsiy eslatma — foydalanuvchiga hech qachon ko'rsatilmaydi.
+adminRouter.patch("/users/:id/notes", asyncHandler(async (req, res) => {
+  const id = Number(req.params.id);
+  const { notes } = req.body;
+
+  const target = await prisma.user.findUnique({ where: { id } });
+  if (!target) return res.status(404).json({ error: "Foydalanuvchi topilmadi" });
+
+  const user = await prisma.user.update({
+    where: { id },
+    data: { adminNotes: typeof notes === "string" ? notes.slice(0, 2000) : null },
+    select: { id: true, adminNotes: true },
+  });
+
+  res.json({ user });
 }));
 
 // ============================== CHEGIRMA ==============================
