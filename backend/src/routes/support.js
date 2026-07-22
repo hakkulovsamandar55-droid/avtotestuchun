@@ -1,9 +1,11 @@
 import { Router } from "express";
 import { prisma } from "../db.js";
-import { requireAuth, requireAdmin } from "../authMiddleware.js";
+import { requireAuth } from "../authMiddleware.js";
+import { loadCurrentUser, requireAdminUser } from "../services/userState.js";
 import { asyncHandler } from "../asyncHandler.js";
 import { uploadImage, publicUrlFor } from "../lib/upload.js";
 import { logActivity, logAdminAction, notifyAllAdmins } from "../services/activity.js";
+import { requireIdParam } from "../lib/validate.js";
 
 export const supportRouter = Router();
 
@@ -29,8 +31,8 @@ async function getOrCreateConversation(userId) {
 // ============================== FOYDALANUVCHI TOMONI ==============================
 
 // GET /api/support/conversation — o'z suhbatini (va xabarlarini) olish
-supportRouter.get("/conversation", requireAuth, asyncHandler(async (req, res) => {
-  const userId = req.auth.sub;
+supportRouter.get("/conversation", requireAuth, loadCurrentUser, asyncHandler(async (req, res) => {
+  const userId = req.user.id;
   const conv = await getOrCreateConversation(userId);
 
   const messages = await prisma.supportMessage.findMany({
@@ -52,8 +54,8 @@ supportRouter.get("/conversation", requireAuth, asyncHandler(async (req, res) =>
 }));
 
 // POST /api/support/message  { text? }  — matnli xabar yuborish
-supportRouter.post("/message", requireAuth, asyncHandler(async (req, res) => {
-  const userId = req.auth.sub;
+supportRouter.post("/message", requireAuth, loadCurrentUser, asyncHandler(async (req, res) => {
+  const userId = req.user.id;
   const { text } = req.body;
   if (!text || !text.trim()) {
     return res.status(400).json({ error: "Xabar matni bo'sh bo'lmasligi kerak" });
@@ -85,8 +87,8 @@ supportRouter.post("/message", requireAuth, asyncHandler(async (req, res) => {
 }));
 
 // POST /api/support/message/image  (multipart, field: "image") — rasm/screenshot yuborish
-supportRouter.post("/message/image", requireAuth, uploadImage.single("image"), asyncHandler(async (req, res) => {
-  const userId = req.auth.sub;
+supportRouter.post("/message/image", requireAuth, loadCurrentUser, uploadImage.single("image"), asyncHandler(async (req, res) => {
+  const userId = req.user.id;
   if (!req.file) {
     return res.status(400).json({ error: "Rasm fayli topilmadi" });
   }
@@ -115,7 +117,7 @@ supportRouter.post("/message/image", requireAuth, uploadImage.single("image"), a
 // ============================== ADMIN TOMONI ==============================
 
 const adminSupport = Router();
-adminSupport.use(requireAuth, requireAdmin);
+adminSupport.use(requireAuth, loadCurrentUser, requireAdminUser);
 
 // GET /api/admin/support/conversations?status=OPEN|CLOSED&query=...
 adminSupport.get("/conversations", asyncHandler(async (req, res) => {
@@ -156,8 +158,8 @@ adminSupport.get("/conversations", asyncHandler(async (req, res) => {
 }));
 
 // GET /api/admin/support/conversations/:id — bitta suhbatning to'liq tarixi
-adminSupport.get("/conversations/:id", asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
+adminSupport.get("/conversations/:id", requireIdParam, asyncHandler(async (req, res) => {
+  const id = req.id;
   const conv = await prisma.conversation.findUnique({
     where: { id },
     include: {
@@ -183,8 +185,8 @@ adminSupport.get("/conversations/:id", asyncHandler(async (req, res) => {
 }));
 
 // POST /api/admin/support/conversations/:id/reply  { text }
-adminSupport.post("/conversations/:id/reply", asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
+adminSupport.post("/conversations/:id/reply", requireIdParam, asyncHandler(async (req, res) => {
+  const id = req.id;
   const { text } = req.body;
   if (!text || !text.trim()) {
     return res.status(400).json({ error: "Javob matni bo'sh bo'lmasligi kerak" });
@@ -202,14 +204,14 @@ adminSupport.post("/conversations/:id/reply", asyncHandler(async (req, res) => {
   });
 
   await logActivity(conv.userId, "SUPPORT_MESSAGE", "Admin javob berdi");
-  await logAdminAction(req.auth.sub, "SUPPORT_REPLIED", { targetUserId: conv.userId });
+  await logAdminAction(req.user.id, "SUPPORT_REPLIED", { targetUserId: conv.userId });
 
   res.status(201).json({ message: serializeMessage(message) });
 }));
 
 // POST /api/admin/support/conversations/:id/reply-image (multipart, field: "image")
-adminSupport.post("/conversations/:id/reply-image", uploadImage.single("image"), asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
+adminSupport.post("/conversations/:id/reply-image", requireIdParam, uploadImage.single("image"), asyncHandler(async (req, res) => {
+  const id = req.id;
   if (!req.file) return res.status(400).json({ error: "Rasm fayli topilmadi" });
 
   const conv = await prisma.conversation.findUnique({ where: { id } });
@@ -227,15 +229,15 @@ adminSupport.post("/conversations/:id/reply-image", uploadImage.single("image"),
 }));
 
 // PATCH /api/admin/support/conversations/:id/status  { status: "OPEN" | "CLOSED" }
-adminSupport.patch("/conversations/:id/status", asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
+adminSupport.patch("/conversations/:id/status", requireIdParam, asyncHandler(async (req, res) => {
+  const id = req.id;
   const { status } = req.body;
   if (status !== "OPEN" && status !== "CLOSED") {
     return res.status(400).json({ error: "status OPEN yoki CLOSED bo'lishi kerak" });
   }
 
   const conv = await prisma.conversation.update({ where: { id }, data: { status } });
-  await logAdminAction(req.auth.sub, status === "CLOSED" ? "SUPPORT_CLOSED" : "SUPPORT_REOPENED", {
+  await logAdminAction(req.user.id, status === "CLOSED" ? "SUPPORT_CLOSED" : "SUPPORT_REOPENED", {
     targetUserId: conv.userId,
   });
 

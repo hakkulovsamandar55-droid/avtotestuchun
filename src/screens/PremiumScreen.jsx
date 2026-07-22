@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, Check, Crown, Sparkles } from "lucide-react";
-import { loadPremiumPlans } from "../data/premiumData";
+import { PREMIUM_PLANS, formatPrice } from "../data/premiumData";
 import { ACCENT_FROM, ACCENT_TO } from "../theme";
 
 const PLAN_STYLE = {
@@ -28,11 +28,9 @@ const PLAN_STYLE = {
 // Premium tariflar ekrani — Lite / Pro / VIP kartalari, ma'lumotlar admin paneldan boshqariladi
 export default function PremiumScreen({ onBack, onSelectPlan }) {
   const { t } = useTranslation();
-  const [plans, setPlans] = useState([]);
-
-  useEffect(() => {
-    setPlans(loadPremiumPlans());
-  }, []);
+  // Tariflar o'zgarmas (statik) ma'lumot — useState/useEffect kerak emas edi.
+  // Ilgari birinchi renderda bo'sh ro'yxat ko'rinib, keyin to'lardi (miltillash).
+  const plans = PREMIUM_PLANS;
 
   return (
     <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-8 bg-[#0F1424] min-h-full text-white animate-slide-in">
@@ -104,7 +102,7 @@ export default function PremiumScreen({ onBack, onSelectPlan }) {
                 </div>
                 <div className="text-right">
                   <p className="font-extrabold text-xl leading-none">
-                    {plan.price}
+                    {formatPrice(plan.price)}
                     <span className="text-xs font-medium text-gray-400"> so'm</span>
                   </p>
                   <p className="text-gray-500 text-[11px] mt-1">/ {plan.period}</p>

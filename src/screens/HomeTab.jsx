@@ -12,12 +12,13 @@ import {
   Flame,
   TrafficCone,
   Swords,
+  ClipboardCheck,
 } from "lucide-react";
 import { ACCENT_FROM, ACCENT_TO } from "../theme";
 import { api } from "../api";
 
 // 3a-EKRAN: "O'rganish" bo'limi — bosh sahifa
-export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam, onOpenStats, onOpenDuel }) {
+export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam, onOpenOfficialExam, onOpenStats, onOpenDuel }) {
   const { t } = useTranslation();
   const [stats, setStats] = useState(null);
 
@@ -125,8 +126,30 @@ export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam, onOpen
         </div>
       </button>
 
+      {/* Rasmiy imtihon — asosiy, alohida ajratilgan karta */}
+      <button
+        onClick={onOpenOfficialExam}
+        className="w-full mt-5 rounded-3xl p-5 text-left text-white relative overflow-hidden active:scale-[0.98] transition-transform"
+        style={{ background: "linear-gradient(135deg, #0F766E, #047857)" }}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+            <ClipboardCheck size={20} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-extrabold leading-tight">
+              {t("home.officialExam")}
+            </p>
+            <p className="text-white/75 text-xs mt-0.5">
+              {t("home.officialExamSubtitle")}
+            </p>
+          </div>
+          <ChevronRight size={20} color="rgba(255,255,255,0.6)" />
+        </div>
+      </button>
+
       {/* Two action cards */}
-      <div className="grid grid-cols-2 gap-3 mt-5">
+      <div className="grid grid-cols-2 gap-3 mt-3">
         <div
           className="rounded-3xl p-5 text-white flex flex-col justify-between h-36"
           style={{ backgroundColor: ACCENT_FROM }}
@@ -152,10 +175,10 @@ export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam, onOpen
           </div>
           <div>
             <p className="font-bold text-text-main leading-tight">
-              {t("home.examMode")}
+              {t("home.practiceExam")}
             </p>
             <p className="text-text-muted text-xs mt-0.5">
-              {t("home.examModeSubtitle")}
+              {t("home.practiceExamSubtitle")}
             </p>
           </div>
         </button>

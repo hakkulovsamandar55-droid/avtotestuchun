@@ -8,6 +8,7 @@ import { statsRouter } from "./routes/stats.js";
 import { supportRouter, adminSupport } from "./routes/support.js";
 import { paymentsRouter, adminPayments } from "./routes/payments.js";
 import { notificationsRouter } from "./routes/notifications.js";
+import { examRouter } from "./routes/exam.js";
 import { initDuelSocket } from "./duel.js";
 import { UPLOADS_DIR } from "./lib/upload.js";
 
@@ -30,8 +31,34 @@ process.on("uncaughtException", (err) => {
 });
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+
+// CORS — oldin `cors()` hech qanday cheklovsiz ishlatilgan edi, ya'ni istalgan
+// sayt foydalanuvchi brauzeri orqali API'ga so'rov yubora olardi. Endi faqat
+// .env dagi CORS_ORIGINS ro'yxatidagi manzillar (vergul bilan) ruxsat etiladi.
+// Ro'yxat bo'sh bo'lsa — faqat lokal ishlab chiqish manzillari.
+const ALLOWED_ORIGINS = (process.env.CORS_ORIGINS || "http://localhost:5173")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+export function isOriginAllowed(origin) {
+  // origin yo'q = bir xil manbadan yoki server-to-server (curl, mobil ilova) —
+  // brauzer CORS'i bunday so'rovlarga taalluqli emas, shuning uchun ruxsat.
+  if (!origin) return true;
+  return ALLOWED_ORIGINS.includes(origin);
+}
+
+app.use(
+  cors({
+    origin: (origin, cb) =>
+      isOriginAllowed(origin) ? cb(null, true) : cb(new Error("CORS: ruxsat etilmagan manba")),
+    credentials: true,
+  })
+);
+
+// JSON body hajmini cheklaymiz — cheksiz katta payload yuborib xotirani
+// to'ldirish (DoS) imkoniyatini yopadi.
+app.use(express.json({ limit: "256kb" }));
 
 // Yuklangan rasmlar (chat screenshotlar, to'lov cheklari) shu orqali ochiladi
 app.use("/uploads", express.static(UPLOADS_DIR));
@@ -45,16 +72,34 @@ app.use("/api/admin/notifications", notificationsRouter);
 app.use("/api/stats", statsRouter);
 app.use("/api/support", supportRouter);
 app.use("/api/payments", paymentsRouter);
+// Rasmiy imtihon (Official Exam) — mashq imtihonidan alohida modul
+app.use("/api/exam", examRouter);
 
-// Umumiy xatolarni ushlash — parolsiz stack-trace'ni foydalanuvchiga chiqarmaslik uchun
+// Umumiy xatolarni ushlash — parolsiz stack-trace'ni foydalanuvchiga chiqarmaslik uchun.
+// Ba'zi xatolar aslida foydalanuvchi xatosi (juda katta fayl, noto'g'ri format,
+// ruxsat etilmagan manba) — ular 500 emas, aniq status va tushunarli matn olishi kerak,
+// aks holda foydalanuvchi nima noto'g'ri ekanini bilmaydi.
 app.use((err, _req, res, _next) => {
+  if (err?.code === "LIMIT_FILE_SIZE") {
+    return res.status(413).json({ error: "Fayl hajmi juda katta (maksimum 8MB)" });
+  }
+  if (err?.code?.startsWith?.("LIMIT_")) {
+    return res.status(400).json({ error: "Fayl yuklashda xato" });
+  }
+  if (err?.message === "Faqat rasm fayllari qabul qilinadi") {
+    return res.status(400).json({ error: err.message });
+  }
+  if (err?.message?.startsWith("CORS:")) {
+    return res.status(403).json({ error: "Ruxsat etilmagan manba" });
+  }
+
   console.error(err);
   res.status(500).json({ error: "Server xatosi" });
 });
 
 // Duel (jonli musobaqa) rejimi uchun Socket.io xuddi shu HTTP server ustida ishlaydi
 const httpServer = createServer(app);
-initDuelSocket(httpServer);
+initDuelSocket(httpServer, { isOriginAllowed });
 
 const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, () => console.log(`Backend ${PORT}-portda ishlayapti (HTTP + duel socket)`));

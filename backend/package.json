@@ -6,12 +6,14 @@
   "scripts": {
     "postinstall": "prisma generate",
     "dev": "node --watch src/index.js",
-    "start": "npx prisma generate && npx prisma db push --accept-data-loss && node src/index.js",
+    "start": "npx prisma migrate deploy && node src/index.js",
+    "start:unsafe-push": "npx prisma generate && npx prisma db push --accept-data-loss && node src/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:push": "prisma db push",
-    "prisma:studio": "prisma studio"
+    "prisma:studio": "prisma studio",
+    "test": "node tests/run.mjs"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

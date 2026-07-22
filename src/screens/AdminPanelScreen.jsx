@@ -3,13 +3,14 @@ import { useTranslation } from "react-i18next";
 import { ChevronLeft, Search, X, Save, Check, ShieldCheck, Crown } from "lucide-react";
 import { ACCENT_FROM, ACCENT_TO } from "../theme";
 import { api } from "../api";
-import { DEFAULT_PREMIUM_PLANS, loadPremiumPlans, savePremiumPlans } from "../data/premiumData";
+import { PREMIUM_PLANS, formatPrice } from "../data/premiumData";
 import UserProfileScreen from "./admin/UserProfileScreen";
 import UserFiltersPanel from "./admin/UserFiltersPanel";
 import AdminSupportTab from "./admin/AdminSupportTab";
 import AdminPaymentsTab from "./admin/AdminPaymentsTab";
 import AdminBroadcastTab from "./admin/AdminBroadcastTab";
 import AdminLogTab from "./admin/AdminLogTab";
+import AdminExamAnalyticsTab from "./admin/AdminExamAnalyticsTab";
 import NotificationsBell from "./admin/NotificationsBell";
 
 function initials(name) {
@@ -113,7 +114,7 @@ export default function AdminPanelScreen({ onBack, currentUserId, isSuperAdmin }
     );
   }
 
-  const TABS = ["users", "premium", "support", "payments", "broadcast", "logs"];
+  const TABS = ["users", "exam", "premium", "support", "payments", "broadcast", "logs"];
 
   return (
     <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-6 bg-app min-h-full animate-slide-in">
@@ -203,6 +204,7 @@ export default function AdminPanelScreen({ onBack, currentUserId, isSuperAdmin }
         </>
       )}
 
+      {tab === "exam" && <AdminExamAnalyticsTab />}
       {tab === "premium" && <PremiumEditor />}
       {tab === "support" && <AdminSupportTab onOpenProfile={setProfileUserId} />}
       {tab === "payments" && <AdminPaymentsTab />}
@@ -214,93 +216,57 @@ export default function AdminPanelScreen({ onBack, currentUserId, isSuperAdmin }
 
 function PremiumEditor() {
   const { t } = useTranslation();
-  const [plans, setPlans] = useState(DEFAULT_PREMIUM_PLANS);
-  const [saved, setSaved] = useState(false);
 
-  useEffect(() => {
-    setPlans(loadPremiumPlans());
-  }, []);
-
-  function updatePlan(key, field, value) {
-    setSaved(false);
-    setPlans((prev) =>
-      prev.map((p) => (p.key === key ? { ...p, [field]: value } : p))
-    );
-  }
-
-  function updateFeatures(key, text) {
-    updatePlan(
-      key,
-      "features",
-      text.split("\n").map((line) => line.trim()).filter(Boolean)
-    );
-  }
-
-  function handleSave() {
-    savePremiumPlans(plans);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  }
+  // MUHIM O'ZGARISH: bu bo'lim endi FAQAT KO'RISH uchun.
+  //
+  // Ilgari bu yerda tariflarni tahrirlash mumkin edi, lekin o'zgarishlar
+  // faqat localStorage'ga — ya'ni SHU adminning brauzeriga saqlanardi.
+  // Natijada:
+  //   - boshqa foydalanuvchilar eski narxni ko'rardi
+  //   - backend o'zining alohida narxi bo'yicha to'lovni tekshirardi
+  //     (chek "summa mos emas" ogohlantirishini olardi)
+  //   - admin narxni o'zgartirdim deb o'ylardi, aslida hech narsa o'zgarmagan
+  //
+  // Ishlamaydigan tugmani qoldirgandan ko'ra olib tashlash to'g'ri. Tariflarni
+  // haqiqatan o'zgartirish uchun narxlar DB'ga ko'chirilishi kerak
+  // (PremiumPlan jadvali + admin API) — alohida vazifa sifatida rejalashtirilgan.
 
   return (
     <div className="space-y-4 pb-4">
-      {plans.map((plan) => (
+      <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 px-4 py-3">
+        <p className="text-amber-600 dark:text-amber-400 text-xs leading-relaxed">
+          {t("admin.plansReadOnly")}
+        </p>
+      </div>
+
+      {PREMIUM_PLANS.map((plan) => (
         <div key={plan.key} className="rounded-2xl bg-card border border-card-border shadow-sm p-4">
-          <p className="font-extrabold text-text-main text-sm mb-3 uppercase tracking-wide">
-            {plan.key}
-          </p>
-
-          <label className="block text-xs text-text-muted mb-1">{t("admin.planName")}</label>
-          <input
-            value={plan.name}
-            onChange={(e) => updatePlan(plan.key, "name", e.target.value)}
-            className="w-full rounded-xl border border-card-border bg-card-soft text-text-main px-3 py-2 text-sm mb-3 outline-none focus:border-gray-400"
-          />
-
-          <div className="flex gap-3 mb-3">
-            <div className="flex-1">
-              <label className="block text-xs text-text-muted mb-1">{t("admin.planPrice")}</label>
-              <input
-                value={plan.price}
-                onChange={(e) => updatePlan(plan.key, "price", e.target.value)}
-                className="w-full rounded-xl border border-card-border bg-card-soft text-text-main px-3 py-2 text-sm outline-none focus:border-gray-400"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="block text-xs text-text-muted mb-1">{t("admin.planPeriod")}</label>
-              <input
-                value={plan.period}
-                onChange={(e) => updatePlan(plan.key, "period", e.target.value)}
-                className="w-full rounded-xl border border-card-border bg-card-soft text-text-main px-3 py-2 text-sm outline-none focus:border-gray-400"
-              />
-            </div>
+          <div className="flex items-baseline justify-between mb-3">
+            <p className="font-extrabold text-text-main text-sm uppercase tracking-wide">
+              {plan.name}
+            </p>
+            <p className="font-bold text-text-main text-sm">
+              {formatPrice(plan.price)}
+              <span className="text-text-muted font-medium text-xs"> so'm / {plan.period}</span>
+            </p>
           </div>
 
-          <label className="block text-xs text-text-muted mb-1">{t("admin.planBadge")}</label>
-          <input
-            value={plan.badge}
-            onChange={(e) => updatePlan(plan.key, "badge", e.target.value)}
-            className="w-full rounded-xl border border-card-border bg-card-soft text-text-main px-3 py-2 text-sm mb-3 outline-none focus:border-gray-400"
-          />
+          {plan.badge && (
+            <span className="inline-block mb-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-card-soft border border-card-border text-text-muted">
+              {plan.badge}
+            </span>
+          )}
 
-          <label className="block text-xs text-text-muted mb-1">{t("admin.planFeatures")}</label>
-          <textarea
-            value={plan.features.join("\n")}
-            onChange={(e) => updateFeatures(plan.key, e.target.value)}
-            rows={4}
-            className="w-full rounded-xl border border-card-border bg-card-soft text-text-main px-3 py-2 text-sm outline-none focus:border-gray-400 resize-none"
-          />
+          <ul className="space-y-1.5">
+            {plan.features.map((f, i) => (
+              <li key={i} className="text-xs text-text-muted leading-snug flex gap-2">
+                <span className="shrink-0">-</span>
+                <span>{f}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       ))}
-
-      <button
-        onClick={handleSave}
-        className="w-full rounded-2xl py-3.5 font-bold text-white text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
-        style={{ background: `linear-gradient(90deg, ${ACCENT_FROM}, ${ACCENT_TO})` }}
-      >
-        {saved ? <Check size={16} /> : <Save size={16} />}
-        {saved ? t("admin.saved") : t("admin.save")}
-      </button>
     </div>
   );
 }

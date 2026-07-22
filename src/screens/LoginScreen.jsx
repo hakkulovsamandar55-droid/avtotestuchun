@@ -38,10 +38,10 @@ const STUDY_TIME_OPTIONS = [
 ];
 
 // 1-EKRAN: Ro'yxatdan o'tish (anketa) — Telegram orqali kirish orqa fonda ketadi
-export default function LoginScreen({ onLogin }) {
+export default function LoginScreen({ onLogin, externalNotice }) {
   const { t } = useTranslation();
   const [connecting, setConnecting] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(externalNotice || "");
 
   // Anketa maydonlari
   const [name, setName] = useState("");
@@ -49,7 +49,12 @@ export default function LoginScreen({ onLogin }) {
   const [studyMinutes, setStudyMinutes] = useState(null);
 
   const savedProfile = getSavedProfile();
-  const needsForm = !savedProfile;
+  // Sessiya tugagani/bloklangani sababli qaytarilgan bo'lsak, saqlangan
+  // profil bo'lsa ham forma ko'rsatilmaydi (aks holda cheksiz silent-login
+  // sinash aylanasiga tushib qolamiz) — lekin foydalanuvchiga nima
+  // bo'lganini tushuntiramiz va qayta urinish imkoni beriladi.
+  const [silentLoginFailed, setSilentLoginFailed] = useState(false);
+  const needsForm = !savedProfile || silentLoginFailed;
 
   const performTelegramLogin = async (profile) => {
     setError("");
@@ -73,6 +78,10 @@ export default function LoginScreen({ onLogin }) {
     } catch (err) {
       setError(err.message);
       setConnecting(false);
+      // Orqa fondagi (silent) urinish muvaffaqiyatsiz bo'lsa — masalan hisob
+      // bloklangan bo'lsa — ilgari foydalanuvchi abadiy spinner ekranida
+      // qolib ketardi, chiqish yo'li yo'q edi. Endi formaga qaytaramiz.
+      if (!profile) setSilentLoginFailed(true);
     }
   };
 

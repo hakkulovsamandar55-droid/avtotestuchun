@@ -12,19 +12,35 @@ import PremiumScreen from "./PremiumScreen";
 import DuelScreen from "./DuelScreen";
 import SupportChatScreen from "./SupportChatScreen";
 import PaymentScreen from "./PaymentScreen";
+import OfficialExamContainer from "./officialExam/OfficialExamContainer";
 
 // 3-EKRAN: login+loading dan keyingi asosiy ilova — 3 bo'lim + pastki nav
 export default function MainApp({ user }) {
   const [active, setActive] = useState("home");
   const [showTickets, setShowTickets] = useState(false);
   const [activeTicket, setActiveTicket] = useState(null);
-  const [showExam, setShowExam] = useState(false);
+  const [showExam, setShowExam] = useState(false); // mashq imtihoni (eski)
+  const [showOfficialExam, setShowOfficialExam] = useState(false); // rasmiy imtihon (yangi)
   const [showSigns, setShowSigns] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [showPremium, setShowPremium] = useState(false);
   const [showDuel, setShowDuel] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
   const [paymentPlan, setPaymentPlan] = useState(null);
+
+  if (showOfficialExam) {
+    return (
+      <div className="flex flex-col h-full">
+        <OfficialExamContainer
+          onExit={() => setShowOfficialExam(false)}
+          onOpenPremium={() => {
+            setShowOfficialExam(false);
+            setShowPremium(true);
+          }}
+        />
+      </div>
+    );
+  }
 
   if (showExam) {
     return (
@@ -122,6 +138,7 @@ export default function MainApp({ user }) {
           onOpenTickets={() => setShowTickets(true)}
           onOpenSigns={() => setShowSigns(true)}
           onOpenExam={() => setShowExam(true)}
+          onOpenOfficialExam={() => setShowOfficialExam(true)}
           onOpenStats={() => setActive("stats")}
           onOpenDuel={() => setShowDuel(true)}
         />

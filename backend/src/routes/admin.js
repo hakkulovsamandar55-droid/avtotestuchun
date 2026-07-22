@@ -1,8 +1,15 @@
 import { Router } from "express";
 import { prisma } from "../db.js";
-import { requireAuth, requireAdmin } from "../authMiddleware.js";
+import { requireAuth } from "../authMiddleware.js";
+import { loadCurrentUser, requireAdminUser } from "../services/userState.js";
 import { asyncHandler } from "../asyncHandler.js";
 import { logActivity, logAdminAction } from "../services/activity.js";
+import { requireIdParam } from "../lib/validate.js";
+import {
+  getExamOverview,
+  getQuestionDifficultyStats,
+  getUserExamSummary,
+} from "../services/examAnalyticsService.js";
 
 export const adminRouter = Router();
 
@@ -19,7 +26,7 @@ function isSuperAdmin(telegramId) {
 
 const VALID_DISCOUNTS = [0, 10, 20, 30, 50, 75, 100];
 
-adminRouter.use(requireAuth, requireAdmin);
+adminRouter.use(requireAuth, loadCurrentUser, requireAdminUser);
 
 // ============================== FOYDALANUVCHILAR RO'YXATI ==============================
 
@@ -187,8 +194,8 @@ adminRouter.get("/users", asyncHandler(async (req, res) => {
 // ============================== FOYDALANUVCHI PROFILI ==============================
 
 // GET /api/admin/users/:id/profile — to'liq profil: umumiy, statistika, premium, to'lovlar, timeline
-adminRouter.get("/users/:id/profile", asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
+adminRouter.get("/users/:id/profile", requireIdParam, asyncHandler(async (req, res) => {
+  const id = req.id;
 
   const user = await prisma.user.findUnique({
     where: { id },
@@ -201,29 +208,58 @@ adminRouter.get("/users/:id/profile", asyncHandler(async (req, res) => {
   });
   if (!user) return res.status(404).json({ error: "Foydalanuvchi topilmadi" });
 
-  const attempts = await prisma.attempt.findMany({ where: { userId: id } });
-  const testsCompleted = attempts.length;
-  const correctAnswers = attempts.reduce((sum, a) => sum + a.correctCount, 0);
-  const totalAnswers = attempts.reduce((sum, a) => sum + a.totalCount, 0);
+  // Ilgari bu yerda foydalanuvchining BARCHA urinishlari xotiraga yuklanardi
+  // (`findMany` cheklovsiz), keyin JS'da yig'ilardi. Faol foydalanuvchida bu
+  // minglab qatorni anglatadi va profil ochilishi sekinlashadi. Endi yig'indi
+  // DB'da hisoblanadi — bitta arzon so'rov, hajmdan qat'i nazar bir xil tez.
+  //
+  // O'rtacha ball (averageScore) uchun har bir urinishning foizi kerak, uni
+  // SQL'siz aniq hisoblab bo'lmaydi, shuning uchun oxirgi 500 urinish bilan
+  // cheklaymiz — statistik jihatdan yetarli namuna.
+  const [aggregate, recentForAverage, lastAttempt, payments, activities] = await Promise.all([
+    prisma.attempt.aggregate({
+      where: { userId: id },
+      _count: { _all: true },
+      _sum: { correctCount: true, totalCount: true },
+    }),
+    prisma.attempt.findMany({
+      where: { userId: id },
+      orderBy: { createdAt: "desc" },
+      take: 500,
+      select: { correctCount: true, totalCount: true },
+    }),
+    prisma.attempt.findFirst({
+      where: { userId: id },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    }),
+    prisma.paymentRequest.findMany({
+      where: { userId: id },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    }),
+    prisma.activityLog.findMany({
+      where: { userId: id },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    }),
+  ]);
+
+  const testsCompleted = aggregate._count._all;
+  const correctAnswers = aggregate._sum.correctCount || 0;
+  const totalAnswers = aggregate._sum.totalCount || 0;
   const wrongAnswers = totalAnswers - correctAnswers;
   const successPercent = totalAnswers > 0 ? Math.round((correctAnswers / totalAnswers) * 100) : 0;
-  const averageScore = testsCompleted > 0
-    ? Math.round(attempts.reduce((sum, a) => sum + (a.totalCount > 0 ? (a.correctCount / a.totalCount) * 100 : 0), 0) / testsCompleted)
-    : 0;
-  const lastActivity = attempts.length > 0
-    ? attempts.reduce((latest, a) => (a.createdAt > latest ? a.createdAt : latest), attempts[0].createdAt)
-    : null;
-
-  const payments = await prisma.paymentRequest.findMany({
-    where: { userId: id },
-    orderBy: { createdAt: "desc" },
-  });
-
-  const activities = await prisma.activityLog.findMany({
-    where: { userId: id },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
+  const averageScore =
+    recentForAverage.length > 0
+      ? Math.round(
+          recentForAverage.reduce(
+            (sum, a) => sum + (a.totalCount > 0 ? (a.correctCount / a.totalCount) * 100 : 0),
+            0
+          ) / recentForAverage.length
+        )
+      : 0;
+  const lastActivity = lastAttempt?.createdAt || null;
 
   res.json({
     general: {
@@ -291,8 +327,8 @@ adminRouter.get("/users/:id/profile", asyncHandler(async (req, res) => {
 // ============================== ROL / BLOKLASH ==============================
 
 // PATCH /api/admin/users/:id/role  { role: "ADMIN" | "USER" }
-adminRouter.patch("/users/:id/role", asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
+adminRouter.patch("/users/:id/role", requireIdParam, asyncHandler(async (req, res) => {
+  const id = req.id;
   const { role } = req.body;
 
   if (role !== "ADMIN" && role !== "USER") {
@@ -305,6 +341,10 @@ adminRouter.patch("/users/:id/role", asyncHandler(async (req, res) => {
   if (isSuperAdmin(target.telegramId) && role === "USER") {
     return res.status(403).json({ error: "Bosh adminning rolini bu yerdan o'zgartirib bo'lmaydi" });
   }
+  // Admin o'zidan admin huquqini olib tashlasa, ortga qaytara olmaydi
+  if (id === req.user.id && role === "USER") {
+    return res.status(400).json({ error: "O'zingizdan admin huquqini olib tashlay olmaysiz" });
+  }
 
   const user = await prisma.user.update({
     where: { id },
@@ -313,14 +353,14 @@ adminRouter.patch("/users/:id/role", asyncHandler(async (req, res) => {
   });
 
   await logActivity(id, role === "ADMIN" ? "MADE_ADMIN" : "REMOVED_ADMIN", role === "ADMIN" ? "Admin etib tayinlandi" : "Admin huquqi olib tashlandi");
-  await logAdminAction(req.auth.sub, role === "ADMIN" ? "ADMIN_GRANTED" : "ADMIN_REMOVED", { targetUserId: id, targetLabel: target.name });
+  await logAdminAction(req.user.id, role === "ADMIN" ? "ADMIN_GRANTED" : "ADMIN_REMOVED", { targetUserId: id, targetLabel: target.name });
 
   res.json({ user });
 }));
 
 // PATCH /api/admin/users/:id/premium  { isPremium, planKey?, days? }
-adminRouter.patch("/users/:id/premium", asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
+adminRouter.patch("/users/:id/premium", requireIdParam, asyncHandler(async (req, res) => {
+  const id = req.id;
   const { isPremium, planKey, days } = req.body;
 
   if (typeof isPremium !== "boolean") {
@@ -349,15 +389,26 @@ adminRouter.patch("/users/:id/premium", asyncHandler(async (req, res) => {
     select: { id: true, name: true, username: true, role: true, isPremium: true, premiumExpiresAt: true },
   });
 
-  await logActivity(id, "PREMIUM_GRANTED", isPremium ? `Premium (${data.premiumPlan}) qo'lda berildi` : "Premium olib tashlandi");
-  await logAdminAction(req.auth.sub, "PREMIUM_GRANTED", { targetUserId: id, targetLabel: target.name, details: data.premiumPlan || "" });
+  // Ilgari premium OLIB TASHLANGANDA ham "PREMIUM_GRANTED" deb yozilardi —
+  // audit jurnali noto'g'ri bo'lib, kim premiumni bekor qilganini topib
+  // bo'lmasdi. Endi harakat turi to'g'ri belgilanadi.
+  await logActivity(
+    id,
+    isPremium ? "PREMIUM_GRANTED" : "PREMIUM_EXPIRED",
+    isPremium ? `Premium (${data.premiumPlan}) qo'lda berildi` : "Premium olib tashlandi"
+  );
+  await logAdminAction(req.user.id, isPremium ? "PREMIUM_GRANTED" : "PREMIUM_REMOVED", {
+    targetUserId: id,
+    targetLabel: target.name,
+    details: data.premiumPlan || "",
+  });
 
   res.json({ user });
 }));
 
 // PATCH /api/admin/users/:id/premium/extend  { days }
-adminRouter.patch("/users/:id/premium/extend", asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
+adminRouter.patch("/users/:id/premium/extend", requireIdParam, asyncHandler(async (req, res) => {
+  const id = req.id;
   const days = Number(req.body.days);
   if (!days || days <= 0) return res.status(400).json({ error: "days musbat son bo'lishi kerak" });
 
@@ -375,14 +426,14 @@ adminRouter.patch("/users/:id/premium/extend", asyncHandler(async (req, res) => 
   });
 
   await logActivity(id, "PREMIUM_EXTENDED", `Premium ${days} kunga uzaytirildi`);
-  await logAdminAction(req.auth.sub, "PREMIUM_EXTENDED", { targetUserId: id, targetLabel: target.name, details: `${days} kun` });
+  await logAdminAction(req.user.id, "PREMIUM_EXTENDED", { targetUserId: id, targetLabel: target.name, details: `${days} kun` });
 
   res.json({ user });
 }));
 
 // PATCH /api/admin/users/:id/block  { blocked: true|false, reason? }
-adminRouter.patch("/users/:id/block", asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
+adminRouter.patch("/users/:id/block", requireIdParam, asyncHandler(async (req, res) => {
+  const id = req.id;
   const { blocked, reason } = req.body;
   if (typeof blocked !== "boolean") return res.status(400).json({ error: "blocked true yoki false bo'lishi kerak" });
 
@@ -390,6 +441,11 @@ adminRouter.patch("/users/:id/block", asyncHandler(async (req, res) => {
   if (!target) return res.status(404).json({ error: "Foydalanuvchi topilmadi" });
   if (isSuperAdmin(target.telegramId) && blocked) {
     return res.status(403).json({ error: "Bosh adminni bloklab bo'lmaydi" });
+  }
+  // O'zini bloklab qo'yish — qaytarib bo'lmaydigan xato bo'lardi
+  // (bloklangan admin endi admin panelga kira olmaydi).
+  if (id === req.user.id && blocked) {
+    return res.status(400).json({ error: "O'zingizni bloklay olmaysiz" });
   }
 
   const user = await prisma.user.update({
@@ -399,15 +455,17 @@ adminRouter.patch("/users/:id/block", asyncHandler(async (req, res) => {
   });
 
   await logActivity(id, blocked ? "BLOCKED" : "UNBLOCKED", blocked ? (reason || "Foydalanuvchi bloklandi") : "Foydalanuvchi blokdan chiqarildi");
-  await logAdminAction(req.auth.sub, blocked ? "USER_BLOCKED" : "USER_UNBLOCKED", { targetUserId: id, targetLabel: target.name, details: reason || "" });
+  await logAdminAction(req.user.id, blocked ? "USER_BLOCKED" : "USER_UNBLOCKED", { targetUserId: id, targetLabel: target.name, details: reason || "" });
 
   res.json({ user });
 }));
 
 // DELETE /api/admin/users/:id — faqat Super Admin
-adminRouter.delete("/users/:id", asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
-  if (!isSuperAdmin(req.auth.telegramId)) {
+adminRouter.delete("/users/:id", requireIdParam, asyncHandler(async (req, res) => {
+  const id = req.id;
+  // Tokendagi telegramId emas, DB'dan yuklangan haqiqiy foydalanuvchi —
+  // token qalbakilashtirilgan yoki eskirgan bo'lsa ham to'g'ri ishlaydi.
+  if (!isSuperAdmin(req.user.telegramId)) {
     return res.status(403).json({ error: "Hisobni o'chirish faqat bosh admin uchun" });
   }
 
@@ -416,8 +474,11 @@ adminRouter.delete("/users/:id", asyncHandler(async (req, res) => {
   if (isSuperAdmin(target.telegramId)) {
     return res.status(403).json({ error: "Bosh adminni o'chirib bo'lmaydi" });
   }
+  if (id === req.user.id) {
+    return res.status(400).json({ error: "O'z hisobingizni o'chira olmaysiz" });
+  }
 
-  await logAdminAction(req.auth.sub, "ACCOUNT_DELETED", { targetUserId: null, targetLabel: target.name, details: `id=${id}` });
+  await logAdminAction(req.user.id, "ACCOUNT_DELETED", { targetUserId: null, targetLabel: target.name, details: `id=${id}` });
 
   // Bog'liq yozuvlarni ketma-ket o'chiramiz (Prisma cascade sozlanmagani uchun)
   await prisma.$transaction([
@@ -438,8 +499,8 @@ adminRouter.delete("/users/:id", asyncHandler(async (req, res) => {
 
 // PATCH /api/admin/users/:id/notes  { notes }
 // Faqat adminlar orasida ko'rinadigan shaxsiy eslatma — foydalanuvchiga hech qachon ko'rsatilmaydi.
-adminRouter.patch("/users/:id/notes", asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
+adminRouter.patch("/users/:id/notes", requireIdParam, asyncHandler(async (req, res) => {
+  const id = req.id;
   const { notes } = req.body;
 
   const target = await prisma.user.findUnique({ where: { id } });
@@ -457,8 +518,8 @@ adminRouter.patch("/users/:id/notes", asyncHandler(async (req, res) => {
 // ============================== CHEGIRMA ==============================
 
 // PATCH /api/admin/users/:id/discount  { percent, expiresAt? }
-adminRouter.patch("/users/:id/discount", asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
+adminRouter.patch("/users/:id/discount", requireIdParam, asyncHandler(async (req, res) => {
+  const id = req.id;
   const { percent, expiresAt } = req.body;
 
   if (!VALID_DISCOUNTS.includes(Number(percent))) {
@@ -475,19 +536,19 @@ adminRouter.patch("/users/:id/discount", asyncHandler(async (req, res) => {
   });
 
   await logActivity(id, "DISCOUNT_GRANTED", `${percent}% chegirma berildi`);
-  await logAdminAction(req.auth.sub, "DISCOUNT_GRANTED", { targetUserId: id, targetLabel: target.name, details: `${percent}%` });
+  await logAdminAction(req.user.id, "DISCOUNT_GRANTED", { targetUserId: id, targetLabel: target.name, details: `${percent}%` });
 
   res.json({ discount });
 }));
 
 // DELETE /api/admin/users/:id/discount
-adminRouter.delete("/users/:id/discount", asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
+adminRouter.delete("/users/:id/discount", requireIdParam, asyncHandler(async (req, res) => {
+  const id = req.id;
   const target = await prisma.user.findUnique({ where: { id } });
   if (!target) return res.status(404).json({ error: "Foydalanuvchi topilmadi" });
 
   await prisma.discount.deleteMany({ where: { userId: id } });
-  await logAdminAction(req.auth.sub, "DISCOUNT_REMOVED", { targetUserId: id, targetLabel: target.name });
+  await logAdminAction(req.user.id, "DISCOUNT_REMOVED", { targetUserId: id, targetLabel: target.name });
 
   res.json({ ok: true });
 }));
@@ -500,7 +561,12 @@ adminRouter.delete("/users/:id/discount", asyncHandler(async (req, res) => {
 // bu qism hozircha "ro'yxatni tayyorlash + hisobni saqlash"gacha ishlaydi.
 adminRouter.post("/broadcast", asyncHandler(async (req, res) => {
   const { text, audience, userIds } = req.body;
-  if (!text || !text.trim()) return res.status(400).json({ error: "Xabar matni bo'sh bo'lmasligi kerak" });
+  if (typeof text !== "string" || !text.trim()) {
+    return res.status(400).json({ error: "Xabar matni bo'sh bo'lmasligi kerak" });
+  }
+  // Telegram bitta xabarda 4096 belgigacha ruxsat beradi — undan uzun matn
+  // yuborishga urinish baribir xatoga olib keladi, shuning uchun shu yerda to'xtatamiz.
+  const cleanText = text.trim().slice(0, 4096);
 
   const validAudiences = ["ALL", "PREMIUM", "VIP", "BLOCKED", "SELECTED"];
   if (!validAudiences.includes(audience)) {
@@ -515,22 +581,34 @@ adminRouter.post("/broadcast", asyncHandler(async (req, res) => {
     if (!Array.isArray(userIds) || userIds.length === 0) {
       return res.status(400).json({ error: "SELECTED uchun userIds ro'yxati kerak" });
     }
-    where = { id: { in: userIds.map(Number) } };
+    // Faqat yaroqli raqamli ID'lar — NaN Prisma so'rovini buzadi.
+    const ids = userIds.map(Number).filter((n) => Number.isInteger(n) && n > 0).slice(0, 1000);
+    if (ids.length === 0) {
+      return res.status(400).json({ error: "userIds da yaroqli ID topilmadi" });
+    }
+    where = { id: { in: ids } };
   }
 
-  const recipients = await prisma.user.findMany({ where, select: { id: true, telegramId: true } });
+  // Bloklangan foydalanuvchilarga xabar yuborilmaydi (BLOCKED auditoriyasi
+  // ataylab tanlangan holatdan tashqari) — ular ilovadan foydalana olmaydi.
+  if (audience !== "BLOCKED") {
+    where = { ...where, isBlocked: false };
+  }
+
+  const recipientCount = await prisma.user.count({ where });
 
   const broadcast = await prisma.broadcastMessage.create({
-    data: { text: text.trim(), audience, sentCount: recipients.length },
+    data: { text: cleanText, audience, sentCount: recipientCount },
   });
 
-  await logAdminAction(req.auth.sub, "BROADCAST_SENT", { details: `${audience}: ${recipients.length} ta foydalanuvchi` });
+  await logAdminAction(req.user.id, "BROADCAST_SENT", { details: `${audience}: ${recipientCount} ta foydalanuvchi` });
 
-  res.status(201).json({
-    broadcast,
-    recipientCount: recipients.length,
-    recipientTelegramIds: recipients.map((r) => r.telegramId.toString()),
-  });
+  // MUHIM: ilgari bu yerda barcha qabul qiluvchilarning Telegram ID'lari
+  // javobda qaytarilardi. Bu shaxsiy ma'lumotlarning keraksiz oshkor bo'lishi
+  // edi — brauzer konsolida yoki tarmoq jurnalida butun foydalanuvchi bazasi
+  // ko'rinib qolardi. Xabarni haqiqiy yuborish backend (bot) vazifasi,
+  // shuning uchun clientga faqat son qaytariladi.
+  res.status(201).json({ broadcast, recipientCount });
 }));
 
 // ============================== ADMIN LOG ==============================
@@ -553,4 +631,23 @@ adminRouter.get("/logs", asyncHandler(async (_req, res) => {
       createdAt: l.createdAt,
     })),
   });
+}));
+
+// ============================== RASMIY IMTIHON ANALITIKASI ==============================
+
+// GET /api/admin/exam/analytics — umumiy ko'rsatkichlar + savol qiyinligi
+adminRouter.get("/exam/analytics", asyncHandler(async (_req, res) => {
+  const [overview, questions] = await Promise.all([
+    getExamOverview(),
+    getQuestionDifficultyStats(),
+  ]);
+  res.json({ overview, questions });
+}));
+
+// GET /api/admin/users/:id/exam-summary — foydalanuvchining imtihon xulosasi.
+// User Profile ekranida ko'rsatiladi.
+adminRouter.get("/users/:id/exam-summary", requireIdParam, asyncHandler(async (req, res) => {
+  const user = await prisma.user.findUnique({ where: { id: req.id }, select: { id: true } });
+  if (!user) return res.status(404).json({ error: "Foydalanuvchi topilmadi" });
+  res.json(await getUserExamSummary(req.id));
 }));

@@ -159,8 +159,18 @@ function createDuel(playerA, playerB) {
   });
 }
 
-export function initDuelSocket(httpServer) {
-  const io = new Server(httpServer, { cors: { origin: "*" } });
+export function initDuelSocket(httpServer, { isOriginAllowed } = {}) {
+  // Socket.io ham HTTP API bilan bir xil manba ro'yxatiga bo'ysunadi —
+  // ilgari `origin: "*"` edi, ya'ni istalgan sayt duel socketiga ulanardi.
+  const io = new Server(httpServer, {
+    cors: {
+      origin: (origin, cb) =>
+        !isOriginAllowed || isOriginAllowed(origin)
+          ? cb(null, true)
+          : cb(new Error("CORS: ruxsat etilmagan manba")),
+      credentials: true,
+    },
+  });
 
   io.use((socket, next) => {
     try {

@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { HelpCircle, Send, ChevronRight, ShieldCheck, Crown, Check } from "lucide-react";
+import { HelpCircle, Send, ChevronRight, ShieldCheck, Crown, Check, Trophy } from "lucide-react";
 import { ACCENT_FROM } from "../theme";
 import { useTheme } from "../ThemeContext";
 import { useFontSize } from "../FontSizeContext";
-import { showComingSoon } from "../api";
+import { api, showComingSoon } from "../api";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 
 function PremiumRow({ onClick }) {
@@ -43,6 +43,76 @@ function SettingsRow({ icon: Icon, label, value, onClick }) {
       </span>
       {value && <span className="text-text-muted text-sm">{value}</span>}
       <ChevronRight size={18} color="var(--chevron)" />
+    </button>
+  );
+}
+
+// Reytingda ko'rinish tugmasi.
+//
+// Maxfiylik: o'chirilsa, foydalanuvchi ommaviy reytinglardan BUTUNLAY
+// chiqariladi (o'z o'rnini ham ko'rmaydi). Holat serverda saqlanadi,
+// shuning uchun boshqa qurilmada ham amal qiladi.
+function LeaderboardToggle() {
+  const { t } = useTranslation();
+  const [visible, setVisible] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .examMe()
+      .then((res) => {
+        if (!cancelled) setVisible(res.showOnLeaderboard);
+      })
+      .catch(() => {
+        // Sozlama yuklanmasa, tugma ko'rsatilmaydi (holatni bilmasdan
+        // noto'g'ri qiymat ko'rsatgandan ko'ra yaxshiroq)
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (visible === null) return null;
+
+  async function toggle() {
+    if (saving) return;
+    const next = !visible;
+    setVisible(next); // optimistik
+    setSaving(true);
+    try {
+      await api.setLeaderboardVisibility(next);
+    } catch {
+      setVisible(!next); // qaytarish
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <button
+      onClick={toggle}
+      disabled={saving}
+      className="w-full flex items-center gap-3 rounded-2xl bg-card border border-card-border shadow-sm px-4 py-3.5 text-left active:scale-[0.99] transition-transform disabled:opacity-60"
+    >
+      <Trophy size={18} color="var(--icon-muted)" />
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-text-main text-sm">
+          {t("settings.showOnLeaderboard")}
+        </p>
+        <p className="text-text-muted text-xs mt-0.5 leading-snug">
+          {t("settings.showOnLeaderboardHint")}
+        </p>
+      </div>
+      <span
+        className="w-11 h-6 rounded-full p-0.5 shrink-0 transition-colors"
+        style={{ backgroundColor: visible ? ACCENT_FROM : "var(--border-card)" }}
+      >
+        <span
+          className="block w-5 h-5 rounded-full bg-white shadow transition-transform"
+          style={{ transform: visible ? "translateX(20px)" : "translateX(0)" }}
+        />
+      </span>
     </button>
   );
 }
@@ -243,6 +313,7 @@ export default function SettingsTab({ user, onOpenAdmin, onOpenPremium, onOpenSu
         <LanguageSwitcher variant="row" />
         <ThemePickerRow isPremium={isPremium} />
         <FontSizePickerRow />
+        <LeaderboardToggle />
         <SettingsRow
           icon={HelpCircle}
           label={t("settings.support")}

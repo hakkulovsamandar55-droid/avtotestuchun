@@ -4,6 +4,9 @@ import { ChevronLeft, Copy, Check, Upload, Clock, XCircle, MessageCircle } from 
 import { ACCENT_FROM, ACCENT_TO } from "../theme";
 import { api } from "../api";
 
+// Backend limiti bilan bir xil (backend/src/lib/upload.js)
+const MAX_RECEIPT_BYTES = 8 * 1024 * 1024;
+
 // Foydalanuvchi karta raqamiga pul o'tkazadi, chekni yuklaydi, admin tasdig'ini kutadi.
 // Bosqichlar: card -> uploading -> result (pending yoki duplicate)
 export default function PaymentScreen({ plan, onBack, onOpenSupport }) {
@@ -30,11 +33,35 @@ export default function PaymentScreen({ plan, onBack, onOpenSupport }) {
     setTimeout(() => setCopied(false), 1500);
   }
 
+  // URL.createObjectURL bilan yaratilgan manzil qo'lda bo'shatilmasa,
+  // rasm brauzer xotirasida qolib ketadi (memory leak). Foydalanuvchi
+  // bir necha marta rasm almashtirsa, bu sezilarli bo'ladi.
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
   function handleFilePick(e) {
     const f = e.target.files?.[0];
     if (!f) return;
+
+    // Katta fayl serverga yuborilib, keyin 413 xatosi qaytishidan ko'ra
+    // shu yerda darhol ogohlantirgan yaxshi (backend limiti ham 8MB).
+    if (f.size > MAX_RECEIPT_BYTES) {
+      setError(t("payment.fileTooLarge"));
+      return;
+    }
+    if (!f.type.startsWith("image/")) {
+      setError(t("payment.notAnImage"));
+      return;
+    }
+
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(f);
+    });
     setFile(f);
-    setPreviewUrl(URL.createObjectURL(f));
     setError("");
   }
 
@@ -49,6 +76,11 @@ export default function PaymentScreen({ plan, onBack, onOpenSupport }) {
     } catch (err) {
       if (err.code === "duplicate_receipt") {
         setResult({ duplicate: true });
+        setStep("result");
+      } else if (err.code === "pending_exists") {
+        // Foydalanuvchida allaqachon ko'rib chiqilmagan so'rov bor —
+        // bu xato emas, shuning uchun "kutilmoqda" ekranini ko'rsatamiz.
+        setResult({ alreadyPending: true });
         setStep("result");
       } else {
         setError(err.message);
@@ -145,6 +177,20 @@ export default function PaymentScreen({ plan, onBack, onOpenSupport }) {
         </>
       )}
 
+      {step === "result" && result?.alreadyPending && (
+        <div className="flex flex-col items-center text-center mt-8 px-4">
+          <Clock size={48} color="#D97706" className="mb-4" />
+          <p className="font-bold text-text-main text-base mb-2">{t("payment.alreadyPendingTitle")}</p>
+          <p className="text-text-muted text-sm mb-6">{t("payment.alreadyPendingBody")}</p>
+          <button
+            onClick={onOpenSupport}
+            className="w-full rounded-2xl py-3 font-semibold text-sm border border-card-border bg-card text-text-main flex items-center justify-center gap-2"
+          >
+            <MessageCircle size={15} /> {t("payment.contactAdmin")}
+          </button>
+        </div>
+      )}
+
       {step === "result" && result?.duplicate && (
         <div className="flex flex-col items-center text-center mt-8 px-4">
           <XCircle size={48} color="#DC2626" className="mb-4" />
@@ -167,7 +213,7 @@ export default function PaymentScreen({ plan, onBack, onOpenSupport }) {
           <p className="text-text-muted text-sm mb-1">{t("payment.pendingBody")}</p>
           <p className="text-text-muted text-xs mb-6">{t("payment.pendingEta")}</p>
 
-          {result.payment.ocr.warnings.length > 0 && (
+          {result.payment.ocr?.warnings?.length > 0 && (
             <div className="w-full rounded-2xl bg-card-soft border border-card-border px-4 py-3 mb-6 text-left">
               <p className="text-text-muted text-xs leading-relaxed">{t("payment.warningsNotice")}</p>
             </div>

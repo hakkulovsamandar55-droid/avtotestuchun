@@ -17,24 +17,66 @@ export function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
 }
 
-async function request(path, { method = "GET", body, auth = true } = {}) {
+// Sessiya tugaganda (401) yoki hisob bloklanganda (403) ilova qayta login
+// ekraniga qaytishi kerak. Ilgari bunday javoblar oddiy xato sifatida
+// ko'rsatilardi va foydalanuvchi "hech narsa ishlamayapti" holatida qolardi.
+let onSessionExpired = null;
+
+export function setSessionExpiredHandler(handler) {
+  onSessionExpired = handler;
+}
+
+function handleAuthFailure(status, message) {
+  if (status === 401) {
+    clearToken();
+    onSessionExpired?.({ reason: "expired", message });
+  } else if (status === 403 && /blok/i.test(message || "")) {
+    clearToken();
+    onSessionExpired?.({ reason: "blocked", message });
+  }
+}
+
+// Tarmoq uzilishi yoki server javob bermasligi — bu `fetch` uchun throw
+// bo'ladi va foydalanuvchi tushunarsiz "Failed to fetch" ko'radi.
+// Shuning uchun aniq, tarjima qilingan xabarga aylantiramiz.
+const NETWORK_ERROR_MESSAGE = "Internetga ulanishda muammo. Qaytadan urinib ko'ring.";
+
+async function parseResponse(res) {
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const message = data.error || data.message || `So'rov muvaffaqiyatsiz (${res.status})`;
+    handleAuthFailure(res.status, message);
+    const err = new Error(message);
+    err.status = res.status;
+    err.code = data.error;
+    throw err;
+  }
+  return data;
+}
+
+async function request(path, { method = "GET", body, auth = true, signal } = {}) {
   const headers = { "Content-Type": "application/json" };
   if (auth) {
     const token = getToken();
     if (token) headers.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_URL}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.error || `So'rov muvaffaqiyatsiz (${res.status})`);
+  let res;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal,
+    });
+  } catch (err) {
+    // AbortError — komponent unmount bo'lgani uchun so'rov bekor qilindi,
+    // bu xato emas, uni yuqoriga o'zgarishsiz uzatamiz.
+    if (err.name === "AbortError") throw err;
+    throw new Error(NETWORK_ERROR_MESSAGE);
   }
-  return data;
+
+  return parseResponse(res);
 }
 
 // Rasm/fayl yuklash uchun alohida — FormData bilan, Content-Type header qo'lda
@@ -50,14 +92,15 @@ async function uploadRequest(path, { method = "POST", file, fieldName, extraFiel
     formData.append(key, value);
   }
 
-  const res = await fetch(`${API_URL}${path}`, { method, headers, body: formData });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const err = new Error(data.error || `So'rov muvaffaqiyatsiz (${res.status})`);
-    err.code = data.error;
-    throw err;
+  let res;
+  try {
+    res = await fetch(`${API_URL}${path}`, { method, headers, body: formData });
+  } catch (err) {
+    if (err.name === "AbortError") throw err;
+    throw new Error(NETWORK_ERROR_MESSAGE);
   }
-  return data;
+
+  return parseResponse(res);
 }
 
 // API_URL ni /uploads dagi rasm manzillariga qo'shib to'liq URL yasaydi
@@ -139,6 +182,35 @@ export const api = {
   recordAttempt: (attempt) =>
     request("/api/stats/attempt", { method: "POST", body: attempt }),
   getMyStats: () => request("/api/stats/me"),
+
+  // ===== Rasmiy imtihon (Official Exam) =====
+  // Mashq imtihonidan alohida: savollar serverdan JAVOBSIZ keladi,
+  // baholash ham serverda bo'ladi.
+  examEligibility: () => request("/api/exam/eligibility"),
+  examStart: () => request("/api/exam/start", { method: "POST" }),
+  examActive: () => request("/api/exam/active"),
+  examAnswer: (examId, questionIndex, chosenIndex) =>
+    request(`/api/exam/${examId}/answer`, {
+      method: "PATCH",
+      body: { questionIndex, chosenIndex },
+    }),
+  examFocusLost: (examId) => request(`/api/exam/${examId}/focus-lost`, { method: "POST" }),
+  examSubmit: (examId) => request(`/api/exam/${examId}/submit`, { method: "POST" }),
+  examAbandon: (examId) => request(`/api/exam/${examId}/abandon`, { method: "POST" }),
+  examReview: (examId) => request(`/api/exam/${examId}/review`),
+  examHistory: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/api/exam/history${qs ? `?${qs}` : ""}`);
+  },
+  examLeaderboard: (period = "all_time", sort = "score") =>
+    request(`/api/exam/leaderboard?period=${period}&sort=${sort}`),
+  examMe: () => request("/api/exam/me"),
+  setLeaderboardVisibility: (visible) =>
+    request("/api/exam/leaderboard-visibility", { method: "PATCH", body: { visible } }),
+
+  // Admin — imtihon analitikasi
+  getExamAnalytics: () => request("/api/admin/exam/analytics"),
+  getUserExamSummary: (userId) => request(`/api/admin/users/${userId}/exam-summary`),
 };
 
 // Hali backend/to'lov integratsiyasi ulanmagan tugmalar uchun:

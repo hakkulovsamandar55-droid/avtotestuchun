@@ -25,7 +25,11 @@ export function requireAuth(req, res, next) {
   }
 }
 
-// requireAuth dan keyin ishlatiladi — faqat admin rolidagilar o'tadi
+// ESKIRGAN — tokendagi rolga tayanadi, ya'ni admin huquqi olib tashlangandan
+// keyin ham eski token bilan 30 kun davomida o'tib ketaverardi.
+// Buning o'rniga services/userState.js dagi loadCurrentUser + requireAdminUser
+// ishlatiladi (DB'dagi joriy rolni tekshiradi).
+// Faqat orqaga moslik uchun qoldirilgan — yangi kodda ishlatilmasin.
 export function requireAdmin(req, res, next) {
   if (req.auth?.role !== "ADMIN") {
     return res.status(403).json({ error: "Bu bo'lim faqat adminlar uchun" });
