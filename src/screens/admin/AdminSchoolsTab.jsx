@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { School, Users, GraduationCap, Trophy, Check, Ban, Trash2, X, Plus } from "lucide-react";
+import { School, Users, GraduationCap, Trophy, Check, Ban, Trash2, X, Plus, Search, UserCircle2 } from "lucide-react";
 import { api } from "../../api";
 
 const STATUS_META = {
@@ -101,6 +101,134 @@ function SchoolCard({ school, onApprove, onDisable, onDelete, busy }) {
   );
 }
 
+/**
+ * Foydalanuvchi qidirish + tanlash komponenti.
+ *
+ * Ilgari admin bu yerga to'g'ridan-to'g'ri raqam (Foydalanuvchi ID) kiritardi.
+ * Muammo: admin odatda Telegram ID'ni (masalan 8711164970) kiritishga
+ * moyil bo'ladi, chunki u foydalanuvchini shu orqali tanigan. Lekin backend
+ * (`createSchool`) buni ICHKI baza ID'si (User.id, kichik autoincrement
+ * raqam) deb kutadi — bu ikkalasi turli maydonlar va turli qiymat
+ * diapazoniga ega (Telegram ID INT4 sig'imidan katta bo'lishi mumkin).
+ *
+ * Bu qidiruv esa xato ehtimolini butunlay yo'q qiladi: admin ism/username/
+ * telefon bo'yicha yozadi, mavjud /api/admin/users qidiruvidan (bu allaqachon
+ * boshqa joyda ishlatiladi — mantiq takrorlanmaydi) natija oladi, va faqat
+ * tugallangan foydalanuvchi ob'ektini tanlaydi — noto'g'ri ID kiritish
+ * imkoniyati yo'q.
+ */
+function OwnerPicker({ value, onChange }) {
+  const { t } = useTranslation();
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [open, setOpen] = useState(false);
+  const debounceRef = useRef(null);
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!query.trim()) {
+      setResults([]);
+      return;
+    }
+    setSearching(true);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await api.searchUsers(query.trim());
+        setResults(res.users || []);
+      } catch {
+        setResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+    return () => clearTimeout(debounceRef.current);
+  }, [query]);
+
+  // Tashqariga bosilganda natijalar ro'yxatini yopish
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  if (value) {
+    return (
+      <div className="w-full rounded-2xl bg-card-soft border border-card-border px-4 py-3 mb-2 flex items-center gap-3">
+        <UserCircle2 size={22} color="var(--icon-muted)" className="shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-text-main truncate">{value.name}</p>
+          <p className="text-text-muted text-[11px]">
+            {value.username ? `@${value.username} · ` : ""}ID: {value.telegramId}
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            onChange(null);
+            setQuery("");
+          }}
+          className="w-7 h-7 rounded-full bg-card flex items-center justify-center shrink-0"
+        >
+          <X size={14} color="var(--icon-muted)" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={containerRef} className="relative mb-2">
+      <div className="relative">
+        <Search size={15} color="var(--icon-muted)" className="absolute left-4 top-1/2 -translate-y-1/2" />
+        <input
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          placeholder={t("school.searchOwnerPlaceholder")}
+          className="w-full rounded-2xl bg-card-soft border border-card-border pl-10 pr-4 py-3 text-sm text-text-main placeholder:text-text-muted focus:outline-none"
+        />
+      </div>
+
+      {open && query.trim() && (
+        <div className="absolute z-10 mt-1.5 w-full max-h-56 overflow-y-auto rounded-2xl bg-white dark:bg-[#161B2E] border border-card-border shadow-lg">
+          {searching && (
+            <div className="px-4 py-3 text-xs text-text-muted">{t("common.searching")}</div>
+          )}
+          {!searching && results.length === 0 && (
+            <div className="px-4 py-3 text-xs text-text-muted">{t("common.noResults")}</div>
+          )}
+          {!searching &&
+            results.map((u) => (
+              <button
+                key={u.id}
+                onClick={() => {
+                  onChange(u);
+                  setOpen(false);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-card-soft"
+              >
+                <UserCircle2 size={20} color="var(--icon-muted)" className="shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-text-main truncate">{u.name}</p>
+                  <p className="text-text-muted text-[11px]">
+                    {u.username ? `@${u.username} · ` : ""}ID: {u.telegramId}
+                  </p>
+                </div>
+              </button>
+            ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** CEO uchun: barcha maktablar, platforma analitikasi, tasdiqlash/o'chirish. */
 export default function AdminSchoolsTab() {
   const { t } = useTranslation();
@@ -112,7 +240,7 @@ export default function AdminSchoolsTab() {
   const [filter, setFilter] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
-  const [newOwnerId, setNewOwnerId] = useState("");
+  const [newOwner, setNewOwner] = useState(null); // { id, name, username, telegramId }
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
 
@@ -173,23 +301,27 @@ export default function AdminSchoolsTab() {
     }
   }
 
+  function closeCreateModal() {
+    setShowCreate(false);
+    setNewName("");
+    setNewOwner(null);
+    setCreateError("");
+  }
+
   async function handleCreateSchool() {
-    const ownerUserId = Number(newOwnerId);
     if (!newName.trim()) {
       setCreateError(t("adminSchool.nameRequired"));
       return;
     }
-    if (!Number.isInteger(ownerUserId) || ownerUserId <= 0) {
-      setCreateError(t("school.invalidUserId"));
+    if (!newOwner) {
+      setCreateError(t("school.ownerNotSelected"));
       return;
     }
     setCreating(true);
     setCreateError("");
     try {
-      await api.schoolAdminCreate({ name: newName.trim(), ownerUserId });
-      setShowCreate(false);
-      setNewName("");
-      setNewOwnerId("");
+      await api.schoolAdminCreate({ name: newName.trim(), ownerUserId: newOwner.id });
+      closeCreateModal();
       await load();
     } catch (err) {
       setCreateError(err.message);
@@ -297,7 +429,7 @@ export default function AdminSchoolsTab() {
             <div className="flex items-center justify-between mb-4">
               <p className="font-bold text-base text-text-main">{t("adminSchool.newSchool")}</p>
               <button
-                onClick={() => setShowCreate(false)}
+                onClick={closeCreateModal}
                 className="w-8 h-8 rounded-full bg-card-soft flex items-center justify-center"
               >
                 <X size={16} color="var(--icon-muted)" />
@@ -316,13 +448,7 @@ export default function AdminSchoolsTab() {
             <label className="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">
               {t("adminSchool.ownerUserId")}
             </label>
-            <input
-              value={newOwnerId}
-              onChange={(e) => setNewOwnerId(e.target.value)}
-              placeholder={t("school.userIdPlaceholder")}
-              inputMode="numeric"
-              className="w-full rounded-2xl bg-card-soft border border-card-border px-4 py-3 text-sm text-text-main placeholder:text-text-muted mb-2 focus:outline-none"
-            />
+            <OwnerPicker value={newOwner} onChange={setNewOwner} />
             <p className="text-text-muted text-[11px] mb-4 leading-relaxed">
               {t("adminSchool.ownerHint")}
             </p>
