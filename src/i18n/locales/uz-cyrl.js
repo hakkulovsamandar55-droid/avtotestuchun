@@ -139,6 +139,7 @@ export default {
     practiceExam: "Машқ имтиҳони",
     practiceExamSubtitle: "Тез синов, 2 хатода тугайди",
     welcome: "Хуш келибсиз,",
+    guest: "Фойдаланувчи",
     streakDays: "{{days}} кун",
     aiHint: "AI кўрсатгич",
     readiness: "Имтиҳонга тайёргарлик: {{percent}}%",

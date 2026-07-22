@@ -135,6 +135,7 @@ export default function MainApp({ user }) {
     <div className="flex flex-col h-full bg-app">
       {active === "home" && (
         <HomeTab
+          user={user}
           onOpenTickets={() => setShowTickets(true)}
           onOpenSigns={() => setShowSigns(true)}
           onOpenExam={() => setShowExam(true)}

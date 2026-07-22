@@ -139,6 +139,7 @@ export default {
     practiceExam: "Тренировочный экзамен",
     practiceExamSubtitle: "Быстрый тест, 2 ошибки — конец",
     welcome: "Добро пожаловать,",
+    guest: "Пользователь",
     streakDays: "{{days}} дн.",
     aiHint: "AI-индикатор",
     readiness: "Готовность к экзамену: {{percent}}%",

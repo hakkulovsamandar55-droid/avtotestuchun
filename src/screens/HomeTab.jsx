@@ -18,7 +18,7 @@ import { ACCENT_FROM, ACCENT_TO } from "../theme";
 import { api } from "../api";
 
 // 3a-EKRAN: "O'rganish" bo'limi — bosh sahifa
-export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam, onOpenOfficialExam, onOpenStats, onOpenDuel }) {
+export default function HomeTab({ user, onOpenTickets, onOpenSigns, onOpenExam, onOpenOfficialExam, onOpenStats, onOpenDuel }) {
   const { t } = useTranslation();
   const [stats, setStats] = useState(null);
 
@@ -76,7 +76,7 @@ export default function HomeTab({ onOpenTickets, onOpenSigns, onOpenExam, onOpen
         <div>
           <p className="text-text-muted text-sm">{t("home.welcome")}</p>
           <h1 className="text-2xl font-extrabold text-text-main">
-            Samandar 👋
+            {user?.name || t("home.guest")}
           </h1>
         </div>
         <div className="flex items-center gap-2">
