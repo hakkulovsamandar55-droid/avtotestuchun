@@ -8,7 +8,7 @@ import { ACCENT_FROM, ACCENT_TO } from "../../theme";
 const FILTER_GROUPS = [
   {
     title: "status",
-    keys: ["premium", "free", "vip", "admin", "blocked"],
+    keys: ["premium", "free", "admin", "blocked"],
   },
   {
     title: "registered",

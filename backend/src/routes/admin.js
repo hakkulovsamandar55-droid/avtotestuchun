@@ -60,9 +60,6 @@ function buildFilterConditions(filters) {
       case "free":
         conditions.push({ isPremium: false });
         break;
-      case "vip":
-        conditions.push({ isPremium: true, premiumPlan: "vip" });
-        break;
       case "admin":
         conditions.push({ role: "ADMIN" });
         break;
@@ -373,7 +370,9 @@ adminRouter.patch("/users/:id/premium", requireIdParam, asyncHandler(async (req,
   const now = new Date();
   const data = { isPremium };
   if (isPremium) {
-    data.premiumPlan = planKey || target.premiumPlan || "pro";
+    // "pro" endi mahsulot nomi emas — muddat kalitlaridan biri (days15/days30/days90)
+    // ishlatiladi. Admin aniq kalit bermasa, standart 30 kunlik tarif tanlanadi.
+    data.premiumPlan = planKey || target.premiumPlan || "days30";
     data.premiumStartedAt = now;
     const expires = new Date(now);
     expires.setDate(expires.getDate() + (Number(days) || 30));
@@ -568,14 +567,13 @@ adminRouter.post("/broadcast", asyncHandler(async (req, res) => {
   // yuborishga urinish baribir xatoga olib keladi, shuning uchun shu yerda to'xtatamiz.
   const cleanText = text.trim().slice(0, 4096);
 
-  const validAudiences = ["ALL", "PREMIUM", "VIP", "BLOCKED", "SELECTED"];
+  const validAudiences = ["ALL", "PREMIUM", "BLOCKED", "SELECTED"];
   if (!validAudiences.includes(audience)) {
     return res.status(400).json({ error: `audience quyidagilardan biri bo'lishi kerak: ${validAudiences.join(", ")}` });
   }
 
   let where = {};
   if (audience === "PREMIUM") where = { isPremium: true };
-  else if (audience === "VIP") where = { isPremium: true, premiumPlan: "vip" };
   else if (audience === "BLOCKED") where = { isBlocked: true };
   else if (audience === "SELECTED") {
     if (!Array.isArray(userIds) || userIds.length === 0) {

@@ -211,6 +211,75 @@ export const api = {
   // Admin — imtihon analitikasi
   getExamAnalytics: () => request("/api/admin/exam/analytics"),
   getUserExamSummary: (userId) => request(`/api/admin/users/${userId}/exam-summary`),
+
+  // ===== Haydovchilik maktablari (Driving School) =====
+  schoolMe: () => request("/api/school/me"),
+  schoolJoin: (code) => request("/api/school/join", { method: "POST", body: { code } }),
+  schoolLeave: () => request("/api/school/leave", { method: "POST" }),
+  schoolMyHomework: () => request("/api/school/my-homework"),
+
+  schoolGet: (schoolId) => request(`/api/school/${schoolId}`),
+  schoolUpdate: (schoolId, data) =>
+    request(`/api/school/${schoolId}`, { method: "PATCH", body: data }),
+
+  schoolGroups: (schoolId) => request(`/api/school/${schoolId}/groups`),
+  schoolCreateGroup: (schoolId, name) =>
+    request(`/api/school/${schoolId}/groups`, { method: "POST", body: { name } }),
+
+  schoolTeachers: (schoolId) => request(`/api/school/${schoolId}/teachers`),
+  schoolAddTeacher: (schoolId, userId) =>
+    request(`/api/school/${schoolId}/teachers`, { method: "POST", body: { userId } }),
+  schoolSuspendTeacher: (schoolId, membershipId) =>
+    request(`/api/school/${schoolId}/teachers/${membershipId}/suspend`, { method: "PATCH" }),
+  schoolReactivateTeacher: (schoolId, membershipId) =>
+    request(`/api/school/${schoolId}/teachers/${membershipId}/reactivate`, { method: "PATCH" }),
+
+  schoolRemoveMember: (schoolId, membershipId) =>
+    request(`/api/school/${schoolId}/members/${membershipId}`, { method: "DELETE" }),
+  schoolMoveStudent: (schoolId, membershipId, groupId) =>
+    request(`/api/school/${schoolId}/members/${membershipId}/group`, {
+      method: "PATCH",
+      body: { groupId },
+    }),
+
+  schoolStudents: (schoolId, groupId) =>
+    request(`/api/school/${schoolId}/students${groupId ? `?groupId=${groupId}` : ""}`),
+
+  schoolInvitations: (schoolId) => request(`/api/school/${schoolId}/invitations`),
+  schoolCreateInvitation: (schoolId, data) =>
+    request(`/api/school/${schoolId}/invitations`, { method: "POST", body: data }),
+  schoolRevokeInvitation: (schoolId, invitationId) =>
+    request(`/api/school/${schoolId}/invitations/${invitationId}`, { method: "DELETE" }),
+
+  schoolGroupHomework: (schoolId, groupId) =>
+    request(`/api/school/${schoolId}/groups/${groupId}/homework`),
+  schoolCreateHomework: (schoolId, groupId, data) =>
+    request(`/api/school/${schoolId}/groups/${groupId}/homework`, {
+      method: "POST",
+      body: data,
+    }),
+
+  schoolTeacherDashboard: (schoolId, groupId) =>
+    request(
+      `/api/school/${schoolId}/teacher/dashboard${groupId ? `?groupId=${groupId}` : ""}`
+    ),
+  schoolGroupLeaderboard: (schoolId, groupId) =>
+    request(`/api/school/${schoolId}/groups/${groupId}/leaderboard`),
+  schoolAnalytics: (schoolId) => request(`/api/school/${schoolId}/analytics`),
+
+  // CEO
+  schoolAdminList: (status) =>
+    request(`/api/school/admin/schools${status ? `?status=${status}` : ""}`),
+  schoolAdminCreate: (data) =>
+    request("/api/school/admin/schools", { method: "POST", body: data }),
+  schoolAdminSetStatus: (schoolId, status, reason) =>
+    request(`/api/school/admin/schools/${schoolId}/status`, {
+      method: "PATCH",
+      body: { status, reason },
+    }),
+  schoolAdminDelete: (schoolId) =>
+    request(`/api/school/admin/schools/${schoolId}`, { method: "DELETE" }),
+  schoolAdminAnalytics: () => request("/api/school/admin/analytics"),
 };
 
 // Hali backend/to'lov integratsiyasi ulanmagan tugmalar uchun:

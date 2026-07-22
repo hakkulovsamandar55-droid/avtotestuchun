@@ -16,7 +16,6 @@ export default function AdminBroadcastTab() {
   const audiences = [
     { key: "ALL", label: t("admin.broadcast.audienceAll") },
     { key: "PREMIUM", label: t("admin.broadcast.audiencePremium") },
-    { key: "VIP", label: t("admin.broadcast.audienceVip") },
     { key: "BLOCKED", label: t("admin.broadcast.audienceBlocked") },
   ];
 

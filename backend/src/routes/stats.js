@@ -6,6 +6,7 @@ import { asyncHandler } from "../asyncHandler.js";
 import { TOTAL_TICKETS } from "../data/ticketsData.js";
 // Kun chegarasi mahalliy vaqtga (UTC+5) ko'ra hisoblanadi — lib/time.js ga qarang.
 import { localDayKey } from "../lib/time.js";
+import { recordAttemptForHomework } from "../services/homeworkService.js";
 
 export const statsRouter = Router();
 
@@ -55,6 +56,17 @@ statsRouter.post("/attempt", asyncHandler(async (req, res) => {
       passed: Boolean(passed),
     },
   });
+
+  // Maktab modulining ilgagi: agar bu foydalanuvchi biror maktabga a'zo
+  // bo'lib, shu turdagi tugallanmagan uy vazifasi bo'lsa, avtomatik
+  // yakunlanadi. Xato tashlamaydi va asosiy oqimni bloklamaydi.
+  const scorePct = totalCount > 0 ? Math.round((correctCount / totalCount) * 100) : 0;
+  recordAttemptForHomework(req.user.id, {
+    type: type === "TICKET" ? "TICKETS" : "PRACTICE",
+    score: scorePct,
+    attemptId: attempt.id,
+    ticketNumber: type === "TICKET" ? ticketNumber : null,
+  }).catch((err) => console.error("Homework hook (stats) xatosi:", err));
 
   res.json({ attempt });
 }));

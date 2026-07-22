@@ -30,6 +30,30 @@ const socketToDuel = new Map(); // socket.id -> duelId
 const lobbies = new Map(); // code -> { hostSocket, hostUserId, hostName, timer }
 const socketToLobby = new Map(); // socket.id -> code
 
+// --- Onlayn foydalanuvchilar soni (Duel bo'limida turganlar) ---
+//
+// Bir foydalanuvchi bir nechta qurilma/tabda ochishi mumkin — shuning uchun
+// socket.id emas, userId to'plamini sanaymiz (bir xil odam ikki marta
+// hisoblanmasin). Har bir userId nechta socket ulanganini kuzatamiz, chunki
+// bitta tab yopilsa ham boshqa tab hali ochiq bo'lishi mumkin.
+const onlineUserSockets = new Map(); // userId -> Set<socket.id>
+
+function markOnline(userId, socketId) {
+  if (!onlineUserSockets.has(userId)) onlineUserSockets.set(userId, new Set());
+  onlineUserSockets.get(userId).add(socketId);
+}
+
+function markOffline(userId, socketId) {
+  const set = onlineUserSockets.get(userId);
+  if (!set) return;
+  set.delete(socketId);
+  if (set.size === 0) onlineUserSockets.delete(userId);
+}
+
+function getOnlineCount() {
+  return onlineUserSockets.size;
+}
+
 function publicQuestion(q, idx) {
   // "correct" javobni clientga yubormaymiz — aks holda tarmoq orqali
   // ko'rish mumkin bo'lib qoladi va musobaqa adolatsiz bo'ladi.
@@ -193,6 +217,12 @@ export function initDuelSocket(httpServer, { isOriginAllowed } = {}) {
       // Ism topilmasa ham duelga xalaqit bermasin — standart ism bilan davom etadi
     }
 
+    // Onlayn hisoblagich: bu foydalanuvchi ulandi — barchaga yangi sonni
+    // yuboramiz va o'ziga ham darhol joriy sonni beramiz (birinchi ekranda
+    // ko'rinishi uchun keyingi o'zgarishni kutmasin).
+    markOnline(userId, socket.id);
+    io.emit("duel:online_count", { count: getOnlineCount() });
+
     // --- Tasodifiy raqib qidirish (matchmaking) ---
     socket.on("duel:join_queue", () => {
       // Bir xil foydalanuvchi ikki marta navbatga tushib qolmasin
@@ -308,6 +338,8 @@ export function initDuelSocket(httpServer, { isOriginAllowed } = {}) {
 
     socket.on("disconnect", () => {
       removeFromQueue(socket.id);
+      markOffline(userId, socket.id);
+      io.emit("duel:online_count", { count: getOnlineCount() });
 
       const lobbyCode = socketToLobby.get(socket.id);
       if (lobbyCode) destroyLobby(lobbyCode);

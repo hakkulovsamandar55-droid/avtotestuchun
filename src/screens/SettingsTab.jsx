@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { HelpCircle, Send, ChevronRight, ShieldCheck, Crown, Check, Trophy } from "lucide-react";
+import { HelpCircle, Send, ChevronRight, ShieldCheck, Crown, Check, Trophy, School } from "lucide-react";
 import { ACCENT_FROM } from "../theme";
 import { useTheme } from "../ThemeContext";
 import { useFontSize } from "../FontSizeContext";
@@ -282,7 +282,7 @@ function FontSizePickerRow() {
 }
 
 // 3c-EKRAN: "Sozlamalar" bo'limi
-export default function SettingsTab({ user, onOpenAdmin, onOpenPremium, onOpenSupport }) {
+export default function SettingsTab({ user, onOpenAdmin, onOpenPremium, onOpenSupport, onOpenSchool }) {
   const { t } = useTranslation();
   const isAdmin = user?.role === "ADMIN";
   const isPremium = Boolean(user?.isPremium) || isAdmin;
@@ -314,6 +314,11 @@ export default function SettingsTab({ user, onOpenAdmin, onOpenPremium, onOpenSu
         <ThemePickerRow isPremium={isPremium} />
         <FontSizePickerRow />
         <LeaderboardToggle />
+        <SettingsRow
+          icon={School}
+          label={t("settings.mySchool")}
+          onClick={onOpenSchool}
+        />
         <SettingsRow
           icon={HelpCircle}
           label={t("settings.support")}

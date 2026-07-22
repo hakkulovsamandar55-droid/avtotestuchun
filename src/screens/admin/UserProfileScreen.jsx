@@ -316,7 +316,7 @@ export default function UserProfileScreen({ userId, onBack, onOpenChat, isSuperA
               icon={Crown}
               label={t("admin.profile.actions.givePremium")}
               busy={busy === "premium"}
-              onClick={() => runAction("premium", () => api.setUserPremium(userId, true, { planKey: "pro", days: 30 }))}
+              onClick={() => runAction("premium", () => api.setUserPremium(userId, true, { planKey: "days30", days: 30 }))}
             />
           )}
 

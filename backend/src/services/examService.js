@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { prisma } from "../db.js";
 import { startOfLocalDay } from "../lib/time.js";
 import { logActivity } from "./activity.js";
+import { recordAttemptForHomework } from "./homeworkService.js";
 import {
   OFFICIAL_EXAM_VERSION,
   getExamRules,
@@ -148,6 +149,15 @@ async function finalizeAttempt(attempt, { reason }) {
       : `Rasmiy imtihondan o'ta olmadi (${result.correctCount}/${result.total})`,
     { examAttemptId: attempt.id, passed: result.passed }
   );
+
+  // Maktab modulining ilgagi: agar bu foydalanuvchi biror maktabga a'zo
+  // bo'lib, OFFICIAL_EXAM turidagi tugallanmagan uy vazifasi bo'lsa,
+  // avtomatik yakunlanadi. Xato tashlamaydi, asosiy oqimni bloklamaydi.
+  recordAttemptForHomework(attempt.userId, {
+    type: "OFFICIAL_EXAM",
+    score: result.accuracyPct,
+    examAttemptId: attempt.id,
+  }).catch((err) => console.error("Homework hook (exam) xatosi:", err));
 
   const fresh = await prisma.examAttempt.findUnique({ where: { id: attempt.id } });
   return { attempt: fresh, result, alreadyFinalized: false };

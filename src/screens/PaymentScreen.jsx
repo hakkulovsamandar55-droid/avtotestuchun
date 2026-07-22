@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronLeft, Copy, Check, Upload, Clock, XCircle, MessageCircle } from "lucide-react";
 import { ACCENT_FROM, ACCENT_TO } from "../theme";
 import { api } from "../api";
+import { formatPrice } from "../data/premiumData";
 
 // Backend limiti bilan bir xil (backend/src/lib/upload.js)
 const MAX_RECEIPT_BYTES = 8 * 1024 * 1024;
@@ -107,11 +108,11 @@ export default function PaymentScreen({ plan, onBack, onOpenSupport }) {
           <div className="rounded-3xl bg-card border border-card-border shadow-sm p-5 mb-4">
             <p className="text-text-muted text-xs mb-1">{t("payment.amountLabel")}</p>
             <p className="text-2xl font-extrabold text-text-main mb-1">
-              {priceInfo ? priceInfo.amount.toLocaleString() : "..."} <span className="text-sm font-medium text-text-muted">so'm</span>
+              {priceInfo ? formatPrice(priceInfo.amount) : "..."} <span className="text-sm font-medium text-text-muted">so'm</span>
             </p>
             {priceInfo?.discountPercent > 0 && (
               <p className="text-xs text-green-600 font-semibold">
-                {t("payment.discountApplied", { percent: priceInfo.discountPercent })} · {t("payment.originalPrice")}: {priceInfo.originalAmount.toLocaleString()} so'm
+                {t("payment.discountApplied", { percent: priceInfo.discountPercent })} · {t("payment.originalPrice")}: {formatPrice(priceInfo.originalAmount)} so'm
               </p>
             )}
           </div>

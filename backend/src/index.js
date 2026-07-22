@@ -9,6 +9,7 @@ import { supportRouter, adminSupport } from "./routes/support.js";
 import { paymentsRouter, adminPayments } from "./routes/payments.js";
 import { notificationsRouter } from "./routes/notifications.js";
 import { examRouter } from "./routes/exam.js";
+import { schoolRouter } from "./routes/school.js";
 import { initDuelSocket } from "./duel.js";
 import { UPLOADS_DIR } from "./lib/upload.js";
 
@@ -74,6 +75,8 @@ app.use("/api/support", supportRouter);
 app.use("/api/payments", paymentsRouter);
 // Rasmiy imtihon (Official Exam) — mashq imtihonidan alohida modul
 app.use("/api/exam", examRouter);
+// Haydovchilik maktablari ekotizimi (CEO/Owner/Teacher/Student)
+app.use("/api/school", schoolRouter);
 
 // Umumiy xatolarni ushlash — parolsiz stack-trace'ni foydalanuvchiga chiqarmaslik uchun.
 // Ba'zi xatolar aslida foydalanuvchi xatosi (juda katta fayl, noto'g'ri format,

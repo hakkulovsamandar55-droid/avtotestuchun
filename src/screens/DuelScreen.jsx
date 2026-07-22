@@ -39,6 +39,7 @@ export default function DuelScreen({ onExit }) {
   const [opponentFinished, setOpponentFinished] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [onlineCount, setOnlineCount] = useState(null);
 
   const [lobbyCode, setLobbyCode] = useState(null);
   const [joinCode, setJoinCode] = useState("");
@@ -57,6 +58,7 @@ export default function DuelScreen({ onExit }) {
       setPhase("idle");
     });
     socket.on("duel:queued", () => setPhase("searching"));
+    socket.on("duel:online_count", ({ count }) => setOnlineCount(count));
 
     socket.on("duel:lobby_created", ({ code }) => {
       setLobbyCode(code);
@@ -100,6 +102,7 @@ export default function DuelScreen({ onExit }) {
     return () => {
       socket.off("connect_error");
       socket.off("duel:queued");
+      socket.off("duel:online_count");
       socket.off("duel:lobby_created");
       socket.off("duel:lobby_expired");
       socket.off("duel:lobby_error");
@@ -221,9 +224,17 @@ export default function DuelScreen({ onExit }) {
             <Swords size={40} color="white" />
           </div>
           <h2 className="text-xl font-extrabold mb-2">{t("duel.introTitle")}</h2>
-          <p className="text-gray-400 text-sm leading-relaxed mb-8">
+          <p className="text-gray-400 text-sm leading-relaxed mb-4">
             {t("duel.introSubtitle")}
           </p>
+          {onlineCount !== null && (
+            <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 px-3 py-1.5 mb-6">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-emerald-300 text-xs font-semibold">
+                {t("duel.onlineCount", { count: onlineCount })}
+              </span>
+            </div>
+          )}
           {error && <p className="text-red-400 text-xs mb-4">{error}</p>}
           <button
             onClick={openModeSelect}
@@ -399,7 +410,12 @@ export default function DuelScreen({ onExit }) {
         <div className="flex-1 flex flex-col items-center justify-center text-center px-4">
           <div className="w-16 h-16 rounded-full border-4 border-white/10 border-t-transparent animate-spin mb-6" style={{ borderTopColor: ACCENT_FROM }} />
           <h2 className="text-lg font-bold mb-2">{t("duel.searching")}</h2>
-          <p className="text-gray-400 text-sm mb-8">{t("duel.searchingSubtitle")}</p>
+          <p className="text-gray-400 text-sm mb-2">{t("duel.searchingSubtitle")}</p>
+          {onlineCount !== null && (
+            <p className="text-gray-500 text-xs mb-6">
+              {t("duel.onlineCount", { count: onlineCount })}
+            </p>
+          )}
           <button
             onClick={cancelSearching}
             className="rounded-2xl px-6 py-3 font-bold text-sm border border-white/10 bg-white/[0.04] active:scale-[0.98] transition-transform"

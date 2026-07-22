@@ -13,6 +13,7 @@ import DuelScreen from "./DuelScreen";
 import SupportChatScreen from "./SupportChatScreen";
 import PaymentScreen from "./PaymentScreen";
 import OfficialExamContainer from "./officialExam/OfficialExamContainer";
+import StudentSchoolContainer from "./school/StudentSchoolContainer";
 
 // 3-EKRAN: login+loading dan keyingi asosiy ilova — 3 bo'lim + pastki nav
 export default function MainApp({ user }) {
@@ -26,6 +27,7 @@ export default function MainApp({ user }) {
   const [showPremium, setShowPremium] = useState(false);
   const [showDuel, setShowDuel] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
+  const [showSchool, setShowSchool] = useState(false);
   const [paymentPlan, setPaymentPlan] = useState(null);
 
   if (showOfficialExam) {
@@ -37,6 +39,17 @@ export default function MainApp({ user }) {
             setShowOfficialExam(false);
             setShowPremium(true);
           }}
+        />
+      </div>
+    );
+  }
+
+  if (showSchool) {
+    return (
+      <div className="flex flex-col h-full">
+        <StudentSchoolContainer
+          currentUserId={user?.id}
+          onExit={() => setShowSchool(false)}
         />
       </div>
     );
@@ -151,6 +164,7 @@ export default function MainApp({ user }) {
           onOpenAdmin={() => setShowAdmin(true)}
           onOpenPremium={() => setShowPremium(true)}
           onOpenSupport={() => setShowSupport(true)}
+          onOpenSchool={() => setShowSchool(true)}
         />
       )}
       <BottomNav active={active} setActive={setActive} />
