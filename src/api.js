@@ -68,8 +68,8 @@ export function resolveUploadUrl(relativeUrl) {
 }
 
 export const api = {
-  loginWithTelegram: (initData) =>
-    request("/api/auth/telegram", { method: "POST", body: { initData }, auth: false }),
+  loginWithTelegram: (initData, profile) =>
+    request("/api/auth/telegram", { method: "POST", body: { initData, profile }, auth: false }),
   searchUsers: (query, filters = []) => {
     const params = new URLSearchParams();
     if (query) params.set("query", query);

@@ -44,13 +44,43 @@ statsRouter.post("/attempt", asyncHandler(async (req, res) => {
   res.json({ attempt });
 }));
 
+// Foydalanuvchi ro'yxatdan o'tishda tanlagan kunlik reja bilan so'nggi
+// 7 kunlik haqiqiy faollikni solishtiradi. Har bir "kun"dagi urinishlar
+// soni taxminiy o'rtacha vaqtga (bir urinish ~1.5 daqiqa) ko'paytiriladi —
+// aniq vaqt o'lchanmagani uchun bu faqat yo'naltiruvchi ko'rsatkich.
+const AVG_MINUTES_PER_ATTEMPT = 1.5;
+
+function computeStudyPlanProgress(attempts, dailyStudyMinutes) {
+  if (!dailyStudyMinutes) return null;
+
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const recentAttempts = attempts.filter((a) => a.createdAt >= sevenDaysAgo);
+
+  const minutesByDay = {};
+  for (const a of recentAttempts) {
+    const day = a.createdAt.toISOString().slice(0, 10);
+    minutesByDay[day] = (minutesByDay[day] || 0) + AVG_MINUTES_PER_ATTEMPT;
+  }
+
+  const activeDays = Object.keys(minutesByDay).length;
+  const avgDailyMinutes = activeDays > 0
+    ? Math.round(Object.values(minutesByDay).reduce((s, m) => s + m, 0) / activeDays)
+    : 0;
+
+  const planProgressPct = Math.min(100, Math.round((avgDailyMinutes / dailyStudyMinutes) * 100));
+
+  return { dailyStudyMinutes, avgDailyMinutes, activeDaysLast7: activeDays, planProgressPct };
+}
+
 // GET /api/stats/me — real statistikani hisoblab qaytaradi
 statsRouter.get("/me", asyncHandler(async (req, res) => {
   const userId = req.auth.sub;
-  const attempts = await prisma.attempt.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-  });
+  const [attempts, user] = await Promise.all([
+    prisma.attempt.findMany({ where: { userId }, orderBy: { createdAt: "desc" } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { dailyStudyMinutes: true } }),
+  ]);
+
+  const studyPlan = computeStudyPlanProgress(attempts, user?.dailyStudyMinutes);
 
   if (attempts.length === 0) {
     return res.json({
@@ -63,6 +93,7 @@ statsRouter.get("/me", asyncHandler(async (req, res) => {
       learnedQuestionsPct: 0,
       masteryQualityPct: 0,
       examResultsPct: 0,
+      studyPlan,
     });
   }
 
@@ -135,5 +166,6 @@ statsRouter.get("/me", asyncHandler(async (req, res) => {
     learnedQuestionsPct,
     masteryQualityPct,
     examResultsPct,
+    studyPlan,
   });
 }));

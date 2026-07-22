@@ -240,6 +240,8 @@ adminRouter.get("/users/:id/profile", asyncHandler(async (req, res) => {
       registeredAt: user.createdAt,
       lastOnlineAt: user.lastOnlineAt,
       adminNotes: user.adminNotes,
+      age: user.age,
+      dailyStudyMinutes: user.dailyStudyMinutes,
     },
     statistics: {
       testsCompleted,

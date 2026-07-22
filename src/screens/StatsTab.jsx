@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Zap, ListChecks, Trophy, Flame } from "lucide-react";
+import { Zap, ListChecks, Trophy, Flame, Clock } from "lucide-react";
 import { ACCENT_FROM } from "../theme";
 import { api } from "../api";
 
@@ -41,6 +41,7 @@ export default function StatsTab() {
     learnedQuestionsPct: 0,
     masteryQualityPct: 0,
     examResultsPct: 0,
+    studyPlan: null,
   };
 
   const readinessColor =
@@ -125,6 +126,36 @@ export default function StatsTab() {
           ))}
         </div>
       </div>
+
+      {s.studyPlan && (
+        <div className="mt-4 rounded-3xl bg-card border border-card-border shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Clock size={16} color={ACCENT_FROM} />
+            <p className="font-bold text-text-main">{t("stats.studyPlanTitle")}</p>
+          </div>
+          <div className="flex items-center justify-between text-sm mb-1.5">
+            <span className="text-text-muted">
+              {t("stats.studyPlanCompare", {
+                actual: s.studyPlan.avgDailyMinutes,
+                planned: s.studyPlan.dailyStudyMinutes,
+              })}
+            </span>
+            <span className="font-bold text-text-main">{s.studyPlan.planProgressPct}%</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-card-soft overflow-hidden">
+            <div
+              className="h-full rounded-full"
+              style={{
+                width: `${Math.max(s.studyPlan.planProgressPct, 4)}%`,
+                backgroundColor: ACCENT_FROM,
+              }}
+            />
+          </div>
+          <p className="text-text-muted text-xs mt-2">
+            {t("stats.studyPlanActiveDays", { days: s.studyPlan.activeDaysLast7 })}
+          </p>
+        </div>
+      )}
     </div>
   );
 }

@@ -114,6 +114,9 @@ model User {
   adminNotes    String?  @map("admin_notes") // faqat adminlarga ko'rinadi, foydalanuvchiga ko'rsatilmaydi
   referralCode  String?  @unique @map("referral_code") // shu foydalanuvchining o'z taklif kodi
   examDate      DateTime? @map("exam_date") // onboarding'da kiritiladi — "Exam Soon" filtri shundan foydalanadi
+  age           Int?     @map("age") // ro'yxatdan o'tish formasida kiritiladi — statistika uchun
+  dailyStudyMinutes Int? @map("daily_study_minutes") // ro'yxatdan o'tish formasida kiritiladi — kuniga qancha shug'ullanishni rejalashtiradi
+  registrationCompletedAt DateTime? @map("registration_completed_at") // profil so'rovnomasi to'ldirilgan payt
   referredById  Int?     @map("referred_by_id") // kim uni taklif qilgan (agar mavjud bo'lsa)
   referredBy    User?    @relation("Referrals", fields: [referredById], references: [id])
   referrals     User[]   @relation("Referrals") // shu foydalanuvchi taklif qilgan barcha odamlar

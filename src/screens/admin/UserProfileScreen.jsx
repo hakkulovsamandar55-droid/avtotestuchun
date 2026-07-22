@@ -206,6 +206,10 @@ export default function UserProfileScreen({ userId, onBack, onOpenChat, isSuperA
         <InfoRow label={t("admin.profile.registeredAt")} value={fmtDate(general.registeredAt)} />
         <InfoRow label={t("admin.profile.lastOnline")} value={general.lastOnlineAt ? fmtDate(general.lastOnlineAt) : "—"} />
         {general.phone && <InfoRow label="Telefon" value={general.phone} />}
+        {general.age != null && <InfoRow label={t("admin.profile.age")} value={general.age} />}
+        {general.dailyStudyMinutes != null && (
+          <InfoRow label={t("admin.profile.dailyStudyMinutes")} value={`${general.dailyStudyMinutes} ${t("admin.profile.minutesShort")}`} />
+        )}
       </div>
 
       {/* STATISTIKA */}
