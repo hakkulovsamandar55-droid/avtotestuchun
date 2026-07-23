@@ -1,5 +1,5 @@
 {
-  "name": "tezprava-backend",
+  "name": "avtotest-backend",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -7,7 +7,6 @@
     "postinstall": "prisma generate",
     "dev": "node --watch src/index.js",
     "start": "npx prisma migrate deploy && node src/index.js",
-    "start:unsafe-push": "npx prisma generate && npx prisma db push --accept-data-loss && node src/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
     "prisma:migrate:dev": "prisma migrate dev",

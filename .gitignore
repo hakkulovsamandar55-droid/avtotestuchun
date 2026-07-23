@@ -1,5 +1,10 @@
 node_modules/
 dist/
 .env
+.env.local
 backend/node_modules/
 backend/.env
+backend/uploads/
+.tp-update-tmp/
+*.log
+.DS_Store

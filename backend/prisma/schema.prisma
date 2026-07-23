@@ -552,6 +552,44 @@ model Invitation {
 }
 
 model Homework {
-  id       Int          @id @default(autoincrement())
-  schoolId Int          @map("school_id")
-  school   School       @relation(fiel
+  id        Int          @id @default(autoincrement())
+  schoolId  Int          @map("school_id")
+  school    School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  groupId   Int          @map("group_id")
+  group     Group        @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  createdById Int        @map("created_by_id")
+  title     String
+  type      HomeworkType
+  params    String       @default("{}") // JSON matn sifatida — masalan tanlangan bilet raqamlari
+  minScore  Int?         @map("min_score")
+  deadline  DateTime
+
+  createdAt DateTime     @default(now()) @map("created_at")
+
+  submissions HomeworkSubmission[]
+
+  @@map("school_homeworks")
+  @@index([groupId])
+  @@index([schoolId, deadline])
+}
+
+model HomeworkSubmission {
+  id            Int                       @id @default(autoincrement())
+  homeworkId    Int                       @map("homework_id")
+  homework      Homework                  @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
+  membershipId  Int                       @map("membership_id")
+  membership    Membership                @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  status        HomeworkSubmissionStatus  @default(PENDING)
+  score         Int?
+  attemptId     Int?                      @map("attempt_id")
+  examAttemptId Int?                      @map("exam_attempt_id")
+  completedAt   DateTime?                 @map("completed_at")
+
+  createdAt     DateTime                  @default(now()) @map("created_at")
+
+  @@map("school_homework_submissions")
+  @@unique([homeworkId, membershipId])
+  @@index([membershipId, status])
+}
