@@ -206,6 +206,12 @@ export default {
       LATE: "Выполнено с опозданием",
       MISSED: "Не выполнено",
     },
+    searchOwnerPlaceholder: "Поиск по имени, username или ID...",
+    ownerNotSelected: "Выберите владельца школы",
+  },
+  common: {
+    searching: "Поиск...",
+    noResults: "Ничего не найдено",
   },
   adminSchool: {
     active: "Активна",
@@ -441,10 +447,6 @@ export default {
     },
   },
   admin: {
-        tab: {
-      schools: "Школы",
-      exam: "Экзамен",
-    },
     title: "Админ-панель",
     searchPlaceholder: "Поиск по имени, username или телефону...",
     resultsCount: "Найдено пользователей: {{count}}",
@@ -452,9 +454,12 @@ export default {
     examReadiness: "Готовность: {{percent}}%",
     tab: {
       users: "Пользователи",
+      exam: "Экзамен",
+      schools: "Школы",
       premium: "Премиум тарифы",
       support: "Поддержка",
       payments: "Платежи",
+      broadcast: "Рассылка",
       logs: "Журнал",
     },
     planName: "Название тарифа",

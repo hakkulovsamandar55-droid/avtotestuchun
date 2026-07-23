@@ -206,6 +206,12 @@ export default {
       LATE: "Kech bajarildi",
       MISSED: "Bajarilmadi",
     },
+    searchOwnerPlaceholder: "Ism, username yoki ID bo'yicha qidirish...",
+    ownerNotSelected: "Maktab egasini tanlang",
+  },
+  common: {
+    searching: "Qidirilmoqda...",
+    noResults: "Hech narsa topilmadi",
   },
   adminSchool: {
     active: "Faol",
@@ -441,10 +447,6 @@ export default {
     },
   },
   admin: {
-        tab: {
-      schools: "Maktablar",
-      exam: "Imtihon",
-    },
     title: "Admin panel",
     searchPlaceholder: "Ism, username yoki telefon bo'yicha qidirish...",
     resultsCount: "{{count}} ta foydalanuvchi topildi",
@@ -452,9 +454,12 @@ export default {
     examReadiness: "Tayyorgarlik: {{percent}}%",
     tab: {
       users: "Foydalanuvchilar",
+      exam: "Imtihon",
+      schools: "Maktablar",
       premium: "Premium tariflar",
       support: "Yordam",
       payments: "To'lovlar",
+      broadcast: "Xabar yuborish",
       logs: "Jurnal",
     },
     planName: "Tarif nomi",

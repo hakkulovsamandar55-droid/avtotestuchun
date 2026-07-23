@@ -230,8 +230,8 @@ export const SIGNS = [
   { code: "5.39", name: "Turar-joy dahasining oxiri", cat: "information", shape: "square", pic: "livingZoneEnd" },
   { code: "5.40", name: "Falokatli holatlar uchun kirish yo'li", cat: "information", shape: "square", pic: "emergencyEntry" },
   { code: "5.41", name: "Surat va video", cat: "information", shape: "square", pic: "photoVideo" },
-  { code: "5.42", name: "Radar", cat: "information", shape: "square", pic: "radar" },
-  { code: "5.43", name: "Qizil rangda o'ng tomonga burilish", cat: "information", shape: "square", pic: "redRightTurn" },
+  { code: "5.42", name: "Qizil chiroqda o'ngga harakatlanish", cat: "information", shape: "square", pic: "redRightTurn" },
+  { code: "5.43", name: "Radar", cat: "information", shape: "square", pic: "radar" },
   { code: "5.44", name: "Velosipedlar uchun harakatlanish bo'lagi", cat: "information", shape: "square", pic: "bikeLaneStart" },
   { code: "5.45", name: "Velosipedlar uchun harakatlanish bo'lagining oxiri", cat: "information", shape: "square", pic: "bikeLaneEnd" },
 

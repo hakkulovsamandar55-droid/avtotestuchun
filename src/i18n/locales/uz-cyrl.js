@@ -206,6 +206,12 @@ export default {
       LATE: "Кеч бажарилди",
       MISSED: "Бажарилмади",
     },
+    searchOwnerPlaceholder: "Исм, username ёки ID бўйича қидириш...",
+    ownerNotSelected: "Мактаб эгасини танланг",
+  },
+  common: {
+    searching: "Қидирилмоқда...",
+    noResults: "Ҳеч нарса топилмади",
   },
   adminSchool: {
     active: "Фаол",
@@ -441,10 +447,6 @@ export default {
     },
   },
   admin: {
-        tab: {
-      schools: "Мактаблар",
-      exam: "Имтиҳон",
-    },
     title: "Админ панел",
     searchPlaceholder: "Исм, username ёки телефон бўйича қидириш...",
     resultsCount: "{{count}} та фойдаланувчи топилди",
@@ -452,9 +454,12 @@ export default {
     examReadiness: "Тайёргарлик: {{percent}}%",
     tab: {
       users: "Фойдаланувчилар",
+      exam: "Имтиҳон",
+      schools: "Мактаблар",
       premium: "Премиум тарифлар",
       support: "Ёрдам",
       payments: "Тўловлар",
+      broadcast: "Хабар юбориш",
       logs: "Журнал",
     },
     planName: "Тариф номи",
