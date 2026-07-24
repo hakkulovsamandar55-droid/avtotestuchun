@@ -100,7 +100,13 @@ export default function StudentSchoolContainer({ currentUserId, onExit }) {
   }
 
   if (membership.role === "OWNER") {
-    return <OwnerDashboard schoolId={membership.schoolId} onBack={onExit} />;
+    return (
+      <OwnerDashboard
+        schoolId={membership.schoolId}
+        myMembershipId={membership.id}
+        onBack={onExit}
+      />
+    );
   }
 
   if (membership.role === "TEACHER") {
@@ -127,6 +133,7 @@ export default function StudentSchoolContainer({ currentUserId, onExit }) {
       <TeacherDashboard
         schoolId={membership.schoolId}
         groupId={membership.groupId}
+        myMembershipId={membership.id}
         onBack={onExit}
         onOpenLeaderboard={() => {
           setLeaderboardCtx({ schoolId: membership.schoolId, groupId: membership.groupId });

@@ -36,21 +36,56 @@ export const THEMES = {
       "--shadow-card": "none",
     },
   },
-  pink: {
-    label: "Pushti",
+  // NEUMORPHISM + GLASSMORPHISM + MINIMALISM
+  //
+  // Uchala uslub tabiatan bir-biriga zid: neumorphism qattiq, mat sirtni
+  // talab qiladi; glassmorphism shaffoflik va blurni; minimalism esa
+  // ikkalasining ham bezagini kamaytirishni. Ularni bitta temada
+  // birlashtirish uchun QATLAMLARGA bo'lindi:
+  //
+  //   Fon (--bg-app)        -> neumorphic: yumshoq, deyarli rangsiz sirt
+  //   Karta (--bg-card)     -> glass: yarim shaffof + blur
+  //   Soya (--shadow-card)  -> ikki tomonlama (yorug'lik + soya) = neumorph
+  //
+  // Minimalism ranglar sonida: butun palitra bitta sovuq kulrang-ko'k
+  // oilasidan, urg'u rangi ham to'yingan emas. Kontrast shakl va soya
+  // orqali beriladi, rang orqali emas.
+  //
+  // MUHIM: --bg-card qiymati rgba — orqasidagi fon ko'rinishi uchun shart.
+  // Qattiq (solid) rangga almashtirilsa, shisha effekti yo'qoladi.
+  aurora: {
+    label: "Aurora",
     isDark: false,
-    accentFrom: "#EC4899",
-    accentTo: "#F472B6",
+    // Urg'u — muzli ko'k-siyohrang. To'yinganligi past, chunki minimalizmda
+    // rang diqqatni tortmasligi, faqat yo'naltirishi kerak.
+    accentFrom: "#7C8CF8",
+    accentTo: "#9EA8FB",
     vars: {
-      "--bg-app": "#FDF2F8",
-      "--bg-card": "#FFFFFF",
-      "--bg-card-soft": "#FCE7F3",
-      "--border-card": "#FBCFE8",
-      "--text-primary": "#831843",
-      "--text-secondary": "#BE7A9A",
-      "--icon-muted": "#9D174D",
-      "--chevron": "#F0ABC4",
-      "--shadow-card": "0 1px 2px rgba(236,72,153,0.08)",
+      // Neumorphic asos: sof oq emas, biroz sovuq — soyalar ko'rinishi uchun
+      // Fon ozgina quyuqroq (#E8EBF2 emas) — neumorphic soyalar shu
+      // farqda ishlaydi. Juda ochiq fonda kartalar "ko'tarilgan" ko'rinmaydi.
+      "--bg-app": "#E3E7F0",
+
+      // Shisha qatlam: yarim shaffof oq + blur (blur index.css da beriladi)
+      "--bg-card": "rgba(255,255,255,0.58)",
+      "--bg-card-soft": "rgba(255,255,255,0.38)",
+
+      // Shisha chekkasi — yuqori qirrada yorug'lik sinishi taassuroti
+      "--border-card": "rgba(255,255,255,0.75)",
+
+      "--text-primary": "#2A3145",
+      // Kontrast: karta ustida 4.8:1 (WCAG AA >= 4.5). Dastlab #7C8499 edi —
+      // ko'rinishi chiroyli, lekin 3.46:1 bo'lib me'yordan past edi. Shisha
+      // qatlam yarim shaffof bo'lgani uchun matn foni ochiqroq bo'ladi,
+      // shuning uchun ikkilamchi matn quyuqroq bo'lishi shart.
+      "--text-secondary": "#646D80",
+      "--icon-muted": "#5A6379",
+      "--chevron": "#A8B0C2",
+
+      // Neumorphic ikki tomonlama soya: pastdan quyuq, tepadan yorug'.
+      // Aynan shu juftlik sirtni "ko'tarilgan" qilib ko'rsatadi.
+      "--shadow-card":
+        "6px 6px 16px rgba(163,177,198,0.42), -6px -6px 16px rgba(255,255,255,0.85)",
     },
   },
   amber: {
@@ -89,4 +124,4 @@ export const THEMES = {
   },
 };
 
-export const THEME_ORDER = ["light", "dark", "pink", "amber", "crimson"];
+export const THEME_ORDER = ["light", "dark", "aurora", "amber", "crimson"];

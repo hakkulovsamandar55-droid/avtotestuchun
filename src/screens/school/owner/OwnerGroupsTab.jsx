@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Users, X } from "lucide-react";
+import { Plus, Users, X, ChevronRight } from "lucide-react";
 import { api } from "../../../api";
 
 /** Owner: guruhlarni boshqarish. */
-export default function OwnerGroupsTab({ schoolId, onChanged }) {
+export default function OwnerGroupsTab({ schoolId, onChanged, onOpenGroup }) {
   const { t } = useTranslation();
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -71,9 +71,11 @@ export default function OwnerGroupsTab({ schoolId, onChanged }) {
 
       <div className="space-y-2.5">
         {groups.map((g) => (
-          <div
+          <button
             key={g.id}
-            className="flex items-center gap-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] px-4 py-3.5"
+            onClick={() => onOpenGroup?.(g.id)}
+            disabled={!onOpenGroup}
+            className="w-full text-left flex items-center gap-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] px-4 py-3.5 hover:bg-white/[0.06] active:bg-white/[0.08] transition-colors disabled:hover:bg-white/[0.03]"
           >
             <div className="w-9 h-9 rounded-full bg-white/[0.06] flex items-center justify-center shrink-0">
               <Users size={15} color="#9CA3AF" />
@@ -84,7 +86,8 @@ export default function OwnerGroupsTab({ schoolId, onChanged }) {
                 {t("school.studentsCount", { count: g.studentCount })}
               </p>
             </div>
-          </div>
+            {onOpenGroup && <ChevronRight size={16} className="text-gray-600 shrink-0" />}
+          </button>
         ))}
       </div>
 

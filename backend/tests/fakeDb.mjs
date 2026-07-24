@@ -4,12 +4,12 @@ export function createFakeDb() {
   const db = {
     examAttempt: [], examEvent: [], attempt: [], activityLog: [], user: [],
     school: [], group: [], membership: [], invitation: [], homework: [],
-    homeworkSubmission: [],
+    homeworkSubmission: [], schoolChat: [], schoolMessage: [], notification: [],
   };
   let ids = {
     examAttempt: 1, examEvent: 1, attempt: 1, activityLog: 1,
     school: 1, group: 1, membership: 1, invitation: 1, homework: 1,
-    homeworkSubmission: 1,
+    homeworkSubmission: 1, schoolChat: 1, schoolMessage: 1, notification: 1,
   };
 
   const DEFAULTS = {
@@ -19,6 +19,9 @@ export function createFakeDb() {
     invitation: { usedCount: 0 },
     homework: { params: '{}' },
     homeworkSubmission: { status: 'PENDING' },
+    schoolChat: { unreadForStudent: 0, unreadForTeacher: 0 },
+    schoolMessage: { isRead: false },
+    notification: { isRead: false },
   };
 
   function matchValue(actual, condition) {
@@ -98,7 +101,16 @@ export function createFakeDb() {
         return { ...row };
       },
       findUnique: async ({ where, select }) => {
-        const row = db[name].find((r) => matches(r, where));
+        // Prisma kompozit unique kalitni ichma-ich obyekt sifatida beradi:
+        //   { studentMembershipId_teacherMembershipId: { studentMembershipId, teacherMembershipId } }
+        // Fake DB tekis solishtiradi, shuning uchun avval yoyamiz.
+        let flat = where;
+        const keys = Object.keys(where || {});
+        if (keys.length === 1 && keys[0].includes('_')) {
+          const inner = where[keys[0]];
+          if (inner && typeof inner === 'object' && !(inner instanceof Date)) flat = inner;
+        }
+        const row = db[name].find((r) => matches(r, flat));
         if (!row) return null;
         return applySelect(row, select);
       },

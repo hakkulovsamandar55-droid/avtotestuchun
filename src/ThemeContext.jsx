@@ -4,10 +4,24 @@ import { THEMES, THEME_ORDER } from "./themes";
 const ThemeContext = createContext(null);
 const STORAGE_KEY = "tezprava-theme";
 
+// Olib tashlangan temalarning o'rnini bosuvchi xarita.
+//
+// NIMA UCHUN KERAK: "pink" temasi "aurora" bilan almashtirildi. Uni tanlagan
+// foydalanuvchilarda localStorage'da hali ham "pink" saqlanib turibdi.
+// Migratsiyasiz ular jimgina "light" ga tushib qolardi — bu "mening temam
+// yo'qoldi" bo'lib ko'rinadi. Yangi temaga o'tkazish to'g'riroq.
+const THEME_MIGRATIONS = {
+  pink: "aurora",
+};
+
 function getInitialTheme() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved && THEMES[saved]) return saved;
+    if (saved) {
+      if (THEMES[saved]) return saved;
+      const migrated = THEME_MIGRATIONS[saved];
+      if (migrated && THEMES[migrated]) return migrated;
+    }
   } catch (e) {
     // localStorage yo'q bo'lishi mumkin — jim o'tkazamiz
   }

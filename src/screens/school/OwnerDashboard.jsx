@@ -7,17 +7,19 @@ import OwnerTeachersTab from "./owner/OwnerTeachersTab";
 import OwnerGroupsTab from "./owner/OwnerGroupsTab";
 import OwnerStudentsTab from "./owner/OwnerStudentsTab";
 import OwnerInvitationsTab from "./owner/OwnerInvitationsTab";
+import TeacherDashboard from "./TeacherDashboard";
 
 const TABS = ["overview", "teachers", "groups", "students", "invitations"];
 
 /** Maktab egasi (Owner) paneli — CEO ham xuddi shu ekranni ko'radi (isCeo=true bilan). */
-export default function OwnerDashboard({ schoolId, onBack }) {
+export default function OwnerDashboard({ schoolId, myMembershipId, onBack }) {
   const { t } = useTranslation();
   const [tab, setTab] = useState("overview");
   const [school, setSchool] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [openGroupId, setOpenGroupId] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -51,6 +53,24 @@ export default function OwnerDashboard({ schoolId, onBack }) {
       <div className="flex-1 bg-[#0F1424] min-h-full px-5 tp-safe-top text-white">
         <p className="text-red-400 text-sm text-center py-10">{error || "—"}</p>
       </div>
+    );
+  }
+
+  // Owner guruhni bosganda o'qituvchi panelini ko'radi.
+  //
+  // NIMA UCHUN: kichik maktabda egasi ko'pincha o'zi ham dars beradi, lekin
+  // avval Owner faqat Owner panelini ko'rardi — talaba statistikasi va
+  // topshiriq berish unga yopiq edi. Backend allaqachon Owner'ga barcha
+  // guruhlarga ruxsat beradi, faqat UI yo'q edi.
+  if (openGroupId != null) {
+    return (
+      <TeacherDashboard
+        schoolId={schoolId}
+        groupId={openGroupId}
+        myMembershipId={myMembershipId}
+        onBack={() => setOpenGroupId(null)}
+        onOpenLeaderboard={() => {}}
+      />
     );
   }
 
@@ -90,7 +110,14 @@ export default function OwnerDashboard({ schoolId, onBack }) {
       {tab === "teachers" && (
         <OwnerTeachersTab key={refreshKey} schoolId={schoolId} onChanged={refresh} />
       )}
-      {tab === "groups" && <OwnerGroupsTab key={refreshKey} schoolId={schoolId} onChanged={refresh} />}
+      {tab === "groups" && (
+        <OwnerGroupsTab
+          key={refreshKey}
+          schoolId={schoolId}
+          onChanged={refresh}
+          onOpenGroup={setOpenGroupId}
+        />
+      )}
       {tab === "students" && <OwnerStudentsTab key={refreshKey} schoolId={schoolId} onChanged={refresh} />}
       {tab === "invitations" && (
         <OwnerInvitationsTab key={refreshKey} schoolId={schoolId} onChanged={refresh} />

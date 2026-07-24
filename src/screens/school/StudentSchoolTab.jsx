@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from "react";
+import SchoolChatListScreen from "./SchoolChatListScreen";
 import { useTranslation } from "react-i18next";
 import {
   School,
-  Users,
+  MessageCircle,
   ClipboardList,
   Trophy,
   LogOut,
@@ -85,6 +86,8 @@ export default function StudentSchoolTab({ onBack, onOpenJoin, onOpenLeaderboard
   const [error, setError] = useState("");
   const [leaving, setLeaving] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [showChats, setShowChats] = useState(false);
+  const [unread, setUnread] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -100,9 +103,23 @@ export default function StudentSchoolTab({ onBack, onOpenJoin, onOpenLeaderboard
     }
   }, []);
 
+  const loadUnread = useCallback(async (schoolId) => {
+    if (!schoolId) return;
+    try {
+      const res = await api.schoolChatUnread(schoolId);
+      setUnread(res.unread || 0);
+    } catch {
+      /* o'qilmaganlar soni muhim emas */
+    }
+  }, []);
+
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (data?.membership?.schoolId) loadUnread(data.membership.schoolId);
+  }, [data, loadUnread]);
 
   async function handleLeave() {
     setLeaving(true);
@@ -114,6 +131,21 @@ export default function StudentSchoolTab({ onBack, onOpenJoin, onOpenLeaderboard
       setError(err.message);
       setLeaving(false);
     }
+  }
+
+  // Talaba o'z o'qituvchisi bilan yozisha oladi — bu chat tizimining
+  // ikkinchi yarmi. O'qituvchi tomonidan TeacherDashboard'da ochiladi.
+  if (showChats && data?.membership) {
+    return (
+      <SchoolChatListScreen
+        schoolId={data.membership.schoolId}
+        myMembershipId={data.membership.id}
+        onBack={() => {
+          setShowChats(false);
+          loadUnread(data.membership.schoolId);
+        }}
+      />
+    );
   }
 
   return (
@@ -162,6 +194,8 @@ export default function StudentSchoolTab({ onBack, onOpenJoin, onOpenLeaderboard
         <StudentSchoolContent
           data={data}
           homework={homework}
+          unread={unread}
+          onOpenChats={() => setShowChats(true)}
           onOpenLeaderboard={onOpenLeaderboard}
           onRequestLeave={() => setConfirmLeave(true)}
         />
@@ -197,7 +231,14 @@ export default function StudentSchoolTab({ onBack, onOpenJoin, onOpenLeaderboard
 }
 
 /** Maktab + guruh + homework kontenti — a'zo bo'lgan talaba uchun. */
-function StudentSchoolContent({ data, homework, onOpenLeaderboard, onRequestLeave }) {
+function StudentSchoolContent({
+  data,
+  homework,
+  unread,
+  onOpenChats,
+  onOpenLeaderboard,
+  onRequestLeave,
+}) {
   const { t } = useTranslation();
   const { school, group } = data;
   const pending = homework.filter((h) => h.status === "PENDING");
@@ -241,10 +282,23 @@ function StudentSchoolContent({ data, homework, onOpenLeaderboard, onRequestLeav
             {t("school.groupLeaderboard")}
           </span>
         </button>
-        <div className="rounded-2xl bg-white/[0.04] border border-white/10 py-3.5 flex flex-col items-center gap-1.5">
-          <Users size={17} color="#9CA3AF" />
-          <span className="text-xs font-semibold text-gray-300">{t("school.myGroup")}</span>
-        </div>
+        <button
+          onClick={onOpenChats}
+          className="relative rounded-2xl bg-white/[0.04] border border-white/10 py-3.5 flex flex-col items-center gap-1.5"
+        >
+          <MessageCircle size={17} color="#9CA3AF" />
+          <span className="text-xs font-semibold text-gray-300">{t("school.messages")}</span>
+          {unread > 0 && (
+            <span
+              className="absolute top-2 right-3 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center"
+              style={{
+                background: "linear-gradient(135deg, var(--accent-from), var(--accent-to))",
+              }}
+            >
+              {unread > 9 ? "9+" : unread}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Uy vazifalari */}

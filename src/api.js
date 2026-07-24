@@ -231,6 +231,11 @@ export const api = {
     request(`/api/school/${schoolId}/search-users?q=${encodeURIComponent(q)}`),
   schoolAddTeacher: (schoolId, userId) =>
     request(`/api/school/${schoolId}/teachers`, { method: "POST", body: { userId } }),
+  schoolAssignTeacherGroup: (schoolId, membershipId, groupId) =>
+    request(`/api/school/${schoolId}/teachers/${membershipId}/group`, {
+      method: "PATCH",
+      body: { groupId },
+    }),
   schoolSuspendTeacher: (schoolId, membershipId) =>
     request(`/api/school/${schoolId}/teachers/${membershipId}/suspend`, { method: "PATCH" }),
   schoolReactivateTeacher: (schoolId, membershipId) =>
@@ -265,6 +270,26 @@ export const api = {
     request(
       `/api/school/${schoolId}/teacher/dashboard${groupId ? `?groupId=${groupId}` : ""}`
     ),
+  // Maktab chati
+  schoolChats: (schoolId) => request(`/api/school/${schoolId}/chats`),
+  schoolChatUnread: (schoolId) => request(`/api/school/${schoolId}/chats/unread`),
+  schoolOpenChat: (schoolId, membershipId) =>
+    request(`/api/school/${schoolId}/chats`, { method: "POST", body: { membershipId } }),
+  schoolChatMessages: (schoolId, chatId, { before, limit } = {}) => {
+    const params = new URLSearchParams();
+    if (before) params.set("before", before);
+    if (limit) params.set("limit", limit);
+    const qs = params.toString();
+    return request(`/api/school/${schoolId}/chats/${chatId}/messages${qs ? `?${qs}` : ""}`);
+  },
+  schoolSendMessage: (schoolId, chatId, text) =>
+    request(`/api/school/${schoolId}/chats/${chatId}/messages`, {
+      method: "POST",
+      body: { text },
+    }),
+  schoolMarkChatRead: (schoolId, chatId) =>
+    request(`/api/school/${schoolId}/chats/${chatId}/read`, { method: "POST" }),
+
   schoolStudentProfile: (schoolId, membershipId, days = 14) =>
     request(`/api/school/${schoolId}/students/${membershipId}/profile?days=${days}`),
   schoolGroupLeaderboard: (schoolId, groupId) =>

@@ -42,3 +42,104 @@ button {
 .sign-pic-dark [stroke="#FFFFFF"] {
   stroke: #1f2937;
 }
+
+/* ============================================================================
+   AURORA TEMASI — neumorphism + glassmorphism + minimalism
+   ============================================================================
+
+   NIMA UCHUN CSS DA, themes.js DA EMAS:
+   backdrop-filter va ko'p qavatli soyalarni CSS o'zgaruvchisi orqali berib
+   bo'lmaydi — ular xossa (property), qiymat emas. Ilovada `bg-card` klassi
+   118 ta joyda ishlatiladi; har biriga blur qo'shish o'rniga shu yerda
+   data-theme="aurora" ostida bir marta beriladi.
+
+   Boshqa temalarga TEGMAYDI — barcha qoidalar [data-theme="aurora"] bilan
+   chegaralangan.
+   ============================================================================ */
+
+/* Fon: juda yumshoq ikki nuqtali yorug'lik. Minimalizm uchun rang emas,
+   yorug'lik gradienti — palitra bitta oilada qoladi. */
+[data-theme="aurora"] body {
+  background-color: #e3e7f0;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 15% 0%, rgba(255, 255, 255, 0.9), transparent 60%),
+    radial-gradient(ellipse 70% 50% at 90% 100%, rgba(190, 200, 225, 0.35), transparent 60%);
+  background-attachment: fixed;
+}
+
+/* Shisha qatlam: bg-card ishlatilgan HAR QANDAY element avtomatik shisha
+   bo'ladi. Blur qiymati past (12px) — minimalizm talabi, kuchli blur
+   diqqatni tortadi va matnni o'qishni qiyinlashtiradi. */
+[data-theme="aurora"] .bg-card,
+[data-theme="aurora"] .bg-card-soft {
+  backdrop-filter: blur(12px) saturate(1.15);
+  -webkit-backdrop-filter: blur(12px) saturate(1.15);
+}
+
+/* Neumorphic soya — Tailwind'ning shadow-sm/shadow-md klasslari ustidan.
+   Ikki tomonlama: pastdan quyuq (og'irlik), tepadan yorug' (ko'tarilish).
+   Aynan shu juftlik sirtni "materialdan chiqib turgan" qilib ko'rsatadi. */
+[data-theme="aurora"] .shadow-sm {
+  box-shadow:
+    5px 5px 12px rgba(163, 177, 198, 0.32),
+    -5px -5px 12px rgba(255, 255, 255, 0.8) !important;
+}
+[data-theme="aurora"] .shadow-md,
+[data-theme="aurora"] .shadow-lg {
+  box-shadow:
+    8px 8px 20px rgba(163, 177, 198, 0.4),
+    -8px -8px 20px rgba(255, 255, 255, 0.88) !important;
+}
+
+/* Bosilganda ichkariga botadi (neumorphic "pressed" holati).
+   Bu uslubning eng tanilgan detali — shuning uchun aynan shu yerda
+   qoldirildi, boshqa joylarda bezak kamaytirildi. */
+[data-theme="aurora"] button:active .bg-card,
+[data-theme="aurora"] button.bg-card:active {
+  box-shadow:
+    inset 4px 4px 10px rgba(163, 177, 198, 0.4),
+    inset -4px -4px 10px rgba(255, 255, 255, 0.8) !important;
+}
+
+/* Pastki navigatsiya — shisha panel, fon ustida suzadi */
+[data-theme="aurora"] nav {
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 -4px 24px rgba(163, 177, 198, 0.18);
+}
+
+/* Kiritish maydonlari — botgan holat (neumorphic inset).
+   Ko'tarilgan kartalar bilan qarama-qarshilik hosil qiladi: nima bosiladi,
+   nimaga yoziladi — shakl orqali ajraladi. */
+[data-theme="aurora"] input,
+[data-theme="aurora"] textarea,
+[data-theme="aurora"] select {
+  background: rgba(255, 255, 255, 0.45);
+  box-shadow:
+    inset 3px 3px 8px rgba(163, 177, 198, 0.28),
+    inset -3px -3px 8px rgba(255, 255, 255, 0.75);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+[data-theme="aurora"] input:focus,
+[data-theme="aurora"] textarea:focus,
+[data-theme="aurora"] select:focus {
+  border-color: rgba(124, 140, 248, 0.5);
+}
+
+/* Urg'u gradienti ishlatilgan tugmalar — shisha ustida yotgani uchun
+   yumshoq halo beriladi (qattiq soya emas) */
+[data-theme="aurora"] .rounded-2xl[style*="--accent-from"],
+[data-theme="aurora"] .rounded-full[style*="--accent-from"] {
+  box-shadow: 0 6px 18px rgba(124, 140, 248, 0.32);
+}
+
+/* Harakat kamaytirilgan rejim — blur og'ir effekt, hurmat qilamiz */
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="aurora"] .bg-card,
+  [data-theme="aurora"] .bg-card-soft,
+  [data-theme="aurora"] nav {
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+}

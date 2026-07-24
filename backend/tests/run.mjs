@@ -27,6 +27,7 @@ const TEST_FILES = [
   "homework.service.test.mjs",
   "school.http.test.mjs",
   "school.regression.test.mjs",
+  "school.chat.test.mjs",
 ];
 
 let restored = false;

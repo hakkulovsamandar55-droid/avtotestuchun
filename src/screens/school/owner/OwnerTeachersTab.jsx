@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, UserX, UserCheck, X } from "lucide-react";
+import { Plus, UserX, UserCheck, X, Users } from "lucide-react";
 import { api } from "../../../api";
 import UserSearchPicker from "../UserSearchPicker";
 
@@ -14,6 +14,7 @@ function statusMeta(status) {
 export default function OwnerTeachersTab({ schoolId, onChanged }) {
   const { t } = useTranslation();
   const [teachers, setTeachers] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
@@ -23,14 +24,34 @@ export default function OwnerTeachersTab({ schoolId, onChanged }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.schoolTeachers(schoolId);
+      // Guruhlar ham kerak — o'qituvchini tayinlash uchun ro'yxat
+      // ko'rsatiladi. Ikkalasi parallel yuklanadi.
+      const [res, groupRes] = await Promise.all([
+        api.schoolTeachers(schoolId),
+        api.schoolGroups(schoolId),
+      ]);
       setTeachers(res.teachers || []);
+      setGroups(groupRes.groups || []);
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   }, [schoolId]);
+
+  async function handleAssignGroup(membershipId, groupId) {
+    setBusy(membershipId);
+    setError("");
+    try {
+      await api.schoolAssignTeacherGroup(schoolId, membershipId, groupId);
+      await load();
+      onChanged?.();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(null);
+    }
+  }
 
   useEffect(() => {
     load();
@@ -143,6 +164,37 @@ export default function OwnerTeachersTab({ schoolId, onChanged }) {
                   </p>
                 </div>
               </div>
+
+              {/* Guruh tayinlash — o'qituvchi paneli SHU YERDAN ochiladi.
+                  Guruh tayinlanmasa, o'qituvchi hech narsa ko'ra olmaydi. */}
+              {m.status === "ACTIVE" && (
+                <div className="mb-3">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <Users size={12} className="text-gray-500" />
+                    <span className="text-[11px] text-gray-500">{t("school.assignedGroup")}</span>
+                  </div>
+                  <select
+                    value={m.groupId ?? ""}
+                    onChange={(e) =>
+                      handleAssignGroup(m.id, e.target.value === "" ? null : Number(e.target.value))
+                    }
+                    disabled={busy === m.id}
+                    className="w-full rounded-xl bg-white/[0.05] border border-white/10 px-3 py-2 text-xs text-white outline-none focus:border-white/25 disabled:opacity-50"
+                  >
+                    <option value="">{t("school.noGroupOption")}</option>
+                    {groups.map((g) => (
+                      <option key={g.id} value={g.id}>
+                        {g.name}
+                      </option>
+                    ))}
+                  </select>
+                  {m.groupId == null && (
+                    <p className="text-amber-400/80 text-[10px] mt-1.5 leading-relaxed">
+                      {t("school.noGroupWarning")}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {m.status !== "REMOVED" && (
                 <div className="flex gap-2">

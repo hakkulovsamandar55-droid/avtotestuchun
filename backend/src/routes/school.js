@@ -7,6 +7,7 @@ import { parsePagination } from "../lib/validate.js";
 import * as schoolSvc from "../services/schoolService.js";
 import * as hwSvc from "../services/homeworkService.js";
 import * as schoolAnalytics from "../services/schoolAnalyticsService.js";
+import * as chatSvc from "../services/schoolChatService.js";
 
 // Har bir joyda try/catch yozmaslik uchun kichik yordamchi — NaN yoki
 // yaroqsiz ID Prisma'ga tushib 500 qaytarmasligi kerak.
@@ -281,16 +282,20 @@ schoolRouter.get(
       where: { schoolId: req.schoolId, role: "TEACHER" },
       orderBy: { joinedAt: "desc" },
     });
-    const withUsers = await Promise.all(
-      teachers.map(async (m) => ({
-        ...m,
-        user: await prisma.user.findUnique({
-          where: { id: m.userId },
-          select: { id: true, name: true, username: true, avatarUrl: true },
-        }),
-      }))
-    );
-    res.json({ teachers: withUsers });
+
+    // N+1 EMAS: barcha foydalanuvchilar bitta so'rovda olinadi.
+    // Avval har o'qituvchi uchun alohida findUnique yuborilardi.
+    if (teachers.length === 0) return res.json({ teachers: [] });
+
+    const users = await prisma.user.findMany({
+      where: { id: { in: teachers.map((m) => m.userId) } },
+      select: { id: true, name: true, username: true, avatarUrl: true },
+    });
+    const userById = new Map(users.map((u) => [u.id, u]));
+
+    res.json({
+      teachers: teachers.map((m) => ({ ...m, user: userById.get(m.userId) ?? null })),
+    });
   })
 );
 
@@ -397,6 +402,42 @@ schoolRouter.get(
       .map((u) => ({ ...u, telegramId: u.telegramId?.toString() ?? null }));
 
     res.json({ users });
+  })
+);
+
+// PATCH /api/school/:schoolId/teachers/:membershipId/group  { groupId }
+// O'qituvchini guruhga tayinlaydi yoki guruhdan chiqaradi (groupId: null).
+//
+// NIMA UCHUN KERAK: o'qituvchi qo'shilganda groupId null bo'ladi va u
+// "Siz hali biror guruhga tayinlanmagansiz" ekranini ko'rardi. Tayinlash
+// uchun esa hech qanday yo'l yo'q edi — butun o'qituvchi paneli, talaba
+// profili va statistika shu sababli yetib bo'lmas holatda qolgan edi.
+schoolRouter.patch(
+  "/:schoolId/teachers/:membershipId/group",
+  requireSchool(["OWNER"]),
+  asyncHandler(async (req, res) => {
+    const membershipId = parseParam(req, res, "membershipId");
+    if (membershipId === null) return;
+
+    // null / "" — guruhdan chiqarish (ataylab qo'llab-quvvatlanadi)
+    let groupId = null;
+    if (req.body.groupId != null && req.body.groupId !== "") {
+      groupId = Number(req.body.groupId);
+      if (!Number.isInteger(groupId) || groupId <= 0) {
+        return res.status(400).json({ error: "Noto'g'ri guruh ID" });
+      }
+    }
+
+    try {
+      const membership = await schoolSvc.assignTeacherToGroup(
+        req.schoolId,
+        membershipId,
+        groupId
+      );
+      res.json({ membership });
+    } catch (err) {
+      return sendServiceError(res, err);
+    }
   })
 );
 
@@ -749,5 +790,152 @@ schoolRouter.get(
   requireSchool(["OWNER"]),
   asyncHandler(async (req, res) => {
     res.json(await schoolAnalytics.getSchoolAnalytics(req.schoolId));
+  })
+);
+
+// ============================================================================
+// CHAT — o'qituvchi ↔ talaba yozishuvi
+//
+// Barcha route'lar requireSchool orqali himoyalangan, ustiga chat servisi
+// o'z ichida ishtirokchilikni qayta tekshiradi (ikki qavatli himoya).
+//
+// ESLATMA: CEO (platforma egasi) uchun req.membership null bo'ladi — u
+// maktab a'zosi emas. Chat shaxsiy yozishuv bo'lgani uchun CEO unga kira
+// olmaydi; bu ataylab shunday.
+// ============================================================================
+
+function requireMembership(req, res) {
+  if (!req.membership) {
+    res.status(403).json({
+      error: "Chat faqat maktab a'zolari uchun. Siz bu maktabning a'zosi emassiz.",
+    });
+    return null;
+  }
+  return req.membership;
+}
+
+// GET /api/school/:schoolId/chats — mening chatlarim
+schoolRouter.get(
+  "/:schoolId/chats",
+  requireSchool(),
+  asyncHandler(async (req, res) => {
+    const membership = requireMembership(req, res);
+    if (!membership) return;
+
+    try {
+      res.json({ chats: await chatSvc.listChats(membership) });
+    } catch (err) {
+      return sendServiceError(res, err);
+    }
+  })
+);
+
+// GET /api/school/:schoolId/chats/unread — jami o'qilmagan (tab nuqtasi uchun)
+schoolRouter.get(
+  "/:schoolId/chats/unread",
+  requireSchool(),
+  asyncHandler(async (req, res) => {
+    const membership = requireMembership(req, res);
+    if (!membership) return;
+
+    try {
+      res.json({ unread: await chatSvc.getTotalUnread(membership) });
+    } catch (err) {
+      return sendServiceError(res, err);
+    }
+  })
+);
+
+// POST /api/school/:schoolId/chats  { membershipId }
+// Suhbatdosh bilan chat ochadi (yoki mavjudini qaytaradi)
+schoolRouter.post(
+  "/:schoolId/chats",
+  requireSchool(),
+  asyncHandler(async (req, res) => {
+    const membership = requireMembership(req, res);
+    if (!membership) return;
+
+    const otherId = Number(req.body.membershipId);
+    if (!Number.isInteger(otherId) || otherId <= 0) {
+      return res.status(400).json({ error: "Noto'g'ri suhbatdosh ID" });
+    }
+
+    const other = await prisma.membership.findUnique({ where: { id: otherId } });
+    if (!other || other.schoolId !== req.schoolId) {
+      return res.status(404).json({ error: "Suhbatdosh topilmadi" });
+    }
+
+    try {
+      const chat = await chatSvc.getOrCreateChat(req.schoolId, membership, other);
+      res.status(201).json({ chat });
+    } catch (err) {
+      return sendServiceError(res, err);
+    }
+  })
+);
+
+// GET /api/school/:schoolId/chats/:chatId/messages?before=<id>&limit=50
+schoolRouter.get(
+  "/:schoolId/chats/:chatId/messages",
+  requireSchool(),
+  asyncHandler(async (req, res) => {
+    const membership = requireMembership(req, res);
+    if (!membership) return;
+
+    const chatId = parseParam(req, res, "chatId");
+    if (chatId === null) return;
+
+    const before = req.query.before != null ? Number(req.query.before) : undefined;
+    if (before !== undefined && (!Number.isInteger(before) || before <= 0)) {
+      return res.status(400).json({ error: "Noto'g'ri before parametri" });
+    }
+
+    const limit = Number(req.query.limit) || 50;
+
+    try {
+      const { messages } = await chatSvc.getMessages(chatId, membership, { limit, before });
+      res.json({ messages });
+    } catch (err) {
+      return sendServiceError(res, err);
+    }
+  })
+);
+
+// POST /api/school/:schoolId/chats/:chatId/messages  { text }
+schoolRouter.post(
+  "/:schoolId/chats/:chatId/messages",
+  requireSchool(),
+  asyncHandler(async (req, res) => {
+    const membership = requireMembership(req, res);
+    if (!membership) return;
+
+    const chatId = parseParam(req, res, "chatId");
+    if (chatId === null) return;
+
+    try {
+      const message = await chatSvc.sendMessage(chatId, membership, req.body.text);
+      res.status(201).json({ message });
+    } catch (err) {
+      return sendServiceError(res, err);
+    }
+  })
+);
+
+// POST /api/school/:schoolId/chats/:chatId/read
+schoolRouter.post(
+  "/:schoolId/chats/:chatId/read",
+  requireSchool(),
+  asyncHandler(async (req, res) => {
+    const membership = requireMembership(req, res);
+    if (!membership) return;
+
+    const chatId = parseParam(req, res, "chatId");
+    if (chatId === null) return;
+
+    try {
+      res.json(await chatSvc.markAsRead(chatId, membership));
+    } catch (err) {
+      return sendServiceError(res, err);
+    }
   })
 );

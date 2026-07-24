@@ -10,11 +10,13 @@ import {
   Plus,
   Activity,
   ChevronRight,
+  MessageCircle,
 } from "lucide-react";
 import { api } from "../../api";
 import { ACCENT_FROM, ACCENT_TO } from "../../theme";
 import CreateHomeworkSheet from "./CreateHomeworkSheet";
 import StudentProfileScreen from "./StudentProfileScreen";
+import SchoolChatListScreen from "./SchoolChatListScreen";
 
 function StatBox({ icon: Icon, value, label, color }) {
   return (
@@ -57,7 +59,13 @@ function StudentRow({ student, onOpen }) {
 }
 
 /** O'qituvchi dashboardi — o'z guruhi haqida hammasi. */
-export default function TeacherDashboard({ schoolId, groupId, onBack, onOpenLeaderboard }) {
+export default function TeacherDashboard({
+  schoolId,
+  groupId,
+  myMembershipId,
+  onBack,
+  onOpenLeaderboard,
+}) {
   const { t } = useTranslation();
   const [data, setData] = useState(null);
   const [homework, setHomework] = useState([]);
@@ -65,6 +73,32 @@ export default function TeacherDashboard({ schoolId, groupId, onBack, onOpenLead
   const [error, setError] = useState("");
   const [showCreateHomework, setShowCreateHomework] = useState(false);
   const [openStudentId, setOpenStudentId] = useState(null);
+  const [showChats, setShowChats] = useState(false);
+  const [unread, setUnread] = useState(0);
+
+  const loadUnread = useCallback(async () => {
+    try {
+      const res = await api.schoolChatUnread(schoolId);
+      setUnread(res.unread || 0);
+    } catch {
+      /* o'qilmaganlar soni muhim emas — xato yutiladi */
+    }
+  }, [schoolId]);
+
+  // Talaba profilidan "Yozish" bosilganda: chat ochiladi (yoki mavjudi
+  // topiladi), so'ng chatlar ro'yxatiga o'tamiz.
+  const handleOpenChat = useCallback(
+    async (studentMembershipId) => {
+      try {
+        await api.schoolOpenChat(schoolId, studentMembershipId);
+        setOpenStudentId(null);
+        setShowChats(true);
+      } catch (err) {
+        setError(err.message);
+      }
+    },
+    [schoolId]
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -85,7 +119,8 @@ export default function TeacherDashboard({ schoolId, groupId, onBack, onOpenLead
 
   useEffect(() => {
     load();
-  }, [load]);
+    loadUnread();
+  }, [load, loadUnread]);
 
   if (loading) {
     return (
@@ -106,6 +141,19 @@ export default function TeacherDashboard({ schoolId, groupId, onBack, onOpenLead
   // Talaba profili ochilganda uni to'liq ekran sifatida ko'rsatamiz.
   // Alohida route qo'shilmadi — dashboard state'i yetarli va orqaga
   // qaytganda ro'yxat qayta yuklanmaydi (tezroq).
+  if (showChats) {
+    return (
+      <SchoolChatListScreen
+        schoolId={schoolId}
+        myMembershipId={myMembershipId}
+        onBack={() => {
+          setShowChats(false);
+          loadUnread();
+        }}
+      />
+    );
+  }
+
   if (openStudentId != null) {
     return (
       <div className="flex-1 overflow-y-auto tp-safe-top bg-[#0F1424] min-h-full text-white animate-slide-in">
@@ -113,6 +161,7 @@ export default function TeacherDashboard({ schoolId, groupId, onBack, onOpenLead
           schoolId={schoolId}
           membershipId={openStudentId}
           onBack={() => setOpenStudentId(null)}
+          onOpenChat={handleOpenChat}
         />
       </div>
     );
@@ -127,12 +176,28 @@ export default function TeacherDashboard({ schoolId, groupId, onBack, onOpenLead
         >
           <ChevronLeft size={20} color="#E5E7EB" />
         </button>
-        <div>
-          <h1 className="text-lg font-extrabold leading-none">{data.group.name}</h1>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-lg font-extrabold leading-none truncate">{data.group.name}</h1>
           <p className="text-gray-400 text-xs mt-1">
             {t("school.studentsCount", { count: data.studentCount })}
           </p>
         </div>
+        <button
+          onClick={() => setShowChats(true)}
+          className="relative w-9 h-9 rounded-full bg-white/5 flex items-center justify-center shrink-0"
+        >
+          <MessageCircle size={17} color="#E5E7EB" />
+          {unread > 0 && (
+            <span
+              className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full text-[9px] font-bold flex items-center justify-center"
+              style={{
+                background: "linear-gradient(135deg, var(--accent-from), var(--accent-to))",
+              }}
+            >
+              {unread > 9 ? "9+" : unread}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Kunlik ko'rsatkichlar */}

@@ -8,6 +8,7 @@ import {
   ClipboardList,
   AlertCircle,
   Loader2,
+  MessageCircle,
 } from "lucide-react";
 import { api } from "../../api";
 
@@ -21,7 +22,7 @@ import { api } from "../../api";
  * durationSec maydoni saqlanmaydi. Rasmiy imtihonlarda esa bor — shuning
  * uchun imtihonlar bo'limida vaqt ko'rsatiladi.
  */
-export default function StudentProfileScreen({ schoolId, membershipId, onBack }) {
+export default function StudentProfileScreen({ schoolId, membershipId, onBack, onOpenChat }) {
   const { t } = useTranslation();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -93,6 +94,20 @@ export default function StudentProfileScreen({ schoolId, membershipId, onBack })
           </p>
         </div>
       </div>
+
+      {/* Yozishuv tugmasi */}
+      {onOpenChat && (
+        <div className="px-5 mt-4">
+          <button
+            onClick={() => onOpenChat(membershipId)}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 font-semibold text-sm"
+            style={{ background: "linear-gradient(135deg, var(--accent-from), var(--accent-to))" }}
+          >
+            <MessageCircle size={16} />
+            {t("school.writeMessage")}
+          </button>
+        </div>
+      )}
 
       {/* Davr tanlash */}
       <div className="px-5 mt-5 flex gap-2">

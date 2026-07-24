@@ -44,6 +44,7 @@ enum NotificationType {
   PAYMENT_REQUEST
   PREMIUM_EXPIRING
   NEW_REGISTRATION
+  SCHOOL_MESSAGE
 }
 
 // User Profile'dagi vertikal timeline shu turlardan quriladi
@@ -485,6 +486,7 @@ model School {
   memberships Membership[]
   invitations Invitation[]
   homeworks   Homework[]
+  chats       SchoolChat[]
 
   @@map("schools")
   @@index([status])
@@ -522,11 +524,73 @@ model Membership {
   endedAt  DateTime?         @map("ended_at") // ARCHIVED/REMOVED bo'lgan payt
 
   homeworkSubmissions HomeworkSubmission[]
+  sentMessages        SchoolMessage[]     @relation("SchoolMessageSender")
+  chatsAsStudent      SchoolChat[]        @relation("SchoolChatStudent")
+  chatsAsTeacher      SchoolChat[]        @relation("SchoolChatTeacher")
 
   @@map("school_memberships")
   @@index([userId, status])
   @@index([schoolId, role, status])
   @@index([groupId, status])
+}
+
+// O'qituvchi ↔ talaba yozishuvi.
+//
+// NIMA UCHUN ALOHIDA MODEL: mavjud Conversation/SupportMessage 1:1 (foydalanuvchi
+// ↔ admin) uchun mo'ljallangan — unda userId @unique va sender faqat USER/ADMIN.
+// Maktabda esa bir talaba turli o'qituvchilar bilan, bir o'qituvchi ko'p talaba
+// bilan yozishadi. Support modelini cho'zish uning mantiqini buzardi.
+//
+// Ishtirokchilar membershipId orqali bog'lanadi (userId emas) — chunki odam
+// maktabdan chiqsa, uning a'zoligi ARCHIVED bo'ladi va chat tarixi o'sha
+// maktabga tegishli bo'lib qoladi.
+model SchoolChat {
+  id       Int    @id @default(autoincrement())
+  schoolId Int    @map("school_id")
+  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  studentMembershipId Int        @map("student_membership_id")
+  student             Membership @relation("SchoolChatStudent", fields: [studentMembershipId], references: [id], onDelete: Cascade)
+
+  teacherMembershipId Int        @map("teacher_membership_id")
+  teacher             Membership @relation("SchoolChatTeacher", fields: [teacherMembershipId], references: [id], onDelete: Cascade)
+
+  // O'qilmagan xabarlar soni — har safar COUNT(*) qilmaslik uchun.
+  // Ro'yxat ekranida bu juda muhim: 50 ta chat = 50 ta qo'shimcha so'rov bo'lardi.
+  unreadForStudent Int @default(0) @map("unread_for_student")
+  unreadForTeacher Int @default(0) @map("unread_for_teacher")
+
+  lastMessageAt   DateTime? @map("last_message_at")
+  lastMessageText String?   @map("last_message_text") // ro'yxatda ko'rsatish uchun
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  messages SchoolMessage[]
+
+  @@map("school_chats")
+  // Bir juftlik uchun faqat BITTA chat bo'lishi kerak — poyga holatida
+  // ikkita chat yaratilishini DB darajasida to'sadi
+  @@unique([studentMembershipId, teacherMembershipId])
+  @@index([schoolId, lastMessageAt])
+  @@index([teacherMembershipId, lastMessageAt])
+  @@index([studentMembershipId, lastMessageAt])
+}
+
+model SchoolMessage {
+  id     Int        @id @default(autoincrement())
+  chatId Int        @map("chat_id")
+  chat   SchoolChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  senderMembershipId Int        @map("sender_membership_id")
+  sender             Membership @relation("SchoolMessageSender", fields: [senderMembershipId], references: [id], onDelete: Cascade)
+
+  text      String
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("school_messages")
+  @@index([chatId, createdAt])
 }
 
 model Invitation {

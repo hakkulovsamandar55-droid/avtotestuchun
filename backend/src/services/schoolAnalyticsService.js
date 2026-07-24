@@ -544,7 +544,7 @@ export async function getStudentProfile(membershipId, { days = 14 } = {}) {
       examReadiness: user.examReadiness,
       lastOnlineAt: user.lastOnlineAt,
       examDate: user.examDate,
-      joinedAt: membership.startedAt ?? user.createdAt,
+      joinedAt: membership.joinedAt ?? user.createdAt,
       groupId: membership.groupId,
     },
     period: {

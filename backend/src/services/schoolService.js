@@ -320,6 +320,35 @@ export async function inviteTeacherDirect(schoolId, teacherUserId) {
   }
 }
 
+/**
+ * O'qituvchini guruhga tayinlaydi (yoki guruhdan chiqaradi — groupId: null).
+ *
+ * MUHIM: bitta guruhda bir nechta o'qituvchi bo'lishi mumkin — bu ataylab
+ * shunday. Kichik maktabda bir guruhga ikki o'qituvchi (masalan nazariya va
+ * amaliyot) tayinlanishi normal holat.
+ */
+export async function assignTeacherToGroup(schoolId, membershipId, groupId) {
+  const membership = await prisma.membership.findUnique({ where: { id: membershipId } });
+  if (!membership || membership.schoolId !== schoolId || membership.role !== "TEACHER") {
+    throw notFound("O'qituvchi a'zoligi");
+  }
+
+  // Guruh ROSTDAN HAM shu maktabga tegishlimi — aks holda boshqa maktabning
+  // guruh ID sini yozib, o'qituvchini o'zga maktab guruhiga tayinlash va
+  // shu orqali begona talabalar ma'lumotiga kirish mumkin bo'lardi.
+  if (groupId != null) {
+    const group = await prisma.group.findUnique({ where: { id: groupId } });
+    if (!group || group.schoolId !== schoolId) {
+      throw notFound("Guruh");
+    }
+  }
+
+  return prisma.membership.update({
+    where: { id: membershipId },
+    data: { groupId },
+  });
+}
+
 /** Owner o'qituvchini vaqtincha to'xtatadi (kirish huquqi yo'qoladi). */
 export async function suspendTeacher(schoolId, membershipId) {
   const membership = await prisma.membership.findUnique({ where: { id: membershipId } });

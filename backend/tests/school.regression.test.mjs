@@ -406,5 +406,62 @@ console.log("\n=== YANGI: talaba profili (o'qituvchi paneli) ===");
   check("juda katta days chegaralandi", huge.json?.daily?.length === 90);
 }
 
+console.log("\n=== YANGI: o'qituvchini guruhga tayinlash ===");
+{
+  // XATO EDI: o'qituvchi qo'shilganda groupId null bo'lardi va uni guruhga
+  // tayinlash uchun HECH QANDAY route yo'q edi. Natijada o'qituvchi paneli,
+  // talaba profili va statistika — hammasi yetib bo'lmas holatda qolgan edi.
+  const freshTeacher = await prisma.user.create({
+    data: { id: 201, telegramId: 201n, name: "Yangi O'qituvchi" },
+  });
+  const added = await req("POST", `/api/school/${school1Id}/teachers`, {
+    user: owner,
+    body: { userId: freshTeacher.id },
+  });
+  check("o'qituvchi qo'shildi", added.status === 201);
+  check("boshida guruhsiz", added.json.membership.groupId == null);
+
+  const teacherMembershipId = added.json.membership.id;
+
+  const assigned = await req(
+    "PATCH",
+    `/api/school/${school1Id}/teachers/${teacherMembershipId}/group`,
+    { user: owner, body: { groupId: groupAId } }
+  );
+  check("guruhga tayinlandi", assigned.status === 200);
+  check("groupId saqlandi", assigned.json.membership.groupId === groupAId);
+
+  // Endi o'qituvchi o'z panelini ko'ra oladimi — asosiy maqsad shu
+  const dash = await req("GET", `/api/school/${school1Id}/teacher/dashboard`, {
+    user: freshTeacher,
+  });
+  check("o'qituvchi paneli ochildi (409 emas)", dash.status === 200);
+
+  // Guruhdan chiqarish (null) ham ishlashi kerak
+  const cleared = await req(
+    "PATCH",
+    `/api/school/${school1Id}/teachers/${teacherMembershipId}/group`,
+    { user: owner, body: { groupId: null } }
+  );
+  check("guruhdan chiqarildi", cleared.status === 200 && cleared.json.membership.groupId == null);
+
+  // XAVFSIZLIK: boshqa maktabning guruhiga tayinlab bo'lmasligi kerak —
+  // aks holda o'qituvchi begona maktab talabalarini ko'rardi
+  const foreign = await req(
+    "PATCH",
+    `/api/school/${school1Id}/teachers/${teacherMembershipId}/group`,
+    { user: owner, body: { groupId: groupXId } }
+  );
+  check("boshqa maktab guruhiga tayinlash rad etildi", foreign.status === 404);
+
+  // O'qituvchi o'zini tayinlay olmasligi kerak (faqat Owner)
+  const selfAssign = await req(
+    "PATCH",
+    `/api/school/${school1Id}/teachers/${teacherMembershipId}/group`,
+    { user: teacherA, body: { groupId: groupAId } }
+  );
+  check("o'qituvchi o'zi tayinlay olmadi", selfAssign.status === 403);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exitCode = 1;
