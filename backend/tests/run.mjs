@@ -26,6 +26,7 @@ const TEST_FILES = [
   "school.service.test.mjs",
   "homework.service.test.mjs",
   "school.http.test.mjs",
+  "school.regression.test.mjs",
 ];
 
 let restored = false;

@@ -175,6 +175,8 @@ export default {
     userIdPlaceholder: "Фойдаланувчи ID",
     weakStudents: "Ёрдам керак бўлган талабалар",
     wholeSchool: "Бутун мактаб",
+    searchOwnerPlaceholder: "Исм ёки username бўйича қидиринг",
+    ownerNotSelected: "Эгаси танланмаган",
     active: "Фаол",
     suspended: "Тўхтатилган",
     removed: "Чиқарилган",

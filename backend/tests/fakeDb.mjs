@@ -22,6 +22,11 @@ export function createFakeDb() {
   };
 
   function matchValue(actual, condition) {
+    // Real DB'da ustun har doim mavjud va qiymati NULL bo'ladi. Fake DB'da
+    // esa `data` ga berilmagan maydon `undefined` bo'lib qoladi. Shu sababli
+    // `where: { revokedAt: null }` kabi shartlar noto'g'ri ishlamasdi.
+    // undefined ni NULL deb qabul qilamiz — SQL semantikasiga moslash uchun.
+    if (actual === undefined) actual = null;
     if (condition && typeof condition === 'object' && !(condition instanceof Date)) {
       if ('gte' in condition && !(actual >= condition.gte)) return false;
       if ('gt' in condition && !(actual > condition.gt)) return false;
@@ -98,6 +103,21 @@ export function createFakeDb() {
         if (take) rows = rows.slice(0, take);
         return rows.map((r) => applySelect(r, select));
       },
+      createMany: async ({ data, skipDuplicates }) => {
+        const rows = Array.isArray(data) ? data : [data];
+        let created = 0;
+        for (const item of rows) {
+          if (skipDuplicates && name === 'homeworkSubmission') {
+            const dup = db[name].some(
+              (r) => r.homeworkId === item.homeworkId && r.membershipId === item.membershipId
+            );
+            if (dup) continue;
+          }
+          db[name].push({ id: ids[name]++, ...(DEFAULTS[name] || {}), ...item });
+          created++;
+        }
+        return { count: created };
+      },
       count: async ({ where }) => db[name].filter((r) => matches(r, where)).length,
       update: async ({ where, data, select }) => {
         const row = db[name].find((r) => matches(r, where.id !== undefined ? { id: where.id } : where));
@@ -117,7 +137,14 @@ export function createFakeDb() {
       updateMany: async ({ where, data }) => {
         const rows = db[name].filter((r) => matches(r, where));
         rows.forEach((row) => {
-          for (const [k, v] of Object.entries(data)) row[k] = v;
+          for (const [k, v] of Object.entries(data)) {
+            // increment/decrement — update() da qo'llab-quvvatlangan, lekin
+            // updateMany da yo'q edi. joinSchoolByCode atomik limit
+            // tekshiruvi shu operatordan foydalanadi.
+            if (v && typeof v === 'object' && 'increment' in v) row[k] = (row[k] || 0) + v.increment;
+            else if (v && typeof v === 'object' && 'decrement' in v) row[k] = (row[k] || 0) - v.decrement;
+            else row[k] = v;
+          }
         });
         return { count: rows.length };
       },
@@ -139,7 +166,7 @@ export function createFakeDb() {
         }
         return result;
       },
-      groupBy: async ({ by, where, _count }) => {
+      groupBy: async ({ by, where, _count, _sum }) => {
         const rows = db[name].filter((r) => matches(r, where));
         const groups = new Map();
         for (const row of rows) {
@@ -148,9 +175,14 @@ export function createFakeDb() {
             const g = {};
             by.forEach((f) => (g[f] = row[f]));
             g._count = { _all: 0 };
+            if (_sum) g._sum = Object.fromEntries(Object.keys(_sum).map((k) => [k, 0]));
             groups.set(key, g);
           }
-          groups.get(key)._count._all++;
+          const g = groups.get(key);
+          g._count._all++;
+          if (_sum) {
+            for (const k of Object.keys(_sum)) g._sum[k] += row[k] || 0;
+          }
         }
         return [...groups.values()];
       },

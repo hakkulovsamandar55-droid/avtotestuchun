@@ -175,6 +175,8 @@ export default {
     userIdPlaceholder: "ID пользователя",
     weakStudents: "Студенты, которым нужна помощь",
     wholeSchool: "Вся школа",
+    searchOwnerPlaceholder: "Поиск по имени или username",
+    ownerNotSelected: "Владелец не выбран",
     active: "Активен",
     suspended: "Приостановлен",
     removed: "Удалён",

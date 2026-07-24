@@ -1,5 +1,4 @@
 import { prisma } from "../db.js";
-import { getQuestionsByIds } from "../../../shared/data/officialExam.js";
 
 // ============================================================================
 // UY VAZIFALARI (Homework)
@@ -67,15 +66,22 @@ export async function createHomework(schoolId, groupId, createdById, { title, ty
   // Bu o'qituvchiga "kim hali bajarmagan" ro'yxatini so'rovsiz ko'rsatish imkonini beradi.
   const students = await prisma.membership.findMany({
     where: { groupId, role: "STUDENT", status: "ACTIVE" },
+    select: { id: true },
   });
 
-  await Promise.all(
-    students.map((s) =>
-      prisma.homeworkSubmission.create({
-        data: { homeworkId: homework.id, membershipId: s.id, status: "PENDING" },
-      })
-    )
-  );
+  // createMany — bitta so'rov. Avval har talaba uchun alohida create()
+  // yuborilardi (50 talaba = 50 so'rov). skipDuplicates unique cheklovga
+  // (homeworkId + membershipId) urilishdan himoya qiladi.
+  if (students.length > 0) {
+    await prisma.homeworkSubmission.createMany({
+      data: students.map((s) => ({
+        homeworkId: homework.id,
+        membershipId: s.id,
+        status: "PENDING",
+      })),
+      skipDuplicates: true,
+    });
+  }
 
   return homework;
 }

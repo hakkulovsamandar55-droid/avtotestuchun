@@ -97,10 +97,15 @@ export default function OwnerInvitationsTab({ schoolId, onChanged }) {
     setCreating(true);
     setError("");
     try {
+      // <select> qiymati HAR DOIM matn ("3"), backend esa son kutadi va
+      // o'qituvchi tekshiruvida qat'iy (===) solishtiradi. Shu yerda
+      // konvertatsiya qilmasak, o'qituvchi o'z guruhi uchun ham kod
+      // yarata olmasdi ("3" !== 3).
+      const isGroup = targetGroupId !== "";
       await api.schoolCreateInvitation(schoolId, {
-        type: targetGroupId ? "GROUP" : "SCHOOL",
-        groupId: targetGroupId || null,
-        maxUses: maxUses ? Number(maxUses) : null,
+        type: isGroup ? "GROUP" : "SCHOOL",
+        groupId: isGroup ? Number(targetGroupId) : null,
+        maxUses: maxUses !== "" ? Number(maxUses) : null,
       });
       setShowCreate(false);
       setTargetGroupId("");

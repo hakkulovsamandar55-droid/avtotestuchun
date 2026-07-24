@@ -381,11 +381,28 @@ schoolRouter.get(
   requireSchool(["OWNER", "TEACHER"]),
   asyncHandler(async (req, res) => {
     const where = { schoolId: req.schoolId, role: "STUDENT", status: "ACTIVE" };
-    // Teacher faqat o'z guruhini ko'radi — bu ma'lumot oqishini oldini oladi
-    if (!req.isCeo && req.membership.role === "TEACHER") {
+
+    // Teacher faqat o'z guruhini ko'radi — bu ma'lumot oqishini oldini oladi.
+    // XAVFSIZLIK: guruhga tayinlanmagan o'qituvchi (groupId === null) uchun
+    // filtrni null qoldirish YARAMAYDI — bu "guruhsiz talabalar"ni ko'rsatardi.
+    // Bunday o'qituvchi hech kimni ko'rmasligi kerak.
+    const isTeacher = !req.isCeo && req.membership?.role === "TEACHER";
+    if (isTeacher) {
+      if (req.membership.groupId == null) {
+        return res.json({ students: [] });
+      }
       where.groupId = req.membership.groupId;
     }
-    if (req.query.groupId) where.groupId = Number(req.query.groupId);
+
+    // query.groupId faqat Owner/CEO uchun ruxsat — aks holda o'qituvchi
+    // ?groupId=<boshqa guruh> yozib, o'z chegarasidan chiqib ketardi.
+    if (!isTeacher && req.query.groupId != null && req.query.groupId !== "") {
+      const qGroupId = Number(req.query.groupId);
+      if (!Number.isInteger(qGroupId) || qGroupId <= 0) {
+        return res.status(400).json({ error: "Noto'g'ri guruh ID" });
+      }
+      where.groupId = qGroupId;
+    }
 
     const { limit, offset } = parsePagination(req.query, { defaultLimit: 50, maxLimit: 200 });
     const students = await prisma.membership.findMany({ where, take: limit, skip: offset });
@@ -419,18 +436,48 @@ schoolRouter.post(
   asyncHandler(async (req, res) => {
     try {
       // O'qituvchi faqat o'z guruhi uchun kod yarata oladi
-      const { type, groupId, maxUses, expiresAt } = req.body;
-      if (!req.isCeo && req.membership.role === "TEACHER") {
-        if (type !== "GROUP" || Number(groupId) !== req.membership.groupId) {
+      const { type, maxUses, expiresAt } = req.body;
+
+      if (!["SCHOOL", "GROUP"].includes(type)) {
+        return res.status(400).json({ error: "Noto'g'ri taklif turi" });
+      }
+
+      // groupId ni bir marta, ishonchli tarzda songa aylantiramiz.
+      // MUHIM: frontend <select> qiymatlari MATN ("3") bo'lib keladi, shuning
+      // uchun taqqoslashdan OLDIN konvertatsiya qilish shart.
+      let groupId = null;
+      if (type === "GROUP") {
+        groupId = Number(req.body.groupId);
+        if (!Number.isInteger(groupId) || groupId <= 0) {
+          return res.status(400).json({ error: "GROUP turi uchun guruh tanlanishi shart" });
+        }
+      }
+
+      if (!req.isCeo && req.membership?.role === "TEACHER") {
+        // Guruhsiz o'qituvchi umuman kod yarata olmaydi
+        if (req.membership.groupId == null) {
+          return res.status(403).json({ error: "Siz hali biror guruhga tayinlanmagansiz" });
+        }
+        if (type !== "GROUP" || groupId !== req.membership.groupId) {
           return res
             .status(403)
             .json({ error: "O'qituvchi faqat o'z guruhi uchun taklif kodi yarata oladi" });
         }
       }
+
+      // maxUses: 0 yoki manfiy qiymat "cheksiz" degani emas — bu xato kiritish
+      let parsedMaxUses = null;
+      if (maxUses != null && maxUses !== "") {
+        parsedMaxUses = Number(maxUses);
+        if (!Number.isInteger(parsedMaxUses) || parsedMaxUses <= 0) {
+          return res.status(400).json({ error: "Foydalanish limiti musbat son bo'lishi kerak" });
+        }
+      }
+
       const invitation = await schoolSvc.createInvitation(req.schoolId, req.user.id, {
         type,
-        groupId: groupId ? Number(groupId) : null,
-        maxUses: maxUses ? Number(maxUses) : null,
+        groupId,
+        maxUses: parsedMaxUses,
         expiresAt,
       });
       res.status(201).json({ invitation });
@@ -463,6 +510,13 @@ schoolRouter.get(
   asyncHandler(async (req, res) => {
     const groupId = parseParam(req, res, "groupId");
     if (groupId === null) return;
+    // Guruh ROSTDAN HAM shu maktabga tegishlimi — aks holda boshqa maktabning
+    // guruh ID sini yozib, o'zga maktab ma'lumotini o'qish mumkin bo'lardi.
+    const group = await prisma.group.findUnique({ where: { id: groupId } });
+    if (!group || group.schoolId !== req.schoolId) {
+      return res.status(404).json({ error: "Guruh topilmadi" });
+    }
+
     // Teacher/Student faqat o'z guruhini ko'ra oladi
     if (!req.isCeo && req.membership.role !== "OWNER" && req.membership.groupId !== groupId) {
       return res.status(403).json({ error: "Bu guruhga kirish huquqingiz yo'q" });
@@ -484,11 +538,23 @@ schoolRouter.post(
     }
     try {
       const { title, type, params, minScore, deadline } = req.body;
+
+      // minScore: "" (bo'sh input) -> null. Number("") === 0 bo'lgani uchun
+      // oddiy `minScore != null` tekshiruvi yetarli emas edi — bo'sh maydon
+      // "minimal ball 0" bo'lib saqlanardi.
+      let parsedMinScore = null;
+      if (minScore != null && minScore !== "") {
+        parsedMinScore = Number(minScore);
+        if (!Number.isFinite(parsedMinScore) || parsedMinScore < 0 || parsedMinScore > 100) {
+          return res.status(400).json({ error: "Minimal ball 0–100 oralig'ida bo'lishi kerak" });
+        }
+      }
+
       const homework = await hwSvc.createHomework(req.schoolId, groupId, req.user.id, {
         title,
         type,
         params,
-        minScore: minScore != null ? Number(minScore) : null,
+        minScore: parsedMinScore,
         deadline,
       });
       res.status(201).json({ homework });
@@ -506,11 +572,29 @@ schoolRouter.get(
   "/:schoolId/teacher/dashboard",
   requireSchool(["OWNER", "TEACHER"]),
   asyncHandler(async (req, res) => {
-    const groupId = req.isCeo ? Number(req.query.groupId) : req.membership.groupId;
-    if (!groupId) {
-      return res.status(400).json({ error: "Guruh tanlanmagan" });
+    // Owner ham bu endpointga kira oladi (requireSchool ruxsat beradi), lekin
+    // Owner uchun membership.groupId odatda null — shuning uchun Owner/CEO
+    // uchun ?groupId= majburiy.
+    const isTeacher = !req.isCeo && req.membership?.role === "TEACHER";
+
+    let groupId;
+    if (isTeacher) {
+      groupId = req.membership.groupId;
+      if (groupId == null) {
+        return res.status(409).json({ error: "Siz hali biror guruhga tayinlanmagansiz" });
+      }
+    } else {
+      groupId = Number(req.query.groupId);
+      if (!Number.isInteger(groupId) || groupId <= 0) {
+        return res.status(400).json({ error: "Guruh tanlanmagan" });
+      }
     }
-    res.json(await schoolAnalytics.getTeacherDashboard(req.schoolId, groupId));
+
+    try {
+      res.json(await schoolAnalytics.getTeacherDashboard(req.schoolId, groupId));
+    } catch (err) {
+      return sendServiceError(res, err);
+    }
   })
 );
 
@@ -520,6 +604,12 @@ schoolRouter.get(
   asyncHandler(async (req, res) => {
     const groupId = parseParam(req, res, "groupId");
     if (groupId === null) return;
+
+    const group = await prisma.group.findUnique({ where: { id: groupId } });
+    if (!group || group.schoolId !== req.schoolId) {
+      return res.status(404).json({ error: "Guruh topilmadi" });
+    }
+
     if (!req.isCeo && req.membership.role !== "OWNER" && req.membership.groupId !== groupId) {
       return res.status(403).json({ error: "Bu guruhga kirish huquqingiz yo'q" });
     }

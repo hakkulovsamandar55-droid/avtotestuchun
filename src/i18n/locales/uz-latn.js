@@ -175,6 +175,8 @@ export default {
     userIdPlaceholder: "Foydalanuvchi ID",
     weakStudents: "Yordam kerak bo'lgan talabalar",
     wholeSchool: "Butun maktab",
+    searchOwnerPlaceholder: "Ism yoki username bo'yicha qidiring",
+    ownerNotSelected: "Egasi tanlanmagan",
     active: "Faol",
     suspended: "To'xtatilgan",
     removed: "Chiqarilgan",

@@ -32,6 +32,23 @@ function forbidden(message) {
   return new SchoolError("forbidden", message);
 }
 
+/**
+ * Activity log yozuvi ASOSIY biznes amalini hech qachon buzmasligi kerak.
+ *
+ * SABAB (real xato tarixidan): ActivityType enumida SCHOOL_* qiymatlari
+ * yo'q edi. Maktab muvaffaqiyatli yaratilardi, lekin tranzaksiyadan keyingi
+ * logActivity() xato tashlab, foydalanuvchi "Server xatosi" ko'rardi —
+ * aslida amal bajarilgan bo'lsa ham. Log — yordamchi ma'lumot, u tufayli
+ * asosiy oqim yiqilmasligi kerak.
+ */
+async function safeLog(fn) {
+  try {
+    await fn();
+  } catch (err) {
+    console.error("[school] activity log yozilmadi:", err?.message || err);
+  }
+}
+
 // ---- Taklif kodi generatsiyasi ----
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // 0/O, 1/I kabi chalkash belgilar yo'q
@@ -87,20 +104,35 @@ export async function requireSchoolAccess(user, schoolId, allowedRoles = null) {
 export async function listSchools({ status } = {}) {
   const where = status ? { status } : {};
   const schools = await prisma.school.findMany({ where, orderBy: { createdAt: "desc" } });
+  if (schools.length === 0) return [];
 
-  // Har bir maktab uchun tezkor sonlar — alohida so'rovlar, lekin ro'yxat
-  // odatda kichik (o'nlab maktab), shuning uchun N+1 muammosi emas.
-  const withCounts = await Promise.all(
-    schools.map(async (school) => {
-      const [teacherCount, studentCount] = await Promise.all([
-        prisma.membership.count({ where: { schoolId: school.id, role: "TEACHER", status: "ACTIVE" } }),
-        prisma.membership.count({ where: { schoolId: school.id, role: "STUDENT", status: "ACTIVE" } }),
-      ]);
-      return { ...school, teacherCount, studentCount };
-    })
-  );
+  // N+1 EMAS: bitta groupBy so'rovi barcha maktablar uchun sonlarni oladi.
+  // Avvalgi versiya har bir maktab uchun 2 ta so'rov yuborardi (100 maktab =
+  // 200 so'rov). Endi jami 2 ta so'rov (schools + groupBy).
+  const grouped = await prisma.membership.groupBy({
+    by: ["schoolId", "role"],
+    where: {
+      schoolId: { in: schools.map((s) => s.id) },
+      status: "ACTIVE",
+      role: { in: ["TEACHER", "STUDENT"] },
+    },
+    _count: { _all: true },
+  });
 
-  return withCounts;
+  const counts = new Map(); // schoolId -> { teacherCount, studentCount }
+  for (const row of grouped) {
+    const entry = counts.get(row.schoolId) || { teacherCount: 0, studentCount: 0 };
+    const n = row._count?._all ?? 0;
+    if (row.role === "TEACHER") entry.teacherCount = n;
+    else if (row.role === "STUDENT") entry.studentCount = n;
+    counts.set(row.schoolId, entry);
+  }
+
+  return schools.map((school) => ({
+    ...school,
+    teacherCount: counts.get(school.id)?.teacherCount ?? 0,
+    studentCount: counts.get(school.id)?.studentCount ?? 0,
+  }));
 }
 
 /**
@@ -113,45 +145,71 @@ export async function createSchool(ceoUser, { name, ownerUserId, address, phone,
     throw new SchoolError("invalid_input", "Maktab nomi kiritilishi shart");
   }
 
+  if (!Number.isInteger(ownerUserId) || ownerUserId <= 0) {
+    throw new SchoolError("invalid_input", "Egasi tanlanishi shart");
+  }
+
   const ownerUser = await prisma.user.findUnique({ where: { id: ownerUserId } });
   if (!ownerUser) throw notFound("Egasi qilib belgilanayotgan foydalanuvchi");
 
-  const existing = await getMyActiveMembership(ownerUserId);
-  if (existing) {
-    throw new SchoolError(
-      "owner_already_member",
-      "Bu foydalanuvchi allaqachon boshqa maktabga a'zo"
-    );
+  let school;
+  try {
+    school = await prisma.$transaction(async (tx) => {
+      // MUHIM: tekshiruv tranzaksiya ICHIDA. Avval u tashqarida edi — ikkita
+      // so'rov bir vaqtda kelsa, ikkalasi ham "a'zo emas" deb o'tib ketardi.
+      const existing = await tx.membership.findFirst({
+        where: { userId: ownerUserId, status: "ACTIVE" },
+      });
+      if (existing) {
+        throw new SchoolError(
+          "owner_already_member",
+          "Bu foydalanuvchi allaqachon boshqa maktabga a'zo"
+        );
+      }
+
+      const created = await tx.school.create({
+        data: {
+          name: name.trim(),
+          address: address || null,
+          phone: phone || null,
+          brandColor: brandColor || null,
+          status: "PENDING",
+          ownerId: ownerUserId,
+          createdById: ceoUser.id,
+        },
+      });
+
+      await tx.membership.create({
+        data: {
+          userId: ownerUserId,
+          schoolId: created.id,
+          role: "OWNER",
+          status: "ACTIVE",
+        },
+      });
+
+      return created;
+    });
+  } catch (err) {
+    // DB'dagi qisman unique indeks (school_memberships_one_active_per_user)
+    // race condition'da P2002 beradi — uni tushunarli xatoga aylantiramiz.
+    if (err?.code === "P2002") {
+      throw new SchoolError(
+        "owner_already_member",
+        "Bu foydalanuvchi allaqachon boshqa maktabga a'zo"
+      );
+    }
+    throw err;
   }
 
-  const school = await prisma.$transaction(async (tx) => {
-    const created = await tx.school.create({
-      data: {
-        name: name.trim(),
-        address: address || null,
-        phone: phone || null,
-        brandColor: brandColor || null,
-        status: "PENDING",
-        ownerId: ownerUserId,
-        createdById: ceoUser.id,
-      },
-    });
-
-    await tx.membership.create({
-      data: {
-        userId: ownerUserId,
-        schoolId: created.id,
-        role: "OWNER",
-        status: "ACTIVE",
-      },
-    });
-
-    return created;
-  });
-
-  await logActivity(ceoUser.id, "SCHOOL_CREATED", `"${school.name}" maktabi yaratildi`, {
-    schoolId: school.id,
-  });
+  // MUHIM: logActivity ASOSIY AMALNI BUZMASLIGI kerak. Maktab allaqachon
+  // yaratilgan — agar log yozishda xato bo'lsa (masalan enum qiymati yo'q),
+  // foydalanuvchiga yolg'on "Server xatosi" ko'rsatilmasligi shart.
+  await safeLog(() =>
+    logActivity(ceoUser.id, "SCHOOL_CREATED", `"${school.name}" maktabi yaratildi`, {
+      schoolId: school.id,
+    })
+  );
 
   return school;
 }
@@ -170,11 +228,13 @@ export async function setSchoolStatus(ceoUser, schoolId, status, reason) {
     },
   });
 
-  await logActivity(
-    ceoUser.id,
-    status === "ACTIVE" ? "SCHOOL_APPROVED" : "SCHOOL_DISABLED",
-    `"${school.name}" maktabi ${status === "ACTIVE" ? "tasdiqlandi" : "to'xtatildi"}`,
-    { schoolId }
+  await safeLog(() =>
+    logActivity(
+      ceoUser.id,
+      status === "ACTIVE" ? "SCHOOL_APPROVED" : "SCHOOL_DISABLED",
+      `"${school.name}" maktabi ${status === "ACTIVE" ? "tasdiqlandi" : "to'xtatildi"}`,
+      { schoolId }
+    )
   );
 
   return updated;
@@ -191,9 +251,11 @@ export async function deleteSchool(ceoUser, schoolId) {
   // uchun avval yakunlash kerak emas (kaskad allaqachon buni hal qiladi).
   await prisma.school.delete({ where: { id: schoolId } });
 
-  await logActivity(ceoUser.id, "SCHOOL_DELETED", `"${school.name}" maktabi o'chirildi`, {
-    schoolId,
-  });
+  await safeLog(() =>
+    logActivity(ceoUser.id, "SCHOOL_DELETED", `"${school.name}" maktabi o'chirildi`, {
+      schoolId,
+    })
+  );
 
   return { ok: true };
 }
@@ -211,15 +273,21 @@ export async function createGroup(schoolId, name) {
 
 export async function listGroups(schoolId) {
   const groups = await prisma.group.findMany({ where: { schoolId }, orderBy: { createdAt: "asc" } });
-  const withCounts = await Promise.all(
-    groups.map(async (g) => {
-      const studentCount = await prisma.membership.count({
-        where: { groupId: g.id, role: "STUDENT", status: "ACTIVE" },
-      });
-      return { ...g, studentCount };
-    })
-  );
-  return withCounts;
+  if (groups.length === 0) return [];
+
+  // N+1 EMAS — bitta groupBy barcha guruhlar sonini oladi.
+  const grouped = await prisma.membership.groupBy({
+    by: ["groupId"],
+    where: {
+      groupId: { in: groups.map((g) => g.id) },
+      role: "STUDENT",
+      status: "ACTIVE",
+    },
+    _count: { _all: true },
+  });
+
+  const counts = new Map(grouped.map((r) => [r.groupId, r._count?._all ?? 0]));
+  return groups.map((g) => ({ ...g, studentCount: counts.get(g.id) ?? 0 }));
 }
 
 /**
@@ -227,14 +295,29 @@ export async function listGroups(schoolId) {
  * maktabga a'zo bo'lmasligi kerak.
  */
 export async function inviteTeacherDirect(schoolId, teacherUserId) {
-  const existing = await getMyActiveMembership(teacherUserId);
-  if (existing) {
-    throw new SchoolError("already_member", "Bu foydalanuvchi allaqachon boshqa maktabga a'zo");
-  }
+  // Foydalanuvchi umuman mavjudmi — aks holda Prisma FK xatosi (P2003) 500
+  // bo'lib chiqardi, foydalanuvchiga tushunarsiz "Server xatosi" ko'rinardi.
+  const user = await prisma.user.findUnique({ where: { id: teacherUserId } });
+  if (!user) throw notFound("Foydalanuvchi");
 
-  return prisma.membership.create({
-    data: { userId: teacherUserId, schoolId, role: "TEACHER", status: "ACTIVE" },
-  });
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const existing = await tx.membership.findFirst({
+        where: { userId: teacherUserId, status: "ACTIVE" },
+      });
+      if (existing) {
+        throw new SchoolError("already_member", "Bu foydalanuvchi allaqachon boshqa maktabga a'zo");
+      }
+      return tx.membership.create({
+        data: { userId: teacherUserId, schoolId, role: "TEACHER", status: "ACTIVE" },
+      });
+    });
+  } catch (err) {
+    if (err?.code === "P2002") {
+      throw new SchoolError("already_member", "Bu foydalanuvchi allaqachon boshqa maktabga a'zo");
+    }
+    throw err;
+  }
 }
 
 /** Owner o'qituvchini vaqtincha to'xtatadi (kirish huquqi yo'qoladi). */
@@ -254,13 +337,26 @@ export async function reactivateTeacher(schoolId, membershipId) {
   if (!membership || membership.schoolId !== schoolId || membership.role !== "TEACHER") {
     throw notFound("O'qituvchi a'zoligi");
   }
-  // Qayta faollashtirishda ham "bitta faol a'zolik" qoidasi buzilmasligi
-  // kerak — lekin bu o'qituvchi allaqachon shu maktabga tegishli bo'lgani
-  // uchun (faqat SUSPENDED->ACTIVE), boshqa maktabga a'zolik tekshiruvi
-  // shart emas.
+  if (membership.status === "ACTIVE") return membership; // idempotent
+
+  // MUHIM TUZATISH: eski izohda "boshqa maktabga a'zolik tekshiruvi shart
+  // emas" deyilgan edi — bu NOTO'G'RI. O'qituvchi SUSPENDED bo'lib turgan
+  // vaqtda boshqa maktabga talaba sifatida qo'shilishi mumkin (joinSchoolByCode
+  // faqat ACTIVE a'zolikni arxivlaydi, SUSPENDED tegilmaydi). U holda qayta
+  // faollashtirish DB'dagi partial unique indeksga urilib, 500 xato berardi.
+  const competing = await prisma.membership.findFirst({
+    where: { userId: membership.userId, status: "ACTIVE" },
+  });
+  if (competing) {
+    throw new SchoolError(
+      "already_member",
+      "Bu o'qituvchi hozir boshqa maktabda faol — avval u yerdan chiqishi kerak"
+    );
+  }
+
   return prisma.membership.update({
     where: { id: membershipId },
-    data: { status: "ACTIVE" },
+    data: { status: "ACTIVE", endedAt: null },
   });
 }
 
@@ -341,7 +437,12 @@ export async function listInvitations(schoolId) {
  * ARCHIVED qilinadi (spec: "eski a'zolik arxivlanadi").
  */
 export async function joinSchoolByCode(user, code) {
-  const invitation = await prisma.invitation.findUnique({ where: { code: code.trim().toUpperCase() } });
+  if (typeof code !== "string" || !code.trim()) {
+    throw new SchoolError("invalid_code", "Kod kiritilishi shart");
+  }
+
+  const normalized = code.trim().toUpperCase();
+  const invitation = await prisma.invitation.findUnique({ where: { code: normalized } });
   if (!invitation) throw new SchoolError("invalid_code", "Kod topilmadi");
   if (invitation.revokedAt) throw new SchoolError("code_revoked", "Bu kod bekor qilingan");
   if (invitation.expiresAt && invitation.expiresAt < new Date()) {
@@ -356,43 +457,84 @@ export async function joinSchoolByCode(user, code) {
     throw new SchoolError("school_unavailable", "Bu maktab hozircha faol emas");
   }
 
+  // GROUP kodi, lekin guruh o'chirilgan bo'lsa (onDelete: SetNull) — groupId
+  // null bo'lib qoladi. Bunday kod bilan qo'shilgan talaba guruhsiz osilib
+  // qolardi va hech qanday homework olmasdi. Aniq xato berish to'g'riroq.
+  if (invitation.type === "GROUP") {
+    if (invitation.groupId == null) {
+      throw new SchoolError("invalid_code", "Bu kodning guruhi o'chirilgan");
+    }
+    const group = await prisma.group.findUnique({ where: { id: invitation.groupId } });
+    if (!group || group.schoolId !== invitation.schoolId) {
+      throw new SchoolError("invalid_code", "Bu kodning guruhi topilmadi");
+    }
+  }
+
   // Foydalanuvchi allaqachon shu maktabga a'zomi (qayta ulanish)?
   const already = await getActiveMembership(user.id, invitation.schoolId);
   if (already) {
     throw new SchoolError("already_member", "Siz allaqachon bu maktabga a'zosiz");
   }
 
-  const result = await prisma.$transaction(async (tx) => {
-    // Eski faol a'zolikni arxivlaymiz (boshqa maktabdan o'tayotgan bo'lsa)
-    const existing = await tx.membership.findFirst({ where: { userId: user.id, status: "ACTIVE" } });
-    if (existing) {
-      await tx.membership.update({
-        where: { id: existing.id },
-        data: { status: "ARCHIVED", endedAt: new Date() },
+  let result;
+  try {
+    result = await prisma.$transaction(async (tx) => {
+      // ATOMIK LIMIT TEKSHIRUVI: yuqoridagi tekshiruv tranzaksiyadan tashqarida
+      // bo'lgani uchun ikki talaba bir vaqtda oxirgi bo'sh joyni egallashi
+      // mumkin edi. updateMany + where sharti bitta atomik amalda limitni
+      // ushlab qoladi — 0 qator yangilansa, demak limit tugagan.
+      if (invitation.maxUses != null) {
+        const claimed = await tx.invitation.updateMany({
+          where: {
+            id: invitation.id,
+            revokedAt: null,
+            usedCount: { lt: invitation.maxUses },
+          },
+          data: { usedCount: { increment: 1 } },
+        });
+        if (claimed.count === 0) {
+          throw new SchoolError("code_exhausted", "Bu kod limiti tugagan");
+        }
+      } else {
+        await tx.invitation.update({
+          where: { id: invitation.id },
+          data: { usedCount: { increment: 1 } },
+        });
+      }
+
+      // Eski faol a'zolikni arxivlaymiz (boshqa maktabdan o'tayotgan bo'lsa)
+      const existing = await tx.membership.findFirst({
+        where: { userId: user.id, status: "ACTIVE" },
       });
+      if (existing) {
+        await tx.membership.update({
+          where: { id: existing.id },
+          data: { status: "ARCHIVED", endedAt: new Date() },
+        });
+      }
+
+      return tx.membership.create({
+        data: {
+          userId: user.id,
+          schoolId: invitation.schoolId,
+          groupId: invitation.type === "GROUP" ? invitation.groupId : null,
+          role: "STUDENT",
+          status: "ACTIVE",
+        },
+      });
+    });
+  } catch (err) {
+    if (err?.code === "P2002") {
+      throw new SchoolError("already_member", "Siz allaqachon boshqa maktabda faolsiz");
     }
+    throw err;
+  }
 
-    const membership = await tx.membership.create({
-      data: {
-        userId: user.id,
-        schoolId: invitation.schoolId,
-        groupId: invitation.type === "GROUP" ? invitation.groupId : null,
-        role: "STUDENT",
-        status: "ACTIVE",
-      },
-    });
-
-    await tx.invitation.update({
-      where: { id: invitation.id },
-      data: { usedCount: { increment: 1 } },
-    });
-
-    return membership;
-  });
-
-  await logActivity(user.id, "SCHOOL_JOINED", `"${school.name}" maktabiga qo'shildi`, {
-    schoolId: school.id,
-  });
+  await safeLog(() =>
+    logActivity(user.id, "SCHOOL_JOINED", `"${school.name}" maktabiga qo'shildi`, {
+      schoolId: school.id,
+    })
+  );
 
   return { membership: result, school };
 }
