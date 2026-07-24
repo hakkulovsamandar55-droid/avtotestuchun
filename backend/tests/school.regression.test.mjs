@@ -300,5 +300,66 @@ console.log("\n=== XATO 12: log xatosi asosiy amalni buzardi ===");
   check("201 qaytdi (log xatosiga qaramay)", status === 201);
 }
 
+console.log("\n=== XATO 13: Telegram ID kiritilsa 500 qaytardi ===");
+{
+  // XATO EDI: User.id — INT4 (maks 2 147 483 647), Telegram ID esa 10+
+  // xonali. Owner "5842067106" kiritganda Prisma
+  // "Unable to fit integer value into INT4" bilan yiqilib, foydalanuvchi
+  // "Server xatosi" ko'rardi. Endi aniq, tushunarli 400 qaytadi.
+  const { status, json } = await req("POST", `/api/school/${school1Id}/teachers`, {
+    user: owner,
+    body: { userId: 5842067106 },
+  });
+  check("400 qaytdi (500 emas)", status === 400);
+  check("xabar Telegram ID ni eslatadi", /Telegram/i.test(json?.error || ""));
+}
+
+console.log("\n=== YANGI: foydalanuvchi qidiruvi ===");
+{
+  // Qidiruv ID yodlash zaruratini yo'q qiladi.
+  const free = await prisma.user.create({
+    data: { id: 101, telegramId: 5842067106n, name: "Bo'sh Foydalanuvchi", username: "bosh_user" },
+  });
+
+  const byName = await req("GET", `/api/school/${school1Id}/search-users?q=Bo'sh`, {
+    user: owner,
+  });
+  check("ism bo'yicha topildi", byName.status === 200 && byName.json.users.length === 1);
+
+  const byUsername = await req("GET", `/api/school/${school1Id}/search-users?q=bosh_user`, {
+    user: owner,
+  });
+  check("username bo'yicha topildi", byUsername.json.users.length === 1);
+
+  // Telegram ID bo'yicha ham topilishi kerak — foydalanuvchi baribir uni
+  // kiritishga urinadi, endi bu ISHLAYDI (xato o'rniga).
+  const byTgId = await req("GET", `/api/school/${school1Id}/search-users?q=5842067106`, {
+    user: owner,
+  });
+  check("Telegram ID bo'yicha topildi", byTgId.json.users.length === 1);
+
+  check(
+    "telegramId matn sifatida qaytdi (BigInt JSON xatosi yo'q)",
+    typeof byTgId.json.users[0].telegramId === "string"
+  );
+
+  // Allaqachon a'zo bo'lganlar chiqmasligi kerak — "tanladim, xato chiqdi"
+  // holatini oldini oladi.
+  const taken = await req("GET", `/api/school/${school1Id}/search-users?q=Teacher A`, {
+    user: owner,
+  });
+  check("a'zo bo'lgan foydalanuvchi ro'yxatda yo'q", taken.json.users.length === 0);
+
+  const short = await req("GET", `/api/school/${school1Id}/search-users?q=B`, { user: owner });
+  check("1 belgili so'rov bo'sh qaytardi", short.json.users.length === 0);
+
+  // Endi shu topilgan foydalanuvchini haqiqatan qo'sha olamizmi
+  const added = await req("POST", `/api/school/${school1Id}/teachers`, {
+    user: owner,
+    body: { userId: free.id },
+  });
+  check("qidiruvdan topilgan foydalanuvchi qo'shildi", added.status === 201);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exitCode = 1;

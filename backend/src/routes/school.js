@@ -298,20 +298,105 @@ schoolRouter.get(
 // Owner allaqachon platformada ro'yxatdan o'tgan foydalanuvchini to'g'ridan-to'g'ri
 // o'qituvchi qilib tayinlaydi (masalan telegram username orqali topib).
 // Umumiy holatda esa TEACHER turidagi taklif kodi ishlatiladi (invitations orqali).
+// PostgreSQL INT4 chegarasi. User.id — Int (INT4), telegramId esa BigInt.
+// Foydalanuvchilar ko'pincha Telegram ID (10 xonali) kiritadi, u esa bu
+// chegaradan oshadi va Prisma "Unable to fit integer value into INT4" deb
+// 500 qaytarardi. Endi aniq, tushunarli xabar beramiz.
+const MAX_INT4 = 2147483647;
+
 schoolRouter.post(
   "/:schoolId/teachers",
   requireSchool(["OWNER"]),
   asyncHandler(async (req, res) => {
-    const userId = Number(req.body.userId);
+    const raw = req.body.userId;
+    const userId = Number(raw);
+
     if (!Number.isInteger(userId) || userId <= 0) {
       return res.status(400).json({ error: "Noto'g'ri foydalanuvchi ID" });
     }
+
+    // Telegram ID odatda 9–10+ xonali. Agar shunday son kelsa, foydalanuvchi
+    // ehtimol Telegram ID kiritgan — uni qidiruv orqali topishga yo'naltiramiz.
+    if (userId > MAX_INT4) {
+      return res.status(400).json({
+        error: "Bu Telegram ID ga o'xshaydi. Iltimos, qidiruvdan foydalanib o'qituvchini tanlang.",
+      });
+    }
+
     try {
       const membership = await schoolSvc.inviteTeacherDirect(req.schoolId, userId);
       res.status(201).json({ membership });
     } catch (err) {
       return sendServiceError(res, err);
     }
+  })
+);
+
+// GET /api/school/:schoolId/search-users?q=...
+// Owner o'qituvchi tayinlash uchun foydalanuvchi qidiradi. ID yodlash shart
+// emas — ism, username yoki telefon bo'yicha topiladi.
+//
+// MUHIM: natijada faqat TAYINLASH MUMKIN bo'lganlar chiqadi, ya'ni hech
+// qanday maktabga faol a'zo bo'lmaganlar. Bu "qo'shdim, xato chiqdi"
+// holatini butunlay yo'q qiladi.
+schoolRouter.get(
+  "/:schoolId/search-users",
+  requireSchool(["OWNER"]),
+  asyncHandler(async (req, res) => {
+    const q = (req.query.q || "").trim();
+    if (q.length < 2) {
+      return res.json({ users: [] });
+    }
+
+    const orConditions = [
+      { name: { contains: q, mode: "insensitive" } },
+      { username: { contains: q, mode: "insensitive" } },
+      { phone: { contains: q } },
+    ];
+
+    // Faqat raqamdan iborat bo'lsa, Telegram ID bo'yicha ham qidiramiz.
+    // BigInt konvertatsiyasi xavfsiz — try ichida, chunki juda uzun son
+    // bo'lsa ham yiqilmasligi kerak.
+    if (/^\d+$/.test(q)) {
+      try {
+        orConditions.push({ telegramId: BigInt(q) });
+      } catch {
+        /* juda uzun son — e'tiborsiz qoldiramiz */
+      }
+      const asId = Number(q);
+      if (Number.isInteger(asId) && asId > 0 && asId <= MAX_INT4) {
+        orConditions.push({ id: asId });
+      }
+    }
+
+    const candidates = await prisma.user.findMany({
+      where: { OR: orConditions, isBlocked: false },
+      orderBy: { lastOnlineAt: "desc" },
+      take: 20,
+      select: {
+        id: true,
+        telegramId: true,
+        name: true,
+        username: true,
+        avatarUrl: true,
+        lastOnlineAt: true,
+      },
+    });
+
+    if (candidates.length === 0) return res.json({ users: [] });
+
+    // Bitta so'rovda kim allaqachon a'zo ekanini aniqlaymiz (N+1 emas)
+    const activeMemberships = await prisma.membership.findMany({
+      where: { userId: { in: candidates.map((u) => u.id) }, status: "ACTIVE" },
+      select: { userId: true },
+    });
+    const takenIds = new Set(activeMemberships.map((m) => m.userId));
+
+    const users = candidates
+      .filter((u) => !takenIds.has(u.id))
+      .map((u) => ({ ...u, telegramId: u.telegramId?.toString() ?? null }));
+
+    res.json({ users });
   })
 );
 

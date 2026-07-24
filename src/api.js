@@ -227,6 +227,8 @@ export const api = {
     request(`/api/school/${schoolId}/groups`, { method: "POST", body: { name } }),
 
   schoolTeachers: (schoolId) => request(`/api/school/${schoolId}/teachers`),
+  schoolSearchUsers: (schoolId, q) =>
+    request(`/api/school/${schoolId}/search-users?q=${encodeURIComponent(q)}`),
   schoolAddTeacher: (schoolId, userId) =>
     request(`/api/school/${schoolId}/teachers`, { method: "POST", body: { userId } }),
   schoolSuspendTeacher: (schoolId, membershipId) =>

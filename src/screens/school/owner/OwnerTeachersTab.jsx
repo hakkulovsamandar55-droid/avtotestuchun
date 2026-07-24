@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, UserX, UserCheck, X } from "lucide-react";
 import { api } from "../../../api";
+import UserSearchPicker from "../UserSearchPicker";
 
 function statusMeta(status) {
   if (status === "SUSPENDED") return { label: "school.suspended", color: "#F87171" };
@@ -16,7 +17,7 @@ export default function OwnerTeachersTab({ schoolId, onChanged }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAdd, setShowAdd] = useState(false);
-  const [newUserId, setNewUserId] = useState("");
+  const [selectedUser, setSelectedUser] = useState(null);
   const [busy, setBusy] = useState(null);
 
   const load = useCallback(async () => {
@@ -36,17 +37,18 @@ export default function OwnerTeachersTab({ schoolId, onChanged }) {
   }, [load]);
 
   async function handleAdd() {
-    const userId = Number(newUserId);
-    if (!Number.isInteger(userId) || userId <= 0) {
-      setError(t("school.invalidUserId"));
+    // Endi ID qo'lda kiritilmaydi — foydalanuvchi qidiruvdan tanlanadi.
+    // Shu sababli noto'g'ri/Telegram ID kiritish holati umuman yuz bermaydi.
+    if (!selectedUser) {
+      setError(t("school.selectUserFirst"));
       return;
     }
     setBusy("add");
     setError("");
     try {
-      await api.schoolAddTeacher(schoolId, userId);
+      await api.schoolAddTeacher(schoolId, selectedUser.id);
       setShowAdd(false);
-      setNewUserId("");
+      setSelectedUser(null);
       await load();
       onChanged?.();
     } catch (err) {
@@ -181,27 +183,41 @@ export default function OwnerTeachersTab({ schoolId, onChanged }) {
             <div className="flex items-center justify-between mb-4">
               <p className="font-bold text-base">{t("school.addTeacher")}</p>
               <button
-                onClick={() => setShowAdd(false)}
+                onClick={() => {
+                  setShowAdd(false);
+                  setSelectedUser(null);
+                  setError("");
+                }}
                 className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center"
               >
                 <X size={16} color="#E5E7EB" />
               </button>
             </div>
             <p className="text-gray-400 text-xs leading-relaxed mb-4">
-              {t("school.addTeacherHint")}
+              {t("school.addTeacherHintSearch")}
             </p>
-            <input
-              value={newUserId}
-              onChange={(e) => setNewUserId(e.target.value)}
-              placeholder={t("school.userIdPlaceholder")}
-              inputMode="numeric"
-              className="w-full rounded-2xl bg-white/[0.05] border border-white/10 px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-white/30 mb-4"
+            <UserSearchPicker
+              schoolId={schoolId}
+              selectedUser={selectedUser}
+              onSelect={(user) => {
+                setSelectedUser(user);
+                setError("");
+              }}
+              autoFocus
             />
-            {error && <p className="text-red-400 text-xs mb-3">{error}</p>}
+            {selectedUser && (
+              <button
+                onClick={() => setSelectedUser(null)}
+                className="mt-2 text-xs text-gray-400 underline"
+              >
+                {t("school.changeSelection")}
+              </button>
+            )}
+            {error && <p className="text-red-400 text-xs mt-3">{error}</p>}
             <button
               onClick={handleAdd}
-              disabled={busy === "add" || !newUserId.trim()}
-              className="w-full rounded-2xl py-3 font-bold text-sm text-white disabled:opacity-50"
+              disabled={busy === "add" || !selectedUser}
+              className="w-full rounded-2xl py-3 font-bold text-sm text-white disabled:opacity-50 mt-4"
               style={{ background: "linear-gradient(90deg, var(--accent-from), var(--accent-to))" }}
             >
               {busy === "add" ? t("school.adding") : t("school.addButton")}

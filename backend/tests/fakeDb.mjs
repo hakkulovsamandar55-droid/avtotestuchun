@@ -28,6 +28,25 @@ export function createFakeDb() {
     // undefined ni NULL deb qabul qilamiz — SQL semantikasiga moslash uchun.
     if (actual === undefined) actual = null;
     if (condition && typeof condition === 'object' && !(condition instanceof Date)) {
+      // Matn operatorlari — qidiruv endpointlari `contains` + `mode` ishlatadi
+      if ('contains' in condition) {
+        if (actual == null) return false;
+        const hay = String(actual);
+        const needle = String(condition.contains);
+        const ok = condition.mode === 'insensitive'
+          ? hay.toLowerCase().includes(needle.toLowerCase())
+          : hay.includes(needle);
+        if (!ok) return false;
+      }
+      if ('startsWith' in condition) {
+        if (actual == null) return false;
+        const hay = String(actual);
+        const needle = String(condition.startsWith);
+        const ok = condition.mode === 'insensitive'
+          ? hay.toLowerCase().startsWith(needle.toLowerCase())
+          : hay.startsWith(needle);
+        if (!ok) return false;
+      }
       if ('gte' in condition && !(actual >= condition.gte)) return false;
       if ('gt' in condition && !(actual > condition.gt)) return false;
       if ('lte' in condition && !(actual <= condition.lte)) return false;
