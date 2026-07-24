@@ -361,5 +361,50 @@ console.log("\n=== YANGI: foydalanuvchi qidiruvi ===");
   check("qidiruvdan topilgan foydalanuvchi qo'shildi", added.status === 201);
 }
 
+console.log("\n=== YANGI: talaba profili (o'qituvchi paneli) ===");
+{
+  // Talaba profili — o'qituvchi uchun asosiy vosita. Xavfsizlik eng muhim:
+  // o'qituvchi FAQAT o'z guruhi talabasini ko'rishi kerak.
+  const studentAMembership = await prisma.membership.findFirst({
+    where: { userId: studentA.id, status: "ACTIVE" },
+  });
+
+  const ok = await req(
+    "GET",
+    `/api/school/${school1Id}/students/${studentAMembership.id}/profile`,
+    { user: teacherA }
+  );
+  check("o'qituvchi o'z guruhi talabasini ko'ra oldi", ok.status === 200);
+  check("profil ma'lumotlari to'liq", Boolean(ok.json?.student && ok.json?.period && ok.json?.daily));
+  check(
+    "kunlik qator to'g'ri uzunlikda (bo'sh kunlar ham bor)",
+    Array.isArray(ok.json.daily) && ok.json.daily.length === 14
+  );
+
+  // Guruhsiz o'qituvchi hech kimni ko'rmasligi kerak
+  const noGroup = await req(
+    "GET",
+    `/api/school/${school1Id}/students/${studentAMembership.id}/profile`,
+    { user: teacherNoGroup }
+  );
+  check("guruhsiz o'qituvchi rad etildi", noGroup.status === 403);
+
+  // Boshqa maktab owner'i ko'ra olmasligi kerak
+  const crossSchool = await req(
+    "GET",
+    `/api/school/${school2Id}/students/${studentAMembership.id}/profile`,
+    { user: owner2 }
+  );
+  check("boshqa maktab owner'i rad etildi", crossSchool.status === 404);
+
+  // days parametri chegaralanadi (DB ni himoya qilish)
+  const huge = await req(
+    "GET",
+    `/api/school/${school1Id}/students/${studentAMembership.id}/profile?days=9999`,
+    { user: teacherA }
+  );
+  check("juda katta days chegaralandi", huge.json?.daily?.length === 90);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exitCode = 1;

@@ -265,6 +265,8 @@ export const api = {
     request(
       `/api/school/${schoolId}/teacher/dashboard${groupId ? `?groupId=${groupId}` : ""}`
     ),
+  schoolStudentProfile: (schoolId, membershipId, days = 14) =>
+    request(`/api/school/${schoolId}/students/${membershipId}/profile?days=${days}`),
   schoolGroupLeaderboard: (schoolId, groupId) =>
     request(`/api/school/${schoolId}/groups/${groupId}/leaderboard`),
   schoolAnalytics: (schoolId) => request(`/api/school/${schoolId}/analytics`),

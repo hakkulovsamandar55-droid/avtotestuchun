@@ -9,10 +9,12 @@ import {
   Trophy,
   Plus,
   Activity,
+  ChevronRight,
 } from "lucide-react";
 import { api } from "../../api";
 import { ACCENT_FROM, ACCENT_TO } from "../../theme";
 import CreateHomeworkSheet from "./CreateHomeworkSheet";
+import StudentProfileScreen from "./StudentProfileScreen";
 
 function StatBox({ icon: Icon, value, label, color }) {
   return (
@@ -24,10 +26,13 @@ function StatBox({ icon: Icon, value, label, color }) {
   );
 }
 
-function StudentRow({ student }) {
+function StudentRow({ student, onOpen }) {
   const { t } = useTranslation();
   return (
-    <div className="flex items-center gap-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] px-4 py-3">
+    <button
+      onClick={() => onOpen?.(student.membershipId)}
+      className="w-full text-left flex items-center gap-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] px-4 py-3 hover:bg-white/[0.06] active:bg-white/[0.08] transition-colors"
+    >
       <div className="w-9 h-9 rounded-full bg-white/[0.06] flex items-center justify-center shrink-0 overflow-hidden">
         {student.avatarUrl ? (
           <img src={student.avatarUrl} alt="" className="w-full h-full object-cover" />
@@ -46,7 +51,8 @@ function StudentRow({ student }) {
       {!student.isActiveRecently && (
         <span className="text-[10px] text-gray-600 shrink-0">{t("school.inactive")}</span>
       )}
-    </div>
+      <ChevronRight size={16} className="text-gray-600 shrink-0" />
+    </button>
   );
 }
 
@@ -58,6 +64,7 @@ export default function TeacherDashboard({ schoolId, groupId, onBack, onOpenLead
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showCreateHomework, setShowCreateHomework] = useState(false);
+  const [openStudentId, setOpenStudentId] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -92,6 +99,21 @@ export default function TeacherDashboard({ schoolId, groupId, onBack, onOpenLead
     return (
       <div className="flex-1 bg-[#0F1424] min-h-full px-5 tp-safe-top text-white">
         <p className="text-red-400 text-sm text-center py-10">{error}</p>
+      </div>
+    );
+  }
+
+  // Talaba profili ochilganda uni to'liq ekran sifatida ko'rsatamiz.
+  // Alohida route qo'shilmadi — dashboard state'i yetarli va orqaga
+  // qaytganda ro'yxat qayta yuklanmaydi (tezroq).
+  if (openStudentId != null) {
+    return (
+      <div className="flex-1 overflow-y-auto tp-safe-top bg-[#0F1424] min-h-full text-white animate-slide-in">
+        <StudentProfileScreen
+          schoolId={schoolId}
+          membershipId={openStudentId}
+          onBack={() => setOpenStudentId(null)}
+        />
       </div>
     );
   }
@@ -171,7 +193,7 @@ export default function TeacherDashboard({ schoolId, groupId, onBack, onOpenLead
           </div>
           <div className="space-y-2">
             {data.weakStudents.map((s) => (
-              <StudentRow key={s.membershipId} student={s} />
+              <StudentRow key={s.membershipId} student={s} onOpen={setOpenStudentId} />
             ))}
           </div>
         </div>
@@ -186,7 +208,7 @@ export default function TeacherDashboard({ schoolId, groupId, onBack, onOpenLead
           </div>
           <div className="space-y-2">
             {data.strongStudents.map((s) => (
-              <StudentRow key={s.membershipId} student={s} />
+              <StudentRow key={s.membershipId} student={s} onOpen={setOpenStudentId} />
             ))}
           </div>
         </div>

@@ -683,6 +683,44 @@ schoolRouter.get(
   })
 );
 
+// GET /api/school/:schoolId/students/:membershipId/profile?days=14
+// O'qituvchi uchun bitta talabaning batafsil profili: kunlik faollik,
+// aniqlik foizi, oxirgi xatolar, imtihonlar, topshiriqlar.
+schoolRouter.get(
+  "/:schoolId/students/:membershipId/profile",
+  requireSchool(["OWNER", "TEACHER"]),
+  asyncHandler(async (req, res) => {
+    const membershipId = parseParam(req, res, "membershipId");
+    if (membershipId === null) return;
+
+    const target = await prisma.membership.findUnique({ where: { id: membershipId } });
+
+    // XAVFSIZLIK: uch bosqichli tekshiruv.
+    // 1) Talaba shu maktabdami
+    if (!target || target.schoolId !== req.schoolId || target.role !== "STUDENT") {
+      return res.status(404).json({ error: "Talaba topilmadi" });
+    }
+
+    // 2) O'qituvchi bo'lsa — faqat O'Z guruhi talabasini ko'radi
+    if (!req.isCeo && req.membership?.role === "TEACHER") {
+      if (req.membership.groupId == null || target.groupId !== req.membership.groupId) {
+        return res.status(403).json({ error: "Bu talaba sizning guruhingizda emas" });
+      }
+    }
+
+    // 3) days parametri — chegaralangan (juda katta qiymat DB'ni yuklaydi)
+    let days = Number(req.query.days) || 14;
+    if (!Number.isInteger(days) || days < 7) days = 7;
+    if (days > 90) days = 90;
+
+    try {
+      res.json(await schoolAnalytics.getStudentProfile(membershipId, { days }));
+    } catch (err) {
+      return sendServiceError(res, err);
+    }
+  })
+);
+
 schoolRouter.get(
   "/:schoolId/groups/:groupId/leaderboard",
   requireSchool(["OWNER", "TEACHER", "STUDENT"]),

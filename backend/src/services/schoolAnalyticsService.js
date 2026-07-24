@@ -326,3 +326,249 @@ export async function getPlatformAnalytics() {
     schoolRankings: rankings,
   };
 }
+
+// ============================================================================
+// TALABA PROFILI — o'qituvchi uchun batafsil ko'rinish
+//
+// MUHIM QAROR: bu yerda YANGI jadval yaratilmadi. Barcha ko'rsatkichlar
+// mavjud Attempt / ExamAttempt / HomeworkSubmission dan hisoblanadi.
+//
+// "Test ishlash vaqti" hozircha YO'Q — Attempt jadvalida durationSec maydoni
+// yo'q (faqat ExamAttempt da bor). Uni qo'shish migratsiya talab qiladi va
+// eski ma'lumotlar baribir bo'sh qolardi. Shuning uchun birinchi bosqichda
+// mavjud ma'lumotdan maksimal foyda olamiz.
+// ============================================================================
+
+/**
+ * Berilgan kun sonidagi kunlik faollikni qaytaradi.
+ * Natija HAR KUN uchun bitta yozuv — test ishlamagan kunlar ham 0 bilan
+ * ko'rinadi, aks holda grafik uzuq bo'lib chiqadi.
+ */
+function buildDailySeries(attempts, days) {
+  const buckets = new Map(); // "YYYY-MM-DD" -> { tests, correct, total }
+
+  for (const a of attempts) {
+    const key = new Date(a.createdAt).toISOString().slice(0, 10);
+    const entry = buckets.get(key) || { tests: 0, correct: 0, total: 0 };
+    entry.tests += 1;
+    entry.correct += a.correctCount || 0;
+    entry.total += a.totalCount || 0;
+    buckets.set(key, entry);
+  }
+
+  const series = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(today.getTime() - i * 86400000);
+    const key = d.toISOString().slice(0, 10);
+    const entry = buckets.get(key) || { tests: 0, correct: 0, total: 0 };
+    series.push({
+      date: key,
+      tests: entry.tests,
+      questionsAnswered: entry.total,
+      accuracyPct: entry.total > 0 ? Math.round((entry.correct / entry.total) * 100) : null,
+    });
+  }
+
+  return series;
+}
+
+/**
+ * Ketma-ket faol kunlar (streak) — bugundan orqaga sanaladi.
+ * Motivatsiya ko'rsatkichi: o'qituvchi kim muntazam ishlayotganini ko'radi.
+ */
+function calcStreak(series) {
+  let streak = 0;
+  for (let i = series.length - 1; i >= 0; i--) {
+    if (series[i].tests > 0) streak++;
+    else break;
+  }
+  return streak;
+}
+
+/**
+ * Talabaning rasmiy imtihonlaridan XATO QILGAN savollarini chiqaradi.
+ *
+ * Bu mumkin, chunki ExamAttempt.questionIds va .answers saqlanadi — ya'ni
+ * qaysi savolga qanday javob berilgani ma'lum. Yangi jadval kerak emas.
+ *
+ * @param {number} limit nechta oxirgi xato qaytarilsin
+ */
+async function getRecentMistakes(userId, limit = 10) {
+  // Savol matnlarini olish uchun shared data — dinamik import, chunki bu
+  // funksiya faqat talab qilinganda ishlaydi va modul og'ir.
+  let getQuestionsByIds;
+  try {
+    ({ getQuestionsByIds } = await import("../../../shared/data/officialExam.js"));
+  } catch {
+    return []; // savol bazasi yuklanmasa, statistika baribir ishlashi kerak
+  }
+
+  const exams = await prisma.examAttempt.findMany({
+    where: { userId, status: "COMPLETED" },
+    orderBy: { finishedAt: "desc" },
+    take: 5, // oxirgi 5 imtihon — undan ko'pi ortiqcha yuk
+    select: { id: true, questionIds: true, answers: true, finishedAt: true },
+  });
+
+  const mistakes = [];
+
+  for (const exam of exams) {
+    if (mistakes.length >= limit) break;
+
+    let ids = [];
+    let answers = {};
+    try {
+      ids = JSON.parse(exam.questionIds) || [];
+      answers = JSON.parse(exam.answers) || {};
+    } catch {
+      continue; // buzilgan JSON — bu imtihonni tashlab ketamiz
+    }
+
+    const questions = getQuestionsByIds(ids);
+
+    questions.forEach((q, index) => {
+      if (mistakes.length >= limit) return;
+      const chosen = answers[String(index)];
+      if (chosen == null) return; // javobsiz qoldirilgan
+      if (chosen === q.correct) return; // to'g'ri javob
+
+      mistakes.push({
+        questionId: q.id,
+        text: q.text,
+        chosenAnswer: q.options?.[chosen] ?? null,
+        correctAnswer: q.options?.[q.correct] ?? null,
+        examDate: exam.finishedAt,
+      });
+    });
+  }
+
+  return mistakes;
+}
+
+/**
+ * O'qituvchi uchun bitta talabaning to'liq profili.
+ *
+ * Xavfsizlik: chaqiruvchi (route) talabaning shu guruhga tegishliligini
+ * ALLAQACHON tekshirgan bo'lishi shart — bu servis tekshirmaydi.
+ */
+export async function getStudentProfile(membershipId, { days = 14 } = {}) {
+  const membership = await prisma.membership.findUnique({ where: { id: membershipId } });
+  if (!membership) {
+    const err = new Error("Talaba topilmadi");
+    err.code = "not_found";
+    throw err;
+  }
+
+  const userId = membership.userId;
+  const since = new Date();
+  since.setHours(0, 0, 0, 0);
+  since.setTime(since.getTime() - (days - 1) * 86400000);
+
+  const [user, attempts, examAgg, lastExams, submissions, mistakes] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        avatarUrl: true,
+        examReadiness: true,
+        lastOnlineAt: true,
+        examDate: true,
+        createdAt: true,
+      },
+    }),
+    prisma.attempt.findMany({
+      where: { userId, createdAt: { gte: since } },
+      orderBy: { createdAt: "asc" },
+      select: { correctCount: true, totalCount: true, createdAt: true, type: true },
+    }),
+    prisma.attempt.aggregate({
+      where: { userId },
+      _count: { _all: true },
+      _sum: { correctCount: true, totalCount: true },
+    }),
+    prisma.examAttempt.findMany({
+      where: { userId, status: "COMPLETED" },
+      orderBy: { finishedAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        correctCount: true,
+        wrongCount: true,
+        accuracyPct: true,
+        passed: true,
+        durationSec: true,
+        finishedAt: true,
+      },
+    }),
+    prisma.homeworkSubmission.findMany({
+      where: { membershipId },
+      orderBy: { id: "desc" },
+      take: 20,
+    }),
+    getRecentMistakes(userId, 10),
+  ]);
+
+  if (!user) {
+    const err = new Error("Foydalanuvchi topilmadi");
+    err.code = "not_found";
+    throw err;
+  }
+
+  const daily = buildDailySeries(attempts, days);
+
+  const totalAnswered = examAgg._sum?.totalCount || 0;
+  const totalCorrect = examAgg._sum?.correctCount || 0;
+
+  // Davr ichidagi ko'rsatkichlar (umumiy emas — o'qituvchiga SO'NGGI holat muhim)
+  const periodTests = attempts.length;
+  const periodAnswered = attempts.reduce((s, a) => s + (a.totalCount || 0), 0);
+  const periodCorrect = attempts.reduce((s, a) => s + (a.correctCount || 0), 0);
+  const activeDays = daily.filter((d) => d.tests > 0).length;
+
+  const hwDone = submissions.filter((s) => s.status === "COMPLETED").length;
+  const hwPending = submissions.filter((s) => s.status === "PENDING").length;
+  const hwExpired = submissions.filter((s) => s.status === "EXPIRED").length;
+
+  return {
+    student: {
+      membershipId,
+      userId: user.id,
+      name: user.name,
+      username: user.username,
+      avatarUrl: user.avatarUrl,
+      examReadiness: user.examReadiness,
+      lastOnlineAt: user.lastOnlineAt,
+      examDate: user.examDate,
+      joinedAt: membership.startedAt ?? user.createdAt,
+      groupId: membership.groupId,
+    },
+    period: {
+      days,
+      tests: periodTests,
+      questionsAnswered: periodAnswered,
+      accuracyPct: periodAnswered > 0 ? Math.round((periodCorrect / periodAnswered) * 100) : null,
+      activeDays,
+      streak: calcStreak(daily),
+      avgTestsPerActiveDay: activeDays > 0 ? Math.round((periodTests / activeDays) * 10) / 10 : 0,
+    },
+    allTime: {
+      tests: examAgg._count?._all || 0,
+      questionsAnswered: totalAnswered,
+      accuracyPct: totalAnswered > 0 ? Math.round((totalCorrect / totalAnswered) * 100) : null,
+    },
+    daily,
+    recentExams: lastExams,
+    recentMistakes: mistakes,
+    homework: {
+      completed: hwDone,
+      pending: hwPending,
+      expired: hwExpired,
+      recent: submissions.slice(0, 10),
+    },
+  };
+}
