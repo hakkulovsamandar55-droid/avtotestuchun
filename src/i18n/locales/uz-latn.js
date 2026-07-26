@@ -488,6 +488,17 @@ export default {
     notEnoughTitle: "Ma'lumot hali yetarli emas",
     notEnoughBody: "Chalg'ituvchi testlar foydalanuvchilar ko'p xato qiladigan savollardan tuziladi. Siz va boshqalar ko'proq test ishlagach, bu bo'lim avtomatik to'ladi.",
   },
+  referral: {
+    title: "Do'stlarni taklif qilish",
+    howItWorks: "Kodingizni do'stlaringizga yuboring. Ular shu kod bilan ro'yxatdan o'tsa, siz taklif qilganlar ro'yxatida ko'rinadi.",
+    yourCode: "Sizning kodingiz",
+    copy: "Nusxa olish",
+    copyLink: "Havolani nusxalash",
+    copied: "Nusxalandi",
+    copyFailed: "Nusxa olib bo'lmadi. Kodni qo'lda yozib oling.",
+    invitedCount: "Taklif qilganlar: {{count}}",
+    noneYet: "Hali hech kimni taklif qilmagansiz. Kodingizni do'stlaringizga yuboring.",
+  },
   signs: {
     sourceNote: "Manba: Yo'l harakati qoidalari (VM 172-son qarori, 1-ilova)",
     title: "Yo'l belgilari",
@@ -495,7 +506,6 @@ export default {
     searchPlaceholder: "Belgi nomini qidiring...",
     noResults: "Hech narsa topilmadi",
     signCount: "{{count}} ta belgi",
-    detailHint: "Bu belgi haqida batafsil ma'lumot va amal qilish qoidalari tez orada qo'shiladi.",
     similarSigns: "Shu turkumdagi boshqa belgilar",
     categories: {
       warning: "Ogohlantiruvchi belgilar",
@@ -525,6 +535,7 @@ export default {
     examResults: "Imtihon natijalari",
   },
   settings: {
+    inviteFriends: "Do'stlarni taklif qilish",
     mySchool: "Mening maktabim",
     showOnLeaderboard: "Reytingda ko'rsatilsin",
     showOnLeaderboardHint: "O'chirilsa, ismingiz ommaviy reytingda umuman ko'rinmaydi",
@@ -539,10 +550,8 @@ export default {
     },
     applyTheme: "Qo'llash",
     notifications: "Bildirishnomalar",
-    notificationsComingSoon: "Bildirishnoma sozlamalari tez orada qo'shiladi.",
     on: "Yoqilgan",
     support: "Qo'llab-quvvatlash",
-    supportComingSoon: "Qo'llab-quvvatlash bo'limi tez orada qo'shiladi.",
     channelTitle: "TezPrava Kanali",
     channelSubtitle: "Telegram kanalimizga obuna bo'ling",
     adminPanel: "Admin panel",
@@ -556,7 +565,6 @@ export default {
     title: "Premium tariflar",
     subtitle: "O'zingizga mos tarifni tanlang",
     select: "{{name}} tarifini tanlash",
-    comingSoon: "{{name}} tarifi uchun to'lov tez orada qo'shiladi.",
     disclaimer: "Tariflar va narxlar administratsiya tomonidan istalgan vaqtda yangilanishi mumkin.",
   },
   exam: {

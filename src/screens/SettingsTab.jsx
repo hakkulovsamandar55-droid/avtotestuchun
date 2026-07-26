@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { HelpCircle, Send, ChevronRight, ShieldCheck, Crown, Check, Trophy, School } from "lucide-react";
+import { HelpCircle, Send, ChevronRight, ShieldCheck, Crown, Check, Trophy, School, Gift } from "lucide-react";
 import { ACCENT_FROM } from "../theme";
 import { useTheme } from "../ThemeContext";
 import { useFontSize } from "../FontSizeContext";
-import { api, showComingSoon } from "../api";
+import { api } from "../api";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 
 function PremiumRow({ onClick }) {
@@ -161,7 +161,7 @@ function ThemeColorRow({ item, isActive, isLocked, onClick }) {
   );
 }
 
-function ThemePickerRow({ isPremium }) {
+function ThemePickerRow({ isPremium, onOpenPremium }) {
   const { t } = useTranslation();
   const { themeKey, setThemeKey, themeList } = useTheme();
   const [open, setOpen] = useState(false);
@@ -176,7 +176,14 @@ function ThemePickerRow({ isPremium }) {
 
   function choose(key, locked) {
     if (locked) {
-      showComingSoon(t("settings.premium"));
+      // MUHIM TUZATISH: ilgari bu yerda showComingSoon("Premium tariflar")
+      // chaqirilardi — foydalanuvchi faqat "Premium tariflar" degan alert
+      // ko'rardi va nima qilish kerakligini tushunmasdi. Bu o'lik yo'l edi:
+      // tema bloklangan, lekin premium sahifasiga o'tish imkoni yo'q.
+      //
+      // Endi to'g'ridan-to'g'ri premium sahifasiga o'tkazamiz — foydalanuvchi
+      // nima uchun bloklanganini ko'radi va sotib olishi mumkin.
+      onOpenPremium?.();
       return;
     }
     setThemeKey(key);
@@ -286,7 +293,14 @@ function FontSizePickerRow() {
 }
 
 // 3c-EKRAN: "Sozlamalar" bo'limi
-export default function SettingsTab({ user, onOpenAdmin, onOpenPremium, onOpenSupport, onOpenSchool }) {
+export default function SettingsTab({
+  user,
+  onOpenAdmin,
+  onOpenPremium,
+  onOpenSupport,
+  onOpenSchool,
+  onOpenReferral,
+}) {
   const { t } = useTranslation();
   const isAdmin = user?.role === "ADMIN";
   const isPremium = Boolean(user?.isPremium) || isAdmin;
@@ -315,9 +329,14 @@ export default function SettingsTab({ user, onOpenAdmin, onOpenPremium, onOpenSu
       <div className="mt-3 space-y-3">
         <PremiumRow onClick={onOpenPremium} />
         <LanguageSwitcher variant="row" />
-        <ThemePickerRow isPremium={isPremium} />
+        <ThemePickerRow isPremium={isPremium} onOpenPremium={onOpenPremium} />
         <FontSizePickerRow />
         <LeaderboardToggle />
+        <SettingsRow
+          icon={Gift}
+          label={t("settings.inviteFriends")}
+          onClick={onOpenReferral}
+        />
         <SettingsRow
           icon={School}
           label={t("settings.mySchool")}

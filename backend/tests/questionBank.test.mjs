@@ -213,5 +213,25 @@ console.log("\n=== Chalg'ituvchi testlar ===");
   check("20% xatoli savol ro'yxatda YO'Q", !r.json.questionIds.includes("easy-1"));
 }
 
+console.log("\n=== Referral (do'stlarni taklif qilish) ===");
+{
+  // BO'SHLIQ EDI: referral tizimi bazada ishlab turgan edi, lekin
+  // foydalanuvchi o'z kodini hech qayerdan ko'ra olmasdi — endpoint yo'q edi.
+  const r = await req("GET", "/api/stats/referral", { user: userA });
+  check("so'rov ishladi", r.status === 200);
+  check("kod berildi", typeof r.json.code === "string" && r.json.code.length > 0);
+  check("taklif soni raqam", typeof r.json.invitedCount === "number");
+  check("ro'yxat massiv", Array.isArray(r.json.invited));
+
+  // Kod BAZAGA saqlanishi kerak — har chaqiruvda yangi kod berilmasin,
+  // aks holda foydalanuvchi tarqatgan kod ishlamay qolardi.
+  const again = await req("GET", "/api/stats/referral", { user: userA });
+  check("kod o'zgarmadi (barqaror)", again.json.code === r.json.code);
+
+  // Autentifikatsiya talab qilinadi
+  const noAuth = await req("GET", "/api/stats/referral", {});
+  check("tokensiz rad etildi", noAuth.status === 401);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exitCode = 1;

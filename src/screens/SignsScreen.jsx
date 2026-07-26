@@ -324,21 +324,19 @@ function SignDetail({ sign, onBack, onSelectSign }) {
       </div>
 
       {/* Izoh: rasmiy qoidalarga tayangan qisqa tushuntirish.
-          Hali yozilmagan belgilar uchun zaxira matn ko'rsatiladi —
-          shunda ekran hech qachon bo'sh qolmaydi. */}
-      <div className="mt-4 rounded-2xl bg-card border border-card-border shadow-sm p-4">
-        <p
-          className="text-sm leading-relaxed"
-          style={{ color: description ? "var(--text-primary)" : "var(--text-secondary)" }}
-        >
-          {description || t("signs.detailHint")}
-        </p>
-        {description && (
+          Barcha 258 belgi izohlangan, shuning uchun zaxira matn kerak emas.
+          Agar kelajakda yangi belgi qo'shilsa va izohi yozilmasa, blok
+          umuman ko'rsatilmaydi (bo'sh karta chiqmasligi uchun). */}
+      {description && (
+        <div className="mt-4 rounded-2xl bg-card border border-card-border shadow-sm p-4">
+          <p className="text-sm leading-relaxed" style={{ color: "var(--text-primary)" }}>
+            {description}
+          </p>
           <p className="text-[10px] mt-3" style={{ color: "var(--text-secondary)" }}>
             {t("signs.sourceNote")}
           </p>
-        )}
-      </div>
+        </div>
+      )}
 
       {siblings.length > 0 && (
         <>

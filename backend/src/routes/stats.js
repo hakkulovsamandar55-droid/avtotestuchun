@@ -3,6 +3,7 @@ import { prisma } from "../db.js";
 import { requireAuth } from "../authMiddleware.js";
 import { loadCurrentUser } from "../services/userState.js";
 import { asyncHandler } from "../asyncHandler.js";
+import { generateUniqueReferralCode } from "../services/referral.js";
 import { CATEGORIES as SIGN_CATEGORIES } from "../../../shared/data/signsData.js";
 import { TOTAL_TICKETS } from "../data/ticketsData.js";
 // Kun chegarasi mahalliy vaqtga (UTC+5) ko'ra hisoblanadi — lib/time.js ga qarang.
@@ -333,3 +334,56 @@ function buildWeeklyActivity(dayCounts) {
   }
   return out;
 }
+
+// GET /api/stats/referral — foydalanuvchining o'z taklif ma'lumoti
+//
+// NIMA UCHUN KERAK: referral tizimi bazada allaqachon ishlaydi (kod
+// generatsiya qilinadi, ro'yxatdan o'tishda bog'lanadi), lekin foydalanuvchi
+// o'z kodini HECH QAYERDAN ko'ra olmasdi — u faqat admin panelida
+// ko'rinardi. Ya'ni funksiya bor, lekin unga yetib bo'lmaydi.
+statsRouter.get("/referral", asyncHandler(async (req, res) => {
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: { referralCode: true },
+  });
+
+  // Kod hali yaratilmagan bo'lsa (eski hisoblar) — hozir yaratamiz.
+  // Aks holda foydalanuvchi bo'sh ekran ko'rardi.
+  let code = user?.referralCode;
+  if (!code) {
+    code = await generateUniqueReferralCode();
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { referralCode: code },
+    });
+  }
+
+  const invitedCount = await prisma.user.count({
+    where: { referredById: req.user.id },
+  });
+
+  // Taklif qilinganlar ro'yxati — foydalanuvchi kimni chaqirganini ko'radi.
+  // Faqat ism, boshqa shaxsiy ma'lumot berilmaydi.
+  const invited = await prisma.user.findMany({
+    where: { referredById: req.user.id },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+    select: { name: true, createdAt: true, isPremium: true },
+  });
+
+  // Havola bot username'iga bog'liq. Env'da bo'lmasa null qaytaramiz —
+  // UI faqat kodni ko'rsatadi, havolani yashiradi.
+  const botUsername = process.env.BOT_USERNAME || null;
+  const link = botUsername ? `https://t.me/${botUsername}?start=ref_${code}` : null;
+
+  res.json({
+    code,
+    link,
+    invitedCount,
+    invited: invited.map((u) => ({
+      name: u.name,
+      joinedAt: u.createdAt,
+      isPremium: u.isPremium,
+    })),
+  });
+}));

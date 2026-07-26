@@ -281,6 +281,8 @@ export const api = {
       body: patch,
     }),
 
+  getReferralInfo: () => request("/api/stats/referral"),
+
   getSavedQuestions: () => request("/api/questions/saved"),
   saveQuestion: (questionId) =>
     request("/api/questions/saved", { method: "POST", body: { questionId } }),
@@ -341,11 +343,3 @@ export const api = {
 // Hali backend/to'lov integratsiyasi ulanmagan tugmalar uchun:
 // bosilganda "hech narsa bo'lmayapti" taassurotini bermaslik uchun
 // Telegramning o'z native popup'ini ko'rsatadi (Telegramdan tashqarida — oddiy alert).
-export function showComingSoon(message) {
-  const tg = window.Telegram?.WebApp;
-  if (tg?.showAlert) {
-    tg.showAlert(message);
-  } else {
-    window.alert(message);
-  }
-}

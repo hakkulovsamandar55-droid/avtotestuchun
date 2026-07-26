@@ -20,6 +20,7 @@ import TopicTestsScreen from "./TopicTestsScreen";
 import MistakesHubScreen from "./MistakesHubScreen";
 import QuestionListScreen from "./QuestionListScreen";
 import TrickyTestScreen from "./TrickyTestScreen";
+import ReferralScreen from "./ReferralScreen";
 import { getAllQuestions } from "../../shared/data/ticketsData";
 import { getQuestionsForTopic } from "../../shared/data/questionTopics";
 
@@ -40,6 +41,7 @@ export default function MainApp({ user }) {
   const [showTopics, setShowTopics] = useState(false);
   const [showMistakes, setShowMistakes] = useState(false);
   const [showTricky, setShowTricky] = useState(false);
+  const [showReferral, setShowReferral] = useState(false);
   // questionList: null | "saved" | "mistakes" | "hardest"
   const [questionList, setQuestionList] = useState(null);
   // Mavzuli test: tanlangan mavzu kaliti
@@ -216,6 +218,14 @@ export default function MainApp({ user }) {
     );
   }
 
+  if (showReferral) {
+    return (
+      <div className="flex flex-col h-full">
+        <ReferralScreen onBack={() => setShowReferral(false)} />
+      </div>
+    );
+  }
+
   if (showSigns) {
     return (
       <div className="flex flex-col h-full">
@@ -262,6 +272,7 @@ export default function MainApp({ user }) {
           onOpenPremium={() => setShowPremium(true)}
           onOpenSupport={() => setShowSupport(true)}
           onOpenSchool={() => setShowSchool(true)}
+          onOpenReferral={() => setShowReferral(true)}
         />
       )}
       <BottomNav active={active} setActive={setActive} />
