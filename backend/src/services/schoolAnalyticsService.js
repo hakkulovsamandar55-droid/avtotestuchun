@@ -333,10 +333,10 @@ export async function getPlatformAnalytics() {
 // MUHIM QAROR: bu yerda YANGI jadval yaratilmadi. Barcha ko'rsatkichlar
 // mavjud Attempt / ExamAttempt / HomeworkSubmission dan hisoblanadi.
 //
-// "Test ishlash vaqti" hozircha YO'Q — Attempt jadvalida durationSec maydoni
-// yo'q (faqat ExamAttempt da bor). Uni qo'shish migratsiya talab qiladi va
-// eski ma'lumotlar baribir bo'sh qolardi. Shuning uchun birinchi bosqichda
-// mavjud ma'lumotdan maksimal foyda olamiz.
+// TEST ISHLASH VAQTI: 2026-07-26 dan boshlab kuzatiladi (Attempt.durationSec).
+// Eski yozuvlarda NULL — o'sha paytda o'lchanmagan. Kunlik yig'indida ular
+// 0 deb hisoblanadi, ya'ni statistikani buzmaydi, faqat eski kunlarda
+// vaqt 0 daqiqa bo'lib ko'rinadi.
 // ============================================================================
 
 /**
@@ -345,14 +345,18 @@ export async function getPlatformAnalytics() {
  * ko'rinadi, aks holda grafik uzuq bo'lib chiqadi.
  */
 function buildDailySeries(attempts, days) {
-  const buckets = new Map(); // "YYYY-MM-DD" -> { tests, correct, total }
+  const buckets = new Map(); // "YYYY-MM-DD" -> { tests, correct, total, seconds }
 
   for (const a of attempts) {
     const key = new Date(a.createdAt).toISOString().slice(0, 10);
-    const entry = buckets.get(key) || { tests: 0, correct: 0, total: 0 };
+    const entry = buckets.get(key) || { tests: 0, correct: 0, total: 0, seconds: 0 };
     entry.tests += 1;
     entry.correct += a.correctCount || 0;
     entry.total += a.totalCount || 0;
+    // durationSec NULL bo'lishi mumkin (eski yozuvlar — o'sha paytda
+    // vaqt kuzatilmagan). Ularni 0 deb qo'shamiz, ya'ni yig'indiga
+    // ta'sir qilmaydi.
+    entry.seconds += a.durationSec || 0;
     buckets.set(key, entry);
   }
 
@@ -363,12 +367,15 @@ function buildDailySeries(attempts, days) {
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(today.getTime() - i * 86400000);
     const key = d.toISOString().slice(0, 10);
-    const entry = buckets.get(key) || { tests: 0, correct: 0, total: 0 };
+    const entry = buckets.get(key) || { tests: 0, correct: 0, total: 0, seconds: 0 };
     series.push({
       date: key,
       tests: entry.tests,
       questionsAnswered: entry.total,
       accuracyPct: entry.total > 0 ? Math.round((entry.correct / entry.total) * 100) : null,
+      // Kunlik o'qish vaqti (daqiqa). O'qituvchi "bu talaba bugun 12
+      // daqiqa ishlagan" deb ko'radi.
+      minutes: Math.round(entry.seconds / 60),
     });
   }
 
@@ -484,7 +491,13 @@ export async function getStudentProfile(membershipId, { days = 14 } = {}) {
     prisma.attempt.findMany({
       where: { userId, createdAt: { gte: since } },
       orderBy: { createdAt: "asc" },
-      select: { correctCount: true, totalCount: true, createdAt: true, type: true },
+      select: {
+        correctCount: true,
+        totalCount: true,
+        createdAt: true,
+        type: true,
+        durationSec: true,
+      },
     }),
     prisma.attempt.aggregate({
       where: { userId },

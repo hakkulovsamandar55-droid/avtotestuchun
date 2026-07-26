@@ -4,9 +4,9 @@ import { School, Users, GraduationCap, Trophy, Check, Ban, Trash2, X, Plus, Sear
 import { api } from "../../api";
 
 const STATUS_META = {
-  PENDING: { color: "#FBBF24", bg: "bg-amber-50", border: "border-amber-200" },
+  PENDING: { color: "#FBBF24", bg: "bg-amber-500/15", border: "border-amber-500/40" },
   ACTIVE: { color: "#059669", bg: "bg-emerald-50", border: "border-emerald-200" },
-  DISABLED: { color: "#DC2626", bg: "bg-red-50", border: "border-red-200" },
+  DISABLED: { color: "#DC2626", bg: "bg-red-500/15", border: "border-red-500/40" },
 };
 
 function Metric({ icon: Icon, value, label }) {
@@ -56,7 +56,7 @@ function SchoolCard({ school, onApprove, onDisable, onDelete, busy }) {
           <button
             onClick={() => onDisable(school.id)}
             disabled={busy === school.id}
-            className="flex-1 rounded-xl py-2 text-xs font-semibold text-amber-700 border border-amber-300 bg-amber-50 flex items-center justify-center gap-1.5 disabled:opacity-50"
+            className="flex-1 rounded-xl py-2 text-xs font-semibold text-amber-400 border border-amber-500/40 bg-amber-500/15 flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
             <Ban size={13} /> {t("adminSchool.disable")}
           </button>
@@ -75,7 +75,7 @@ function SchoolCard({ school, onApprove, onDisable, onDelete, busy }) {
           <button
             onClick={() => setConfirmDelete(true)}
             disabled={busy === school.id}
-            className="rounded-xl px-3 py-2 text-xs font-semibold text-red-600 border border-red-300 bg-red-50 disabled:opacity-50"
+            className="rounded-xl px-3 py-2 text-xs font-semibold text-red-400 border border-red-500/40 bg-red-500/15 disabled:opacity-50"
           >
             <Trash2 size={13} />
           </button>
@@ -197,7 +197,7 @@ function OwnerPicker({ value, onChange }) {
       </div>
 
       {open && query.trim() && (
-        <div className="absolute z-10 mt-1.5 w-full max-h-56 overflow-y-auto rounded-2xl bg-white dark:bg-[#161B2E] border border-card-border shadow-lg">
+        <div className="absolute z-10 mt-1.5 w-full max-h-56 overflow-y-auto rounded-2xl bg-card border border-card-border shadow-lg">
           {searching && (
             <div className="px-4 py-3 text-xs text-text-muted">{t("common.searching")}</div>
           )}
@@ -425,7 +425,7 @@ export default function AdminSchoolsTab() {
 
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-5 pb-8">
-          <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-[#161B2E] p-5">
+          <div className="w-full max-w-sm rounded-3xl bg-solid p-5">
             <div className="flex items-center justify-between mb-4">
               <p className="font-bold text-base text-text-main">{t("adminSchool.newSchool")}</p>
               <button

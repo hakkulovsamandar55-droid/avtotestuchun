@@ -76,8 +76,8 @@ export default function NotificationsBell({ onOpenLink }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-11 w-80 max-w-[85vw] max-h-96 overflow-y-auto rounded-2xl bg-card border border-card-border shadow-xl z-50">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-card-border sticky top-0 bg-card">
+        <div className="absolute right-0 top-11 w-80 max-w-[85vw] max-h-96 overflow-y-auto rounded-2xl bg-solid border border-card-border shadow-xl z-50">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-card-border sticky top-0 bg-solid z-10">
             <p className="font-bold text-text-main text-sm">{t("admin.notifications.title")}</p>
             {unreadCount > 0 && (
               <button onClick={handleMarkAll} className="text-[11px] font-semibold" style={{ color: ACCENT_FROM }}>

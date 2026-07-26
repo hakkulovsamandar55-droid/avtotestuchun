@@ -166,8 +166,12 @@ function ThemePickerRow({ isPremium }) {
   const { themeKey, setThemeKey, themeList } = useTheme();
   const [open, setOpen] = useState(false);
 
-  const modePills = themeList.filter((it) => it.key === "light" || it.key === "dark");
-  const colorOptions = themeList.filter((it) => it.key !== "light" && it.key !== "dark");
+  // Kunduzgi/tungi — asosiy rejimlar, yuqorida katta tugma sifatida.
+  // Qolganlari rang varianti. Kalitlar themes.js dan keladi, shuning uchun
+  // yangi tema qo'shilsa bu ro'yxat o'zi yangilanadi.
+  const MODE_KEYS = ["day", "night"];
+  const modePills = themeList.filter((it) => MODE_KEYS.includes(it.key));
+  const colorOptions = themeList.filter((it) => !MODE_KEYS.includes(it.key));
   const activeItem = themeList.find((it) => it.key === themeKey);
 
   function choose(key, locked) {

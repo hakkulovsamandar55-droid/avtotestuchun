@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, X, GraduationCap } from "lucide-react";
 import {
   CATEGORIES,
   CATEGORY_META,
@@ -10,6 +10,8 @@ import {
   SIGNS,
 } from "../data/signsData";
 import SignIcon from "../components/SignIcon";
+import { getSignDescription } from "../../shared/data/signDescriptions";
+import SignsQuizScreen from "./SignsQuizScreen";
 import { ACCENT_FROM, ACCENT_TO } from "../theme";
 
 // Yo'l belgilarini o'rganish — asosiy ekran: qidiruv + kategoriyalar ro'yxati
@@ -18,8 +20,19 @@ export default function SignsScreen({ onBack }) {
   const [query, setQuery] = useState("");
   const [openCategory, setOpenCategory] = useState(null);
   const [selectedSign, setSelectedSign] = useState(null);
+  // quizCategory: null = test yopiq, "all" = barcha belgilar, aks holda toifa kaliti
+  const [quizCategory, setQuizCategory] = useState(null);
 
   const results = useMemo(() => searchSigns(query), [query]);
+
+  if (quizCategory) {
+    return (
+      <SignsQuizScreen
+        category={quizCategory === "all" ? null : quizCategory}
+        onBack={() => setQuizCategory(null)}
+      />
+    );
+  }
 
   if (selectedSign) {
     return (
@@ -37,6 +50,7 @@ export default function SignsScreen({ onBack }) {
         catKey={openCategory}
         onBack={() => setOpenCategory(null)}
         onSelectSign={setSelectedSign}
+        onStartQuiz={() => setQuizCategory(openCategory)}
       />
     );
   }
@@ -57,6 +71,21 @@ export default function SignsScreen({ onBack }) {
       <p className="text-text-muted text-sm mt-1 mb-4 ml-12">
         {t("signs.subtitle", { count: TOTAL_SIGNS })}
       </p>
+
+      {/* Test — o'rganish va sinash bir ekranda. Ro'yxatdan OLDIN turadi,
+          chunki qaytib kelgan foydalanuvchi ko'pincha o'qish emas, sinash
+          uchun kiradi. */}
+      <button
+        onClick={() => setQuizCategory("all")}
+        className="w-full rounded-[19px] py-4 px-4 mb-4 font-bold text-sm text-white flex items-center justify-center gap-2 active:scale-[0.99] transition-transform"
+        style={{
+          background: "linear-gradient(135deg, var(--accent-from), var(--accent-to))",
+          boxShadow: "0 10px 26px color-mix(in srgb, var(--accent-from) 38%, transparent)",
+        }}
+      >
+        <GraduationCap size={17} />
+        {t("signsQuiz.startAll")}
+      </button>
 
       {/* Qidiruv */}
       <div className="relative">
@@ -184,7 +213,7 @@ function SignRow({ sign, onClick }) {
   );
 }
 
-function CategoryView({ catKey, onBack, onSelectSign }) {
+function CategoryView({ catKey, onBack, onSelectSign, onStartQuiz }) {
   const { t } = useTranslation();
   const meta = CATEGORY_META[catKey];
   const items = getSignsByCategory(catKey);
@@ -205,6 +234,23 @@ function CategoryView({ catKey, onBack, onSelectSign }) {
       <p className="text-text-muted text-sm mt-1 mb-4 ml-12">
         {t("signs.signCount", { count: items.length })}
       </p>
+
+      {/* Toifa bo'yicha test — bu eng samarali o'rganish yo'li: avval bitta
+          toifani o'qib, keyin darhol shu toifadan sinaladi. Chalg'ituvchi
+          variantlar ham shu toifadan olinadi (signsQuiz.js). */}
+      {onStartQuiz && items.length >= 4 && (
+        <button
+          onClick={onStartQuiz}
+          className="w-full rounded-[19px] py-3.5 px-4 mb-4 font-bold text-[13px] text-white flex items-center justify-center gap-2 active:scale-[0.99] transition-transform"
+          style={{
+            background: "linear-gradient(135deg, var(--accent-from), var(--accent-to))",
+            boxShadow: "0 10px 26px color-mix(in srgb, var(--accent-from) 34%, transparent)",
+          }}
+        >
+          <GraduationCap size={16} />
+          {t("signsQuiz.startCategory")}
+        </button>
+      )}
 
       <div className="grid grid-cols-3 gap-3">
         {items.map((sign) => (
@@ -236,6 +282,7 @@ function CategoryView({ catKey, onBack, onSelectSign }) {
 }
 
 function SignDetail({ sign, onBack, onSelectSign }) {
+  const description = getSignDescription(sign.code);
   const { t } = useTranslation();
   const meta = CATEGORY_META[sign.cat];
 
@@ -276,10 +323,21 @@ function SignDetail({ sign, onBack, onSelectSign }) {
         </h2>
       </div>
 
+      {/* Izoh: rasmiy qoidalarga tayangan qisqa tushuntirish.
+          Hali yozilmagan belgilar uchun zaxira matn ko'rsatiladi —
+          shunda ekran hech qachon bo'sh qolmaydi. */}
       <div className="mt-4 rounded-2xl bg-card border border-card-border shadow-sm p-4">
-        <p className="text-text-muted text-sm leading-relaxed">
-          {t("signs.detailHint")}
+        <p
+          className="text-sm leading-relaxed"
+          style={{ color: description ? "var(--text-primary)" : "var(--text-secondary)" }}
+        >
+          {description || t("signs.detailHint")}
         </p>
+        {description && (
+          <p className="text-[10px] mt-3" style={{ color: "var(--text-secondary)" }}>
+            {t("signs.sourceNote")}
+          </p>
+        )}
       </div>
 
       {siblings.length > 0 && (

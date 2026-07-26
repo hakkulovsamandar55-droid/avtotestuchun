@@ -2,6 +2,8 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { createServer } from "http";
+import { prisma } from "./db.js";
+import { asyncHandler } from "./asyncHandler.js";
 import { authRouter } from "./routes/auth.js";
 import { adminRouter } from "./routes/admin.js";
 import { statsRouter } from "./routes/stats.js";
@@ -10,6 +12,7 @@ import { paymentsRouter, adminPayments } from "./routes/payments.js";
 import { notificationsRouter } from "./routes/notifications.js";
 import { examRouter } from "./routes/exam.js";
 import { schoolRouter } from "./routes/school.js";
+import { questionBankRouter } from "./routes/questionBank.js";
 import { initDuelSocket } from "./duel.js";
 import { UPLOADS_DIR } from "./lib/upload.js";
 
@@ -64,7 +67,25 @@ app.use(express.json({ limit: "256kb" }));
 // Yuklangan rasmlar (chat screenshotlar, to'lov cheklari) shu orqali ochiladi
 app.use("/uploads", express.static(UPLOADS_DIR));
 
-app.get("/health", (_req, res) => res.json({ ok: true }));
+// MUHIM: bu endpoint faqat Express serverini emas, BAZANI ham tekshiradi.
+// Neon (bepul tarif) foydalanilmasa "compute"ni uxlatadi — keyingi so'rov
+// bir necha soniya kutib, bazani uyg'otadi. Agar bu endpoint faqat
+// { ok: true } qaytarsa (bazaga tegmasa), tashqi "uyg'otuvchi" (cron)
+// serverni chaqirsa ham baza uxlab qolaveradi.
+//
+// `SELECT 1` — eng arzon so'rov, jadval o'qimaydi, faqat ulanishni tiriklaydi.
+app.get("/health", asyncHandler(async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ ok: true, db: "up" });
+  } catch (err) {
+    // Baza javob bermasa ham server o'zi tirikligini ko'rsatamiz —
+    // monitoring vositasi buni "server ishlayapti, baza muammoli" deb
+    // to'g'ri tushunishi uchun 200 emas, 503 qaytaramiz.
+    console.error("[health] baza javob bermadi:", err?.message);
+    res.status(503).json({ ok: false, db: "down" });
+  }
+}));
 app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/admin/support", adminSupport);
@@ -77,6 +98,7 @@ app.use("/api/payments", paymentsRouter);
 app.use("/api/exam", examRouter);
 // Haydovchilik maktablari ekotizimi (CEO/Owner/Teacher/Student)
 app.use("/api/school", schoolRouter);
+app.use("/api/questions", questionBankRouter);
 
 // Umumiy xatolarni ushlash — parolsiz stack-trace'ni foydalanuvchiga chiqarmaslik uchun.
 // Ba'zi xatolar aslida foydalanuvchi xatosi (juda katta fayl, noto'g'ri format,

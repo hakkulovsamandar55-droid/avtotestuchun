@@ -3,6 +3,7 @@ import { prisma } from "../db.js";
 import { requireAuth } from "../authMiddleware.js";
 import { loadCurrentUser } from "../services/userState.js";
 import { asyncHandler } from "../asyncHandler.js";
+import { CATEGORIES as SIGN_CATEGORIES } from "../../../shared/data/signsData.js";
 import { TOTAL_TICKETS } from "../data/ticketsData.js";
 // Kun chegarasi mahalliy vaqtga (UTC+5) ko'ra hisoblanadi — lib/time.js ga qarang.
 import { localDayKey } from "../lib/time.js";
@@ -15,8 +16,52 @@ statsRouter.use(requireAuth, loadCurrentUser);
 
 
 // POST /api/stats/attempt — bilet testi yoki imtihon yakunlanganda natijani saqlaydi
+// POST /api/stats/signs-quiz  { correctCount, totalCount, category }
+//
+// Yo'l belgilari testining natijasi.
+//
+// NIMA UCHUN Attempt JADVALIGA YOZILMAYDI: Attempt jadvali haydovchilik
+// imtihoni savollari uchun — undan `accuracy`, `solved`, `examReadiness`
+// hisoblanadi. Belgilar testi boshqa narsani o'lchaydi (belgi tanish), uni
+// shu jadvalga qo'shsak "imtihonga tayyorlik" foizi sun'iy ko'tarilib,
+// foydalanuvchini chalg'itadi.
+//
+// Shuning uchun bu endpoint FAQAT uy vazifasi ilgagini ishga tushiradi:
+// o'qituvchi "belgilarni o'rgan" vazifasini bergan bo'lsa, u yopiladi.
+// Maktabga a'zo bo'lmagan foydalanuvchida hech narsa saqlanmaydi — belgilar
+// testi ular uchun o'rganish vositasi, ball yig'ish emas.
+statsRouter.post("/signs-quiz", asyncHandler(async (req, res) => {
+  const { correctCount, totalCount, category } = req.body || {};
+
+  if (
+    !Number.isInteger(correctCount) ||
+    !Number.isInteger(totalCount) ||
+    totalCount <= 0 ||
+    correctCount < 0 ||
+    correctCount > totalCount
+  ) {
+    return res.status(400).json({ error: "correctCount/totalCount noto'g'ri" });
+  }
+  if (totalCount > 50) {
+    return res.status(400).json({ error: "totalCount juda katta" });
+  }
+  if (category != null && !SIGN_CATEGORIES.includes(category)) {
+    return res.status(400).json({ error: "Noto'g'ri belgi toifasi" });
+  }
+
+  const scorePct = Math.round((correctCount / totalCount) * 100);
+
+  const submission = await recordAttemptForHomework(req.user.id, {
+    type: "SIGNS",
+    score: scorePct,
+    signsCategory: category ?? null,
+  });
+
+  res.json({ ok: true, scorePct, homeworkClosed: Boolean(submission) });
+}));
+
 statsRouter.post("/attempt", asyncHandler(async (req, res) => {
-  const { type, ticketNumber, correctCount, totalCount, passed } = req.body;
+  const { type, ticketNumber, correctCount, totalCount, passed, durationSec } = req.body;
 
   if (!["TICKET", "EXAM"].includes(type)) {
     return res.status(400).json({ error: "type TICKET yoki EXAM bo'lishi kerak" });
@@ -46,6 +91,21 @@ statsRouter.post("/attempt", asyncHandler(async (req, res) => {
     }
   }
 
+  // Test ishlash vaqti — ixtiyoriy (eski ilova versiyalari yubormaydi).
+  //
+  // YUQORI CHEGARA MUHIM: foydalanuvchi testni ochib qo'yib ketishi mumkin
+  // (masalan telefonni yopib, ertasi kuni davom etishi). Bunday holatda
+  // vaqt bir necha soat bo'lib chiqadi va "kunlik o'qish vaqti"
+  // statistikasini butunlay buzadi. 2 soat (7200 s) real chegara —
+  // undan oshsa yozmaymiz.
+  let cleanDuration = null;
+  if (durationSec != null) {
+    const n = Number(durationSec);
+    if (Number.isInteger(n) && n > 0 && n <= 7200) {
+      cleanDuration = n;
+    }
+  }
+
   const attempt = await prisma.attempt.create({
     data: {
       userId: req.user.id,
@@ -54,6 +114,7 @@ statsRouter.post("/attempt", asyncHandler(async (req, res) => {
       correctCount,
       totalCount,
       passed: Boolean(passed),
+      durationSec: cleanDuration,
     },
   });
 
@@ -170,6 +231,7 @@ statsRouter.get("/me", asyncHandler(async (req, res) => {
   }
 
   const studyPlan = computeStudyPlanProgress(recentDayCounts, req.user.dailyStudyMinutes);
+  const weeklyActivity = buildWeeklyActivity(dayCounts);
 
   if (totals._count._all === 0) {
     return res.json({
@@ -182,6 +244,8 @@ statsRouter.get("/me", asyncHandler(async (req, res) => {
       learnedQuestionsPct: 0,
       masteryQualityPct: 0,
       examResultsPct: 0,
+      totalAnswered: 0,
+      weeklyActivity,
       studyPlan,
     });
   }
@@ -235,6 +299,37 @@ statsRouter.get("/me", asyncHandler(async (req, res) => {
     learnedQuestionsPct,
     masteryQualityPct,
     examResultsPct,
+    totalAnswered,
+    weeklyActivity,
     studyPlan,
   });
 }));
+
+/**
+ * So'nggi 7 kunlik faollik — bosh sahifadagi haftalik ritm chizig'i uchun.
+ *
+ * MUHIM: natija HAR DOIM 7 element, dushanbadan boshlab emas, balki
+ * "6 kun oldin -> bugun" tartibida. Sabab: foydalanuvchiga hafta boshi
+ * qachon ekani emas, SO'NGGI 7 kun muhim — bugun o'ngdagi oxirgi katak
+ * bo'lib turadi va ko'z shu yerga tushadi.
+ *
+ * Kunlar mahalliy vaqt bo'yicha guruhlanadi (APP_TZ_OFFSET_MINUTES),
+ * aks holda kechqurun ishlagan test "ertaga" hisoblanib qolardi.
+ */
+function buildWeeklyActivity(dayCounts) {
+  const out = [];
+  const todayKey = localDayKey(new Date());
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86400000);
+    const key = localDayKey(d);
+    const count = dayCounts.get(key) || 0;
+    out.push({
+      date: key,
+      count,
+      active: count > 0,
+      isToday: key === todayKey,
+    });
+  }
+  return out;
+}

@@ -4,6 +4,7 @@ import { ChevronLeft, Check, X, RotateCcw, Timer, AlertTriangle } from "lucide-r
 import { getRandomExamQuestions, EXAM_TIME_SECONDS, EXAM_MAX_MISTAKES } from "../data/ticketsData";
 import { api } from "../api";
 import SignIcon from "../components/SignIcon";
+import TicketQuestionImage from "../components/TicketQuestionImage";
 import { ACCENT_FROM, ACCENT_TO, ACCENT_WARM } from "../theme";
 
 function formatTime(totalSeconds) {
@@ -171,10 +172,19 @@ export default function ExamScreen({ onExit }) {
       {question.image && (
         <div className="w-full flex justify-center mb-5">
           <div
-            className="w-32 h-32 rounded-3xl bg-white flex items-center justify-center shadow-lg"
+            className="w-full max-w-[280px] rounded-3xl bg-white flex items-center justify-center shadow-lg p-2"
             style={{ boxShadow: "0 10px 30px rgba(108,92,231,0.25)" }}
           >
-            <SignIcon code={question.image} size={104} />
+            {/* MUHIM: question.image endi IKKI XIL bo'lishi mumkin —
+                yo'l belgisi kodi ("3.24", SignIcon uchun) yoki savol
+                sahnasi rasmi (masalan "t1-1.webp", TicketQuestionImage
+                uchun). Kengaytma bo'yicha ajratamiz — belgi kodlarida
+                hech qachon ".png" bo'lmaydi. */}
+            {question.image.endsWith(".webp") ? (
+              <TicketQuestionImage questionId={question.image.replace(".webp", "")} maxHeight={260} />
+            ) : (
+              <SignIcon code={question.image} size={104} />
+            )}
           </div>
         </div>
       )}
@@ -351,7 +361,11 @@ function ExamReview({ answers, questions, onBack }) {
 
               {q.image && (
                 <div className="w-16 h-16 rounded-xl bg-white flex items-center justify-center mb-3">
-                  <SignIcon code={q.image} size={52} />
+                  {q.image.endsWith(".webp") ? (
+                    <TicketQuestionImage questionId={q.image.replace(".webp", "")} maxHeight={80} />
+                  ) : (
+                    <SignIcon code={q.image} size={52} />
+                  )}
                 </div>
               )}
 

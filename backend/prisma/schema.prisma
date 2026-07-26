@@ -143,6 +143,9 @@ model User {
   schoolMemberships   Membership[]
   ownedSchools        School[]   @relation("SchoolOwner")
 
+  savedQuestions   SavedQuestion[]
+  questionMistakes QuestionMistake[]
+
   @@map("users")
   @@index([isPremium])
   @@index([isBlocked])
@@ -160,6 +163,9 @@ model Attempt {
   correctCount Int         @map("correct_count")
   totalCount   Int         @map("total_count")
   passed       Boolean
+  // Test ishlashga sarflangan vaqt (soniya). Eski yozuvlarda NULL —
+  // o'sha paytda kuzatilmagan, statistikada chetlab o'tiladi.
+  durationSec  Int?        @map("duration_sec")
   createdAt    DateTime    @default(now()) @map("created_at")
 
   @@map("attempts")
@@ -626,6 +632,10 @@ model Homework {
   title     String
   type      HomeworkType
   params    String       @default("{}") // JSON matn sifatida — masalan tanlangan bilet raqamlari
+  // true bo'lsa — vazifa TANLANGAN talabalarga berilgan, butun guruhga emas.
+  // Guruhga yangi qo'shilgan talaba bunday vazifaga avtomatik yozilmaydi.
+  isTargeted Boolean @default(false) @map("is_targeted")
+
   minScore  Int?         @map("min_score")
   deadline  DateTime
 
@@ -656,4 +666,66 @@ model HomeworkSubmission {
   @@map("school_homework_submissions")
   @@unique([homeworkId, membershipId])
   @@index([membershipId, status])
+}
+
+// Foydalanuvchi qo'lda saqlagan savollar ("Saqlangan savollar" bo'limi)
+model SavedQuestion {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId String   @map("question_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("saved_questions")
+  @@unique([userId, questionId])
+  @@index([userId, createdAt])
+}
+
+// FAQAT xato javoblar. To'g'ri javob berilganda resolvedAt belgilanadi.
+model QuestionMistake {
+  id          Int       @id @default(autoincrement())
+  userId      Int       @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId  String    @map("question_id")
+  wrongCount  Int       @default(1) @map("wrong_count")
+  lastWrongAt DateTime  @default(now()) @map("last_wrong_at")
+  resolvedAt  DateTime? @map("resolved_at")
+
+  @@map("question_mistakes")
+  @@unique([userId, questionId])
+  @@index([userId, resolvedAt])
+}
+
+// Global agregat — "odamlar ko'p xato qilayotgan savollar" uchun.
+// Faqat savollar soniga teng qator (1220), foydalanuvchidan mustaqil.
+model QuestionStat {
+  questionId String   @id @map("question_id")
+  totalCount Int      @default(0) @map("total_count")
+  wrongCount Int      @default(0) @map("wrong_count")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("question_stats")
+  @@index([wrongCount])
+}
+
+// Premium tariflar — narxni admin panelidan o'zgartirish uchun.
+//
+// `key` va muddat (durationDays) KODDA qoladi (shared/data/premiumPlans.js):
+// ular biznes mantiqi va admin ularni buzib qo'ymasligi kerak. DB'da faqat
+// ko'rinadigan va o'zgartirilishi mumkin bo'lgan qiymatlar.
+model PremiumPlan {
+  key       String @id
+  name      String
+  price     Int
+  period    String
+  badge     String @default("")
+  // Xususiyatlar "|" bilan ajratilgan satr — alohida jadval ortiqcha
+  // murakkablik bo'lardi, ro'yxat qisqa va faqat ko'rsatish uchun.
+  features  String
+  sortOrder Int    @default(0) @map("sort_order")
+
+  updatedById Int?     @map("updated_by_id")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("premium_plans")
 }

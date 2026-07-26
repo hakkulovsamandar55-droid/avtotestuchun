@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { ChevronLeft } from "lucide-react";
 import BottomNav from "../components/BottomNav";
 import HomeTab from "./HomeTab";
 import StatsTab from "./StatsTab";
@@ -14,9 +16,16 @@ import SupportChatScreen from "./SupportChatScreen";
 import PaymentScreen from "./PaymentScreen";
 import OfficialExamContainer from "./officialExam/OfficialExamContainer";
 import StudentSchoolContainer from "./school/StudentSchoolContainer";
+import TopicTestsScreen from "./TopicTestsScreen";
+import MistakesHubScreen from "./MistakesHubScreen";
+import QuestionListScreen from "./QuestionListScreen";
+import TrickyTestScreen from "./TrickyTestScreen";
+import { getAllQuestions } from "../../shared/data/ticketsData";
+import { getQuestionsForTopic } from "../../shared/data/questionTopics";
 
 // 3-EKRAN: login+loading dan keyingi asosiy ilova — 3 bo'lim + pastki nav
 export default function MainApp({ user }) {
+  const { t } = useTranslation();
   const [active, setActive] = useState("home");
   const [showTickets, setShowTickets] = useState(false);
   const [activeTicket, setActiveTicket] = useState(null);
@@ -28,6 +37,13 @@ export default function MainApp({ user }) {
   const [showDuel, setShowDuel] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
   const [showSchool, setShowSchool] = useState(false);
+  const [showTopics, setShowTopics] = useState(false);
+  const [showMistakes, setShowMistakes] = useState(false);
+  const [showTricky, setShowTricky] = useState(false);
+  // questionList: null | "saved" | "mistakes" | "hardest"
+  const [questionList, setQuestionList] = useState(null);
+  // Mavzuli test: tanlangan mavzu kaliti
+  const [topicKey, setTopicKey] = useState(null);
   const [paymentPlan, setPaymentPlan] = useState(null);
 
   if (showOfficialExam) {
@@ -124,6 +140,82 @@ export default function MainApp({ user }) {
     );
   }
 
+  // Mavzuli test ishga tushdi — TestScreen qayta ishlatiladi
+  if (topicKey) {
+    const questions = getQuestionsForTopic(getAllQuestions(), topicKey);
+    return (
+      <div className="flex flex-col h-full">
+        <TestScreen
+          customQuestions={questions}
+          customTitle={t(`topics.names.${topicKey}`)}
+          onExit={() => setTopicKey(null)}
+        />
+      </div>
+    );
+  }
+
+  if (showTopics) {
+    return (
+      <div className="flex flex-col h-full">
+        <TopicTestsScreen
+          onBack={() => setShowTopics(false)}
+          onStartTopic={(key) => {
+            setShowTopics(false);
+            setTopicKey(key);
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (questionList) {
+    return (
+      <div className="flex flex-col h-full">
+        <QuestionListScreen
+          mode={questionList}
+          onBack={() => {
+            // Xatolar bo'limidan kelgan bo'lsa, unga qaytamiz —
+            // to'g'ridan-to'g'ri bosh sahifaga tashlash chalkash bo'ladi.
+            const cameFromHub = questionList === "mistakes" || questionList === "hardest";
+            setQuestionList(null);
+            if (cameFromHub) setShowMistakes(true);
+          }}
+        />
+      </div>
+    );
+  }
+
+  if (showMistakes) {
+    return (
+      <div className="flex flex-col h-full">
+        <MistakesHubScreen
+          onBack={() => setShowMistakes(false)}
+          onOpenCommon={() => {
+            setShowMistakes(false);
+            setQuestionList("hardest");
+          }}
+          onOpenMine={() => {
+            setShowMistakes(false);
+            setQuestionList("mistakes");
+          }}
+        />
+      </div>
+    );
+  }
+
+  // CHALG'ITUVCHI TESTLAR — ko'pchilik xato qiladigan savollardan tuzilgan test.
+  //
+  // Savollar serverdan ID sifatida keladi (global question_stats bo'yicha,
+  // yetmasa foydalanuvchining o'z xatolaridan). Matnlar mahalliy bazadan
+  // olinadi — tarmoq orqali qayta yuborish ma'nosiz bo'lardi.
+  if (showTricky) {
+    return (
+      <div className="flex flex-col h-full">
+        <TrickyTestScreen onBack={() => setShowTricky(false)} />
+      </div>
+    );
+  }
+
   if (showSigns) {
     return (
       <div className="flex flex-col h-full">
@@ -155,6 +247,11 @@ export default function MainApp({ user }) {
           onOpenOfficialExam={() => setShowOfficialExam(true)}
           onOpenStats={() => setActive("stats")}
           onOpenDuel={() => setShowDuel(true)}
+          onOpenSchool={() => setShowSchool(true)}
+          onOpenTopics={() => setShowTopics(true)}
+          onOpenMistakes={() => setShowMistakes(true)}
+          onOpenSaved={() => setQuestionList("saved")}
+          onOpenTricky={() => setShowTricky(true)}
         />
       )}
       {active === "stats" && <StatsTab />}
@@ -171,3 +268,4 @@ export default function MainApp({ user }) {
     </div>
   );
 }
+

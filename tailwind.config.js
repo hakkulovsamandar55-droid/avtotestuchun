@@ -9,6 +9,8 @@ export default {
         card: "var(--bg-card)",
         "card-soft": "var(--bg-card-soft)",
         "card-border": "var(--border-card)",
+        // Ochiluvchi oyna/modal uchun qattiq fon (shaffof shisha emas)
+        solid: "var(--bg-solid)",
         "text-main": "var(--text-primary)",
         "text-muted": "var(--text-secondary)",
         "icon-muted": "var(--icon-muted)",

@@ -66,7 +66,7 @@ export default function AdminBroadcastTab() {
 
       {error && <p className="text-red-500 text-xs mb-3">{error}</p>}
       {result != null && (
-        <p className="text-green-600 text-xs font-semibold mb-3">{t("admin.broadcast.sent", { count: result })}</p>
+        <p className="text-emerald-400 text-xs font-semibold mb-3">{t("admin.broadcast.sent", { count: result })}</p>
       )}
 
       <button

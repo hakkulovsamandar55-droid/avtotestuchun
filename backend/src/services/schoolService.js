@@ -83,11 +83,21 @@ export async function getMyActiveMembership(userId) {
  * (isCeo bayrog'i orqali), chunki CEO uchun ba'zi UI elementlari boshqacha.
  */
 export async function requireSchoolAccess(user, schoolId, allowedRoles = null) {
+  // MUHIM TUZATISH: avval ADMIN uchun darhol `membership: null` qaytarilardi.
+  // Natijada platforma egasi AYNI PAYTDA maktab a'zosi (Owner yoki
+  // o'qituvchi) bo'lsa ham, a'zolik talab qiladigan bo'limlarga kira
+  // olmasdi — masalan chatda "Siz bu maktabning a'zosi emassiz" chiqardi.
+  //
+  // Endi ADMIN uchun ham a'zolik izlanadi. `isCeo` va `membership` bir
+  // vaqtda mavjud bo'lishi mumkin: birinchisi platforma huquqini,
+  // ikkinchisi maktab ichidagi rolni bildiradi — bular bir-birini
+  // almashtirmaydi.
+  const membership = await getActiveMembership(user.id, schoolId);
+
   if (user.role === "ADMIN") {
-    return { isCeo: true, membership: null };
+    return { isCeo: true, membership: membership || null };
   }
 
-  const membership = await getActiveMembership(user.id, schoolId);
   if (!membership) {
     throw forbidden("Siz bu maktabga a'zo emassiz");
   }

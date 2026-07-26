@@ -67,6 +67,9 @@ export default function StudentProfileScreen({ schoolId, membershipId, onBack, o
 
   const { student, period, allTime, daily, recentExams, recentMistakes, homework } = data;
 
+  // Davr ichidagi jami o'qish vaqti (daqiqa). Kunlik qatordan yig'iladi.
+  const totalMinutes = daily.reduce((sum, d) => sum + (d.minutes || 0), 0);
+
   return (
     <div className="pb-8">
       <div className="px-5 pt-4">
@@ -156,6 +159,14 @@ export default function StudentProfileScreen({ schoolId, membershipId, onBack, o
           {t("school.answeredInPeriod", { count: period.questionsAnswered })} ·{" "}
           {t("school.allTimeTotal")}: {allTime.questionsAnswered}
         </p>
+        {/* Kunlik o'qish vaqti — 2026-07-26 dan kuzatiladi. Eski kunlarda
+            ma'lumot yo'q, shuning uchun 0 bo'lsa umuman ko'rsatilmaydi
+            ("0 daqiqa ishlagan" degan xato ma'no bermasligi uchun). */}
+        {totalMinutes > 0 && (
+          <p className="text-[11px] mt-1" style={{ color: "var(--accent-from)" }}>
+            {t("school.studyTimeInPeriod", { minutes: totalMinutes })}
+          </p>
+        )}
       </Section>
 
       {/* Oxirgi xatolar */}

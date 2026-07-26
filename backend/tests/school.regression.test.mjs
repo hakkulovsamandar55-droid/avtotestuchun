@@ -219,12 +219,16 @@ console.log("\n=== XATO 8: minScore bo'sh bo'lsa 0 bo'lib saqlanardi ===");
 {
   // XATO EDI: `minScore != null ? Number(minScore) : null` — "" uchun
   // Number("") === 0, ya'ni "minimal ball 0" saqlanardi.
+  //
+  // ESLATMA: bu test ilgari `params: { ticketId: 1 }` yuborardi — noto'g'ri
+  // maydon nomi. Backend uni jimgina saqlardi va natijada TICKETS vazifasi
+  // ISTALGAN bilet bilan yopilardi (XATO 15 ga qarang).
   const { status, json } = await req("POST", `/api/school/${school1Id}/groups/${groupAId}/homework`, {
     user: owner,
     body: {
       title: "Uy vazifasi",
       type: "TICKETS",
-      params: { ticketId: 1 },
+      params: { ticketNumbers: [1] },
       minScore: "",
       deadline: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString(),
     },
@@ -240,7 +244,7 @@ console.log("\n=== XATO 9: minScore diapazoni tekshirilmasdi ===");
     body: {
       title: "Xato",
       type: "TICKETS",
-      params: { ticketId: 1 },
+      params: { ticketNumbers: [1] },
       minScore: 150,
       deadline: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString(),
     },
@@ -461,6 +465,145 @@ console.log("\n=== YANGI: o'qituvchini guruhga tayinlash ===");
     { user: teacherA, body: { groupId: groupAId } }
   );
   check("o'qituvchi o'zi tayinlay olmadi", selfAssign.status === 403);
+}
+
+console.log("\n=== XATO 14: SIGNS vazifasi bajarilishi mumkin emas edi ===");
+{
+  // XATO EDI: isMatchingHomeworkType SIGNS uchun attemptType === "SIGNS"
+  // kutardi, lekin hech qanday kod bu turni yubormasdi (belgilar testi
+  // umuman yo'q edi). O'qituvchi vazifa berardi, talaba esa uni HECH QACHON
+  // yopa olmasdi va muddat tugagach MISSED bo'lib aybdor chiqardi.
+  const hw = await req("POST", `/api/school/${school1Id}/groups/${groupAId}/homework`, {
+    user: owner,
+    body: {
+      title: "Ogohlantiruvchi belgilarni o'rgan",
+      type: "SIGNS",
+      params: { category: "warning", questionCount: 10 },
+      deadline: new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString(),
+    },
+  });
+  check("SIGNS vazifasi yaratildi", hw.status === 201);
+
+  // Talaba shu toifadan test ishlaydi
+  const done = await req("POST", "/api/stats/signs-quiz", {
+    user: studentA,
+    body: { correctCount: 9, totalCount: 10, category: "warning" },
+  });
+  check("belgilar testi qabul qilindi", done.status === 200);
+  check("vazifa yopildi", done.json?.homeworkClosed === true);
+}
+
+console.log("\n=== XATO 15: SIGNS toifasi tekshirilmasdi ===");
+{
+  const hw = await req("POST", `/api/school/${school1Id}/groups/${groupAId}/homework`, {
+    user: owner,
+    body: {
+      title: "Xizmat belgilari",
+      type: "SIGNS",
+      params: { category: "service", questionCount: 10 },
+      deadline: new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString(),
+    },
+  });
+  check("ikkinchi SIGNS vazifasi yaratildi", hw.status === 201);
+
+  // BOSHQA toifadan test ishlash bu vazifani YOPMASLIGI kerak — aks holda
+  // "xizmat belgilarini o'rgan" vazifasini ogohlantiruvchilardan yopib
+  // qo'yish mumkin bo'lardi.
+  const wrongCat = await req("POST", "/api/stats/signs-quiz", {
+    user: studentA,
+    body: { correctCount: 10, totalCount: 10, category: "priority" },
+  });
+  check("boshqa toifa vazifani yopmadi", wrongCat.json?.homeworkClosed === false);
+
+  const rightCat = await req("POST", "/api/stats/signs-quiz", {
+    user: studentA,
+    body: { correctCount: 10, totalCount: 10, category: "service" },
+  });
+  check("to'g'ri toifa vazifani yopdi", rightCat.json?.homeworkClosed === true);
+}
+
+console.log("\n=== XATO 16: vazifa parametrlari tekshirilmasdi ===");
+{
+  // 999-bilet mavjud emas. Avval bunday vazifa YARATILARDI, lekin uni
+  // bajarish imkonsiz bo'lardi — talaba aybdor bo'lib chiqardi.
+  const bad = await req("POST", `/api/school/${school1Id}/groups/${groupAId}/homework`, {
+    user: owner,
+    body: {
+      title: "Mavjud bo'lmagan bilet",
+      type: "TICKETS",
+      params: { ticketNumbers: [999] },
+      deadline: new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString(),
+    },
+  });
+  check("noto'g'ri bilet raqami rad etildi", bad.status === 400);
+
+  const badCat = await req("POST", `/api/school/${school1Id}/groups/${groupAId}/homework`, {
+    user: owner,
+    body: {
+      title: "Mavjud bo'lmagan toifa",
+      type: "SIGNS",
+      params: { category: "kosmik-belgilar" },
+      deadline: new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString(),
+    },
+  });
+  check("noto'g'ri belgi toifasi rad etildi", badCat.status === 400);
+}
+
+console.log("\n=== XATO 17: maqsadli vazifa berish imkoni yo'q edi ===");
+{
+  // O'qituvchi talaba profilida zaiflikni ko'radi, lekin aynan o'sha odamga
+  // vazifa bera olmasdi — faqat butun guruhga.
+  const studentAMembership = await prisma.membership.findFirst({
+    where: { userId: studentA.id, status: "ACTIVE" },
+  });
+  const studentB = await prisma.user.create({
+    data: { id: 301, telegramId: 301n, name: "Talaba B" },
+  });
+  const bMembership = await prisma.membership.create({
+    data: {
+      userId: studentB.id,
+      schoolId: school1Id,
+      groupId: groupAId,
+      role: "STUDENT",
+      status: "ACTIVE",
+    },
+  });
+
+  const hw = await req("POST", `/api/school/${school1Id}/groups/${groupAId}/homework`, {
+    user: owner,
+    body: {
+      title: "Faqat A uchun qo'shimcha mashq",
+      type: "PRACTICE",
+      deadline: new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString(),
+      targetMembershipIds: [studentAMembership.id],
+    },
+  });
+  check("maqsadli vazifa yaratildi", hw.status === 201);
+
+  const subs = await prisma.homeworkSubmission.findMany({
+    where: { homeworkId: hw.json.homework.id },
+  });
+  check("faqat 1 talabaga berildi", subs.length === 1);
+  check("aynan tanlangan talabaga", subs[0].membershipId === studentAMembership.id);
+  check("isTargeted belgilandi", hw.json.homework.isTargeted === true);
+
+  // Guruhdagi boshqa talaba bu vazifani ko'rmasligi kerak
+  const bSubs = await prisma.homeworkSubmission.findMany({
+    where: { membershipId: bMembership.id, homeworkId: hw.json.homework.id },
+  });
+  check("boshqa talabaga berilmadi", bSubs.length === 0);
+
+  // Boshqa guruh talabasini maqsad qilib bo'lmaydi
+  const foreign = await req("POST", `/api/school/${school1Id}/groups/${groupAId}/homework`, {
+    user: owner,
+    body: {
+      title: "Begona talaba",
+      type: "PRACTICE",
+      deadline: new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString(),
+      targetMembershipIds: [99999],
+    },
+  });
+  check("guruhdan tashqari talaba rad etildi", foreign.status === 400);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

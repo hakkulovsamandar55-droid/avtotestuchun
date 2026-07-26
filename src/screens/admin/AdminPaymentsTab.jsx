@@ -102,7 +102,7 @@ function CardSettingsForm() {
           <p className="text-text-main text-sm font-semibold tracking-wide">{settings.cardNumber || "—"}</p>
           <p className="text-text-muted text-xs mt-0.5">{settings.cardOwner || "—"}</p>
           {saved && (
-            <p className="text-green-600 text-[11px] font-semibold mt-2 flex items-center gap-1">
+            <p className="text-emerald-400 text-[11px] font-semibold mt-2 flex items-center gap-1">
               <Check size={12} /> {t("admin.saved")}
             </p>
           )}
@@ -129,11 +129,11 @@ function PaymentCard({ payment, onApprove, onReject }) {
           </p>
         </div>
         {warnings.length === 0 ? (
-          <span className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-50 rounded-full px-2 py-1 shrink-0">
+          <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/15 rounded-full px-2 py-1 shrink-0">
             <CheckCircle2 size={11} /> {payment.ocr.confidence}%
           </span>
         ) : (
-          <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-50 rounded-full px-2 py-1 shrink-0">
+          <span className="flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-500/15 rounded-full px-2 py-1 shrink-0">
             <AlertTriangle size={11} /> {warnings.length}
           </span>
         )}
@@ -168,11 +168,11 @@ function PaymentCard({ payment, onApprove, onReject }) {
           <div>
             <p className="text-[11px] text-text-muted mb-1">{t("admin.payments.ocrWarnings")}:</p>
             {warnings.length === 0 ? (
-              <p className="text-[11px] text-green-600 font-medium">{t("admin.payments.noWarnings")}</p>
+              <p className="text-[11px] text-emerald-400 font-medium">{t("admin.payments.noWarnings")}</p>
             ) : (
               <ul className="space-y-0.5">
                 {warnings.map((w) => (
-                  <li key={w} className="text-[11px] text-amber-600">• {t(`admin.payments.warning.${w}`)}</li>
+                  <li key={w} className="text-[11px] text-amber-400">• {t(`admin.payments.warning.${w}`)}</li>
                 ))}
               </ul>
             )}
@@ -191,7 +191,7 @@ function PaymentCard({ payment, onApprove, onReject }) {
           <button
             onClick={async () => { setBusy("reject"); await onReject(payment.id); setBusy(""); }}
             disabled={busy !== ""}
-            className="flex-1 rounded-xl py-2.5 text-xs font-bold border border-red-200 text-red-600 bg-red-50 disabled:opacity-50"
+            className="flex-1 rounded-xl py-2.5 text-xs font-bold border border-red-500/40 text-red-400 bg-red-500/15 disabled:opacity-50"
           >
             {t("admin.payments.reject")}
           </button>

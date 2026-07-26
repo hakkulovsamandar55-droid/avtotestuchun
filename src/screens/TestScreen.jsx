@@ -1,15 +1,74 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, Check, X, RotateCcw } from "lucide-react";
-import { getTicketQuestions } from "../data/ticketsData";
+import { ChevronLeft, Check, X, RotateCcw, Bookmark, BookmarkCheck } from "lucide-react";
+import { getTicketQuestions } from "../../shared/data/ticketsData";
 import { api } from "../api";
 import SignIcon from "../components/SignIcon";
+import TicketQuestionImage from "../components/TicketQuestionImage";
 import { ACCENT_FROM, ACCENT_TO, ACCENT_WARM } from "../theme";
 
-// Bilet testi ekrani — savol-javob oqimi, darhol fikr-mulohaza, va yakuniy natija
-export default function TestScreen({ ticketNumber, onExit }) {
+/**
+ * Test ekrani — savol-javob oqimi, darhol fikr-mulohaza, yakuniy natija.
+ *
+ * QAYTA ISHLATILADI: bilet testi (ticketNumber) VA mavzuli test
+ * (customQuestions). Ikkinchisi uchun alohida ekran yozish kodni
+ * takrorlash bo'lardi — oqim aynan bir xil.
+ *
+ * @param {number} [ticketNumber] bilet raqami
+ * @param {object[]} [customQuestions] tayyor savollar (mavzuli test uchun)
+ * @param {string} [customTitle] sarlavha (mavzu nomi)
+ */
+export default function TestScreen({ ticketNumber, customQuestions, customTitle, onExit }) {
   const { t } = useTranslation();
-  const questions = useMemo(() => getTicketQuestions(ticketNumber), [ticketNumber]);
+  const questions = useMemo(
+    () => (customQuestions?.length ? customQuestions : getTicketQuestions(ticketNumber)),
+    [customQuestions, ticketNumber]
+  );
+
+  // Saqlangan savollar — test davomida belgilash uchun.
+  // Ro'yxat bir marta yuklanadi; keyingi o'zgarishlar mahalliy holatda.
+  // Test boshlanish vaqti — sarflangan vaqtni hisoblash uchun.
+  // useRef: qayta render'da qiymat o'zgarmasligi kerak.
+  const startedAtRef = useRef(Date.now());
+
+  const [savedIds, setSavedIds] = useState(new Set());
+  const [savingId, setSavingId] = useState(null);
+
+  useEffect(() => {
+    api
+      .getSavedQuestions()
+      .then((res) => setSavedIds(new Set((res.saved || []).map((x) => x.questionId))))
+      .catch(() => {
+        // Saqlanganlar yuklanmasa ham test ishlashda davom etadi —
+        // nishonlar shunchaki bo'sh ko'rinadi.
+      });
+  }, []);
+
+  const toggleSave = useCallback(
+    async (questionId) => {
+      if (!questionId || savingId) return;
+      setSavingId(questionId);
+      const wasSaved = savedIds.has(questionId);
+      try {
+        if (wasSaved) {
+          await api.unsaveQuestion(questionId);
+          setSavedIds((prev) => {
+            const next = new Set(prev);
+            next.delete(questionId);
+            return next;
+          });
+        } else {
+          await api.saveQuestion(questionId);
+          setSavedIds((prev) => new Set(prev).add(questionId));
+        }
+      } catch {
+        // Tarmoq xatosi — foydalanuvchini test o'rtasida to'xtatmaymiz
+      } finally {
+        setSavingId(null);
+      }
+    },
+    [savedIds, savingId]
+  );
 
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState(null);
@@ -40,13 +99,35 @@ export default function TestScreen({ ticketNumber, onExit }) {
       setFinished(true);
       const correctCount = nextAnswers.filter((a) => a.isCorrect).length;
       const pct = Math.round((correctCount / total) * 100);
+
+      // HAR SAVOL natijasi alohida yuboriladi — "mening xatolarim" va
+      // "ko'pchilik xato qiladigan savollar" bo'limlari shundan to'ladi.
+      // Umumiy statistika (correctCount/totalCount) esa alohida endpointga
+      // ketadi, chunki u boshqa narsani hisoblaydi (examReadiness).
+      const perQuestion = nextAnswers
+        .map((a) => {
+          const q = questions[a.qIndex];
+          return q?.id ? { questionId: q.id, isCorrect: a.isCorrect } : null;
+        })
+        .filter(Boolean);
+      if (perQuestion.length > 0) {
+        api.recordAnswers(perQuestion).catch(() => {
+          // Xatolar statistikasi saqlanmasa ham natija ko'rsatilishda davom etadi
+        });
+      }
+
+      // Mavzuli testda bilet raqami yo'q — umumiy urinish "PRACTICE" bo'ladi.
       api
         .recordAttempt({
-          type: "TICKET",
-          ticketNumber,
+          type: customQuestions?.length ? "EXAM" : "TICKET",
+          ticketNumber: customQuestions?.length ? null : ticketNumber,
           correctCount,
           totalCount: total,
           passed: pct >= 70,
+          // Sarflangan vaqt (soniya). Backend 2 soatdan oshganini
+          // rad etadi — foydalanuvchi testni ochiq qoldirib ketgan
+          // bo'lishi mumkin.
+          durationSec: Math.round((Date.now() - startedAtRef.current) / 1000),
         })
         .catch(() => {
           // Statistika saqlanmasa ham, natija ekranda ko'rsatilishda davom etadi —
@@ -102,15 +183,41 @@ export default function TestScreen({ ticketNumber, onExit }) {
         >
           <ChevronLeft size={20} color="#E5E7EB" />
         </button>
-        <div className="flex-1">
-          <h1 className="text-lg font-extrabold text-white leading-none">
-            {t("test.ticketTitle", { num: ticketNumber })}
+        <div className="flex-1 min-w-0">
+          <h1 className="text-lg font-extrabold text-white leading-none truncate">
+            {customTitle || t("test.ticketTitle", { num: ticketNumber })}
           </h1>
           <p className="text-gray-400 text-xs mt-1">
             {t("test.questionOf", { current: index + 1, total })}
           </p>
         </div>
+
+        {/* SAQLASH tugmasi — foydalanuvchi savolni "Saqlangan savollar"
+            bo'limiga o'tkazadi. Savol matni yonida emas, sarlavhada:
+            savol matni uzun bo'lishi mumkin va tugma pastga siljib ketardi. */}
+        {question?.id && (
+          <button
+            onClick={() => toggleSave(question.id)}
+            disabled={savingId === question.id}
+            className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center shrink-0 disabled:opacity-50"
+            aria-label={savedIds.has(question.id) ? t("question.unsave") : t("question.save")}
+          >
+            {savedIds.has(question.id) ? (
+              <BookmarkCheck size={17} color={ACCENT_FROM} />
+            ) : (
+              <Bookmark size={17} color="#9CA3AF" />
+            )}
+          </button>
+        )}
       </div>
+
+      {/* Saqlanganda qisqa tasdiq — foydalanuvchi bosgani natija berdimi
+          degan savolda qolmasligi kerak */}
+      {question?.id && savedIds.has(question.id) && (
+        <p className="text-[11px] mb-3 -mt-2" style={{ color: ACCENT_FROM }}>
+          {t("question.savedNotice")}
+        </p>
+      )}
 
       {/* Progress bar */}
       <div className="h-1.5 rounded-full bg-white/10 overflow-hidden mb-6">
@@ -127,10 +234,19 @@ export default function TestScreen({ ticketNumber, onExit }) {
       {question.image && (
         <div className="w-full flex justify-center mb-5">
           <div
-            className="w-32 h-32 rounded-3xl bg-white flex items-center justify-center shadow-lg"
+            className="w-full max-w-[280px] rounded-3xl bg-white flex items-center justify-center shadow-lg p-2"
             style={{ boxShadow: "0 10px 30px rgba(108,92,231,0.25)" }}
           >
-            <SignIcon code={question.image} size={104} />
+            {/* MUHIM: question.image endi IKKI XIL bo'lishi mumkin —
+                yo'l belgisi kodi ("3.24", SignIcon uchun) yoki savol
+                sahnasi rasmi (masalan "t1-1.webp", TicketQuestionImage
+                uchun). Kengaytma bo'yicha ajratamiz — belgi kodlarida
+                hech qachon ".png" bo'lmaydi. */}
+            {question.image.endsWith(".webp") ? (
+              <TicketQuestionImage questionId={question.image.replace(".webp", "")} maxHeight={260} />
+            ) : (
+              <SignIcon code={question.image} size={104} />
+            )}
           </div>
         </div>
       )}
@@ -315,7 +431,11 @@ function ReviewView({ ticketNumber, answers, questions, onBack }) {
 
               {q.image && (
                 <div className="w-16 h-16 rounded-xl bg-white flex items-center justify-center mb-3">
-                  <SignIcon code={q.image} size={52} />
+                  {q.image.endsWith(".webp") ? (
+                    <TicketQuestionImage questionId={q.image.replace(".webp", "")} maxHeight={80} />
+                  ) : (
+                    <SignIcon code={q.image} size={52} />
+                  )}
                 </div>
               )}
 

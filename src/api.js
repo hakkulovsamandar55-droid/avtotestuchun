@@ -271,6 +271,33 @@ export const api = {
       `/api/school/${schoolId}/teacher/dashboard${groupId ? `?groupId=${groupId}` : ""}`
     ),
   // Maktab chati
+  // ===== Savollar banki: saqlangan, xatolar, global statistika =====
+  // Premium tariflar — narx DB'da, admin panelidan o'zgartiriladi
+  getPremiumPlans: () => request("/api/payments/plans"),
+  adminGetPremiumPlans: () => request("/api/admin/payments/plans"),
+  adminUpdatePremiumPlan: (key, patch) =>
+    request(`/api/admin/payments/plans/${encodeURIComponent(key)}`, {
+      method: "PATCH",
+      body: patch,
+    }),
+
+  getSavedQuestions: () => request("/api/questions/saved"),
+  saveQuestion: (questionId) =>
+    request("/api/questions/saved", { method: "POST", body: { questionId } }),
+  unsaveQuestion: (questionId) =>
+    request(`/api/questions/saved/${encodeURIComponent(questionId)}`, { method: "DELETE" }),
+  getMyMistakes: () => request("/api/questions/mistakes"),
+  getHardestQuestions: () => request("/api/questions/hardest"),
+  getTrickyQuestions: () => request("/api/questions/tricky"),
+  recordAnswers: (answers) =>
+    request("/api/questions/answers", { method: "POST", body: { answers } }),
+
+  submitSignsQuiz: (correctCount, totalCount, category) =>
+    request("/api/stats/signs-quiz", {
+      method: "POST",
+      body: { correctCount, totalCount, category: category ?? null },
+    }),
+
   schoolChats: (schoolId) => request(`/api/school/${schoolId}/chats`),
   schoolChatUnread: (schoolId) => request(`/api/school/${schoolId}/chats/unread`),
   schoolOpenChat: (schoolId, membershipId) =>

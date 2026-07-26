@@ -8,6 +8,7 @@ import * as schoolSvc from "../services/schoolService.js";
 import * as hwSvc from "../services/homeworkService.js";
 import * as schoolAnalytics from "../services/schoolAnalyticsService.js";
 import * as chatSvc from "../services/schoolChatService.js";
+import { rateLimit } from "../rateLimit.js";
 
 // Har bir joyda try/catch yozmaslik uchun kichik yordamchi — NaN yoki
 // yaroqsiz ID Prisma'ga tushib 500 qaytarmasligi kerak.
@@ -178,7 +179,18 @@ schoolRouter.get("/me", asyncHandler(async (req, res) => {
 }));
 
 // POST /api/school/join  { code }
-schoolRouter.post("/join", asyncHandler(async (req, res) => {
+// RATE LIMIT: 10 daqiqada 8 urinish.
+//
+// NIMA UCHUN MUHIM: taklif kodi qisqa (6 belgi). Chegarasiz bo'lsa,
+// avtomatik skript kodlarni birma-bir sinab, boshqa maktabga qo'shilib
+// olishi mumkin. 8 urinish — odam xato yozsa yetarli, lekin brute-force
+// uchun juda sekin.
+schoolRouter.post("/join", rateLimit({
+  name: "school-join",
+  max: 8,
+  windowMs: 10 * 60 * 1000,
+  message: "Juda ko'p urinish. 10 daqiqadan keyin qayta urinib ko'ring.",
+}), asyncHandler(async (req, res) => {
   const { code } = req.body;
   if (!code || typeof code !== "string") {
     return res.status(400).json({ error: "Kod kiritilishi shart" });
@@ -676,12 +688,23 @@ schoolRouter.post(
         }
       }
 
+      // Maqsadli vazifa: faqat tanlangan talabalarga. Bo'sh yoki
+      // yo'q bo'lsa — butun guruhga (avvalgi xatti-harakat saqlanadi).
+      let targetMembershipIds = null;
+      if (Array.isArray(req.body.targetMembershipIds) && req.body.targetMembershipIds.length > 0) {
+        targetMembershipIds = req.body.targetMembershipIds.map(Number);
+        if (targetMembershipIds.some((id) => !Number.isInteger(id) || id <= 0)) {
+          return res.status(400).json({ error: "Noto'g'ri talaba ID" });
+        }
+      }
+
       const homework = await hwSvc.createHomework(req.schoolId, groupId, req.user.id, {
         title,
         type,
         params,
         minScore: parsedMinScore,
         deadline,
+        targetMembershipIds,
       });
       res.status(201).json({ homework });
     } catch (err) {
@@ -902,8 +925,17 @@ schoolRouter.get(
 );
 
 // POST /api/school/:schoolId/chats/:chatId/messages  { text }
+//
+// RATE LIMIT: daqiqada 20 xabar. Oddiy suhbat uchun ortig'i bilan yetarli
+// (3 soniyada bir xabar), lekin avtomatik spam'ni to'sadi.
 schoolRouter.post(
   "/:schoolId/chats/:chatId/messages",
+  rateLimit({
+    name: "chat-send",
+    max: 20,
+    windowMs: 60 * 1000,
+    message: "Juda tez xabar yuborayapsiz. Bir daqiqa kutib qayta urinib ko'ring.",
+  }),
   requireSchool(),
   asyncHandler(async (req, res) => {
     const membership = requireMembership(req, res);

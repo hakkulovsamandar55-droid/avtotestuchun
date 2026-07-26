@@ -28,6 +28,7 @@ const TEST_FILES = [
   "school.http.test.mjs",
   "school.regression.test.mjs",
   "school.chat.test.mjs",
+  "questionBank.test.mjs",
 ];
 
 let restored = false;

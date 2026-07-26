@@ -1,24 +1,52 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Zap,
   Play,
   Layers,
-  Bookmark,
-  ListChecks,
-  ChevronRight,
-  Bell,
-  Trophy,
-  Flame,
   TrafficCone,
   Swords,
+  GraduationCap,
+  BookOpen,
+  AlertTriangle,
+  Bookmark,
+  Shuffle,
   ClipboardCheck,
+  Flame,
 } from "lucide-react";
-import { ACCENT_FROM, ACCENT_TO } from "../theme";
 import { api } from "../api";
 
-// 3a-EKRAN: "O'rganish" bo'limi — bosh sahifa
-export default function HomeTab({ user, onOpenTickets, onOpenSigns, onOpenExam, onOpenOfficialExam, onOpenStats, onOpenDuel }) {
+/**
+ * BOSH SAHIFA — frosted glass uslubi.
+ *
+ * TUZILMA (yuqoridan pastga, muhimlik tartibida):
+ *   1) Salomlashish + ketma-ket kunlar
+ *   2) HAFTALIK RITM — qaysi kun ishlangani. Bo'sh kunlar ko'zga tashlanadi,
+ *      bu qaytib kelishga undaydi. Ostida uchta asosiy ko'rsatkich.
+ *   3) Rasmiy imtihon — yagona to'q rangli tugma, eng muhim harakat
+ *   4) 2 ustunli kafellar — barcha bo'limlarga tez kirish
+ *
+ * NIMA UCHUN SHUNDAY: avvalgi variantlar (gradient hero + 2x2 grid, keyin
+ * "yo'l" metaforasi) yoki shablon edi, yoki mazmundan uzoq. Bu tuzilma
+ * foydalanuvchining haqiqiy savoliga javob beradi: "qanchalik tayyorman va
+ * bugun nima qildim?"
+ *
+ * Barcha panellar `bg-card` klassini ishlatadi — shisha ko'rinishi
+ * index.css da bir marta berilgan, shuning uchun bu yerda faqat tuzilma.
+ */
+export default function HomeTab({
+  user,
+  onOpenTickets,
+  onOpenSigns,
+  onOpenExam,
+  onOpenOfficialExam,
+  onOpenStats,
+  onOpenDuel,
+  onOpenSchool,
+  onOpenTopics,
+  onOpenMistakes,
+  onOpenSaved,
+  onOpenTricky,
+}) {
   const { t } = useTranslation();
   const [stats, setStats] = useState(null);
 
@@ -29,199 +57,269 @@ export default function HomeTab({ user, onOpenTickets, onOpenSigns, onOpenExam, 
       .catch(() => setStats(null));
   }, []);
 
-  const s = stats || {
-    passChance: 0,
-    learnedQuestionsPct: 0,
-    examResultsPct: 0,
-    examReadiness: 0,
-    streakDays: 0,
-  };
+  const s = stats || {};
+  const readiness = clampPct(s.examReadiness);
+  const passChance = clampPct(s.passChance);
+  const learned = clampPct(s.learnedQuestionsPct);
+  const streak = s.streakDays || 0;
+  const weekly = s.weeklyActivity || [];
 
-  const menuItems = [
+  const tiles = [
     {
+      key: "practice",
+      icon: Play,
+      title: t("home.dailyPractice"),
+      sub: t("home.chooseQuestionCount"),
+      onClick: onOpenExam,
+    },
+    {
+      key: "tickets",
       icon: Layers,
       title: t("home.tickets"),
-      subtitle: t("home.ticketsSubtitle"),
-      bg: "#EEEBFF",
-      fg: ACCENT_FROM,
+      sub: `${learned}%`,
       onClick: onOpenTickets,
     },
     {
+      key: "signs",
       icon: TrafficCone,
       title: t("home.roadSigns"),
-      subtitle: t("home.roadSignsSubtitle"),
-      bg: "#FFE8E8",
-      fg: "#E4231C",
+      sub: t("home.roadSignsSubtitle"),
       onClick: onOpenSigns,
     },
     {
-      icon: Bookmark,
-      title: t("home.savedQuestions"),
-      subtitle: t("home.savedQuestionsSubtitle"),
-      bg: "#FFF3DC",
-      fg: "#F59E0B",
+      key: "topics",
+      icon: BookOpen,
+      title: t("home.topicTests"),
+      sub: t("home.topicTestsSubtitle"),
+      onClick: onOpenTopics,
     },
     {
-      icon: ListChecks,
-      title: t("home.topicTests"),
-      subtitle: t("home.topicTestsSubtitle"),
-      bg: "#FFE8DC",
-      fg: "#FB7A3C",
+      key: "mistakes",
+      icon: AlertTriangle,
+      title: t("home.mistakes"),
+      sub: t("home.mistakesSubtitle"),
+      onClick: onOpenMistakes,
+    },
+    {
+      key: "saved",
+      icon: Bookmark,
+      title: t("home.savedQuestions"),
+      sub: t("home.savedQuestionsSubtitle"),
+      onClick: onOpenSaved,
+    },
+    {
+      key: "tricky",
+      icon: Shuffle,
+      title: t("home.trickyTests"),
+      sub: t("home.trickyTestsSubtitle"),
+      onClick: onOpenTricky,
+    },
+    {
+      key: "duel",
+      icon: Swords,
+      title: t("home.duel"),
+      sub: t("home.duelSubtitle"),
+      onClick: onOpenDuel,
+    },
+    {
+      key: "school",
+      icon: GraduationCap,
+      title: t("home.school"),
+      sub: t("home.schoolSubtitle"),
+      onClick: onOpenSchool,
     },
   ];
 
   return (
     <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-4 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-text-muted text-sm">{t("home.welcome")}</p>
-          <h1 className="text-2xl font-extrabold text-text-main">
+      {/* Sarlavha */}
+      <div className="flex items-start justify-between">
+        <div className="min-w-0">
+          <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+            {t("home.welcome")}
+          </p>
+          <h1
+            className="text-[23px] font-extrabold truncate tracking-tight"
+            style={{ color: "var(--text-primary)" }}
+          >
             {user?.name || t("home.guest")}
           </h1>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-full bg-card-soft flex items-center justify-center">
-            <Trophy size={16} color="#D97706" />
-          </div>
-          <div className="w-9 h-9 rounded-full bg-card-soft flex items-center justify-center">
-            <Bell size={16} color="var(--icon-muted)" />
-          </div>
-          <div className="flex items-center gap-1 rounded-full bg-card-soft px-3 py-2">
-            <Flame size={14} color="#F97316" />
-            <span className="text-xs font-semibold text-orange-500">
-              {t("home.streakDays", { days: s.streakDays })}
-            </span>
-          </div>
+        <div className="flex items-center gap-1.5 rounded-full bg-card border border-card-border px-3 py-2 shrink-0">
+          <Flame size={13} color="#FDBA74" />
+          <span className="text-xs font-bold" style={{ color: "#FDBA74" }}>
+            {t("home.streakDays", { days: streak })}
+          </span>
         </div>
       </div>
 
-      {/* AI ko'rsatgich card */}
+      {/* HAFTALIK RITM + ko'rsatkichlar */}
       <button
         onClick={onOpenStats}
-        className="w-full text-left mt-6 rounded-3xl p-5 text-white relative overflow-hidden active:scale-[0.98] transition-transform"
-        style={{
-          background: `linear-gradient(135deg, ${ACCENT_FROM}, ${ACCENT_TO})`,
-        }}
+        className="w-full text-left mt-5 rounded-[26px] bg-card border border-card-border p-[19px] active:scale-[0.995] transition-transform"
       >
-        <div className="flex items-center gap-1.5 text-xs font-bold tracking-wide uppercase text-white/80">
-          <Zap size={13} /> {t("home.aiHint")}
+        <div className="flex items-center justify-between mb-4">
+          <span
+            className="text-[10px] font-extrabold uppercase tracking-[0.11em]"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            {t("home.thisWeek")}
+          </span>
+          <span
+            className="text-[11px] font-extrabold"
+            style={{ color: "var(--accent-from)" }}
+          >
+            {t("home.daysOfSeven", { count: weekly.filter((d) => d.active).length })}
+          </span>
         </div>
-        <p className="mt-1.5 text-sm font-semibold">
-          {t("home.readiness", { percent: s.examReadiness })}
-        </p>
-        <div className="mt-4 grid grid-cols-4 gap-2 text-center">
-          {[
-            [`${s.passChance}%`, t("home.passChance")],
-            [`${s.learnedQuestionsPct}%`, t("home.learningProgress")],
-            [`${s.examResultsPct}%`, t("home.examPassLevel")],
-            [`${s.examReadiness}%`, t("home.ready")],
-          ].map(([val, label]) => (
-            <div key={label}>
-              <p className="font-bold text-sm">{val}</p>
-              <p className="text-[9px] text-white/70 leading-tight mt-0.5">
-                {label}
-              </p>
-            </div>
-          ))}
+
+        <WeekStrip days={weekly} t={t} />
+
+        <div
+          className="flex gap-2.5 mt-[17px] pt-[15px] border-t"
+          style={{ borderColor: "var(--border-card)" }}
+        >
+          <Metric value={`${readiness}%`} label={t("home.readinessShort")} />
+          <Metric value={`${passChance}%`} label={t("home.passChanceShort")} />
+          <Metric value={formatCount(s.totalAnswered)} label={t("home.totalQuestions")} />
         </div>
       </button>
 
-      {/* Rasmiy imtihon — asosiy, alohida ajratilgan karta */}
+      {/* RASMIY IMTIHON — yagona to'q rangli harakat */}
       <button
         onClick={onOpenOfficialExam}
-        className="w-full mt-5 rounded-3xl p-5 text-left text-white relative overflow-hidden active:scale-[0.98] transition-transform"
-        style={{ background: "linear-gradient(135deg, #0F766E, #047857)" }}
+        className="w-full mt-[13px] rounded-[19px] py-4 px-4 font-bold text-sm text-white flex items-center justify-center gap-2 active:scale-[0.99] transition-transform"
+        style={{
+          background: "linear-gradient(135deg, var(--exam-from), var(--exam-to))",
+          boxShadow:
+            "0 14px 34px color-mix(in srgb, var(--exam-from) 42%, transparent), inset 0 1px 0 rgba(255,255,255,0.3)",
+        }}
       >
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-            <ClipboardCheck size={20} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-extrabold leading-tight">
-              {t("home.officialExam")}
-            </p>
-            <p className="text-white/75 text-xs mt-0.5">
-              {t("home.officialExamSubtitle")}
-            </p>
-          </div>
-          <ChevronRight size={20} color="rgba(255,255,255,0.6)" />
-        </div>
+        <ClipboardCheck size={17} />
+        {t("home.startOfficialExam")}
       </button>
 
-      {/* Two action cards */}
-      <div className="grid grid-cols-2 gap-3 mt-3">
-        <div
-          className="rounded-3xl p-5 text-white flex flex-col justify-between h-36"
-          style={{ backgroundColor: ACCENT_FROM }}
-        >
-          <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
-            <Zap size={16} />
-          </div>
-          <div>
-            <p className="font-bold leading-tight">
-              {t("home.dailyPractice")}
-            </p>
-            <p className="text-white/70 text-xs mt-0.5">
-              {t("home.chooseQuestionCount")}
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={onOpenExam}
-          className="rounded-3xl p-5 bg-card border border-card-border flex flex-col justify-between h-36 shadow-sm text-left active:scale-[0.98] transition-transform"
-        >
-          <div className="w-9 h-9 rounded-full bg-card-soft flex items-center justify-center">
-            <Play size={15} color="#F59E0B" fill="#F59E0B" />
-          </div>
-          <div>
-            <p className="font-bold text-text-main leading-tight">
-              {t("home.practiceExam")}
-            </p>
-            <p className="text-text-muted text-xs mt-0.5">
-              {t("home.practiceExamSubtitle")}
-            </p>
-          </div>
-        </button>
-      </div>
-
-      {/* Menu list */}
-      <div className="mt-5 space-y-3">
-        {menuItems.map(({ icon: Icon, title, subtitle, bg, fg, onClick }) => (
-          <button
-            key={title}
-            onClick={onClick}
-            className="w-full flex items-center gap-3 rounded-2xl bg-card border border-card-border shadow-sm px-4 py-3.5 text-left"
-          >
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-              style={{ backgroundColor: bg }}
-            >
-              <Icon size={18} color={fg} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-text-main text-sm">{title}</p>
-              <p className="text-text-muted text-xs truncate">{subtitle}</p>
-            </div>
-            <ChevronRight size={18} color="var(--chevron)" />
-          </button>
+      {/* KAFELLAR */}
+      <div className="grid grid-cols-2 gap-[11px] mt-[13px]">
+        {tiles.map((tile) => (
+          <Tile key={tile.key} {...tile} />
         ))}
       </div>
-
-      {/* Duel rejimi */}
-      <button
-        onClick={onOpenDuel}
-        className="w-full mt-3 flex items-center gap-3 rounded-2xl px-4 py-3.5 text-left active:scale-[0.98] transition-transform"
-        style={{ background: "linear-gradient(90deg, #1F2937, #111827)" }}
-      >
-        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-          <Swords size={18} color="#F5C542" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="font-semibold text-white text-sm">{t("home.duel")}</p>
-          <p className="text-white/60 text-xs truncate">{t("home.duelSubtitle")}</p>
-        </div>
-        <ChevronRight size={18} color="rgba(255,255,255,0.4)" />
-      </button>
     </div>
   );
+}
+
+/**
+ * Haftalik ritm chizig'i.
+ *
+ * Backend `weeklyActivity` bermasa ham yiqilmasligi kerak — bo'sh massivda
+ * hafta kunlari faolsiz holatda ko'rsatiladi.
+ */
+function WeekStrip({ days, t }) {
+  const labels = t("home.weekdayLetters", { returnObjects: true });
+  const letters = Array.isArray(labels) ? labels : ["D", "S", "C", "P", "J", "S", "Y"];
+
+  // Har doim 7 kun — ma'lumot yetmasa bo'sh kun sifatida to'ldiramiz
+  const cells = Array.from({ length: 7 }, (_, i) => days[i] || { active: false, isToday: false });
+
+  return (
+    <div className="flex gap-1.5">
+      {cells.map((d, i) => {
+        const state = d.isToday ? "today" : d.active ? "done" : "empty";
+        return (
+          <div key={i} className="flex-1 text-center">
+            <div
+              className="h-[35px] rounded-[10px] flex items-end justify-center pb-[5px]"
+              style={
+                state === "today"
+                  ? {
+                      background:
+                        "linear-gradient(180deg, var(--accent-from), var(--accent-to))",
+                      boxShadow:
+                        "0 6px 18px color-mix(in srgb, var(--accent-from) 45%, transparent), inset 0 1px 0 rgba(255,255,255,0.45)",
+                    }
+                  : state === "done"
+                    ? {
+                        background:
+                          "color-mix(in srgb, var(--accent-from) 18%, transparent)",
+                        boxShadow: "inset 0 1px 0 var(--glass-hi)",
+                      }
+                    : { background: "var(--track)" }
+              }
+            >
+              {state !== "empty" && (
+                <span
+                  className="w-[5px] h-[5px] rounded-full block"
+                  style={{
+                    background: state === "today" ? "#FFFFFF" : "var(--accent-from)",
+                  }}
+                />
+              )}
+            </div>
+            <div
+              className="text-[9.5px] mt-[5px]"
+              style={{
+                color: state === "today" ? "var(--accent-from)" : "var(--text-secondary)",
+                fontWeight: state === "today" ? 800 : 500,
+              }}
+            >
+              {letters[i]}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function Metric({ value, label }) {
+  return (
+    <div className="flex-1 min-w-0">
+      <div
+        className="text-[15.5px] font-extrabold tabular-nums"
+        style={{ color: "var(--text-primary)" }}
+      >
+        {value}
+      </div>
+      <div
+        className="text-[9.5px] mt-0.5 truncate"
+        style={{ color: "var(--text-secondary)" }}
+      >
+        {label}
+      </div>
+    </div>
+  );
+}
+
+function Tile({ icon: Icon, title, sub, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className="rounded-[19px] bg-card border border-card-border p-[15px] text-left active:scale-[0.985] transition-transform"
+    >
+      <Icon size={18} color="var(--accent-from)" />
+      <div
+        className="text-[12.5px] font-bold mt-2.5"
+        style={{ color: "var(--text-primary)" }}
+      >
+        {title}
+      </div>
+      <div className="text-[10px] mt-0.5" style={{ color: "var(--text-secondary)" }}>
+        {sub}
+      </div>
+    </button>
+  );
+}
+
+function clampPct(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(Math.max(Math.round(n), 0), 100);
+}
+
+/** 1240 -> "1 240" — uzun raqamlar kafelga sig'ishi uchun */
+function formatCount(v) {
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0) return "0";
+  return n.toLocaleString("ru-RU").replace(/\u00A0/g, " ");
 }

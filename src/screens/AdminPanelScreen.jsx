@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronLeft, Search, X, Save, Check, ShieldCheck, Crown } from "lucide-react";
+import { ChevronLeft, Search, X, Save, Check, ShieldCheck, Crown, Loader2 } from "lucide-react";
 import { ACCENT_FROM, ACCENT_TO } from "../theme";
 import { api } from "../api";
-import { PREMIUM_PLANS, formatPrice } from "../data/premiumData";
+import { formatPrice } from "../../shared/data/premiumPlans";
 import UserProfileScreen from "./admin/UserProfileScreen";
 import UserFiltersPanel from "./admin/UserFiltersPanel";
 import AdminSupportTab from "./admin/AdminSupportTab";
@@ -218,57 +218,221 @@ export default function AdminPanelScreen({ onBack, currentUserId, isSuperAdmin }
 
 function PremiumEditor() {
   const { t } = useTranslation();
+  const [plans, setPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editingKey, setEditingKey] = useState(null);
+  const [draft, setDraft] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
-  // MUHIM O'ZGARISH: bu bo'lim endi FAQAT KO'RISH uchun.
-  //
-  // Ilgari bu yerda tariflarni tahrirlash mumkin edi, lekin o'zgarishlar
-  // faqat localStorage'ga — ya'ni SHU adminning brauzeriga saqlanardi.
-  // Natijada:
-  //   - boshqa foydalanuvchilar eski narxni ko'rardi
-  //   - backend o'zining alohida narxi bo'yicha to'lovni tekshirardi
-  //     (chek "summa mos emas" ogohlantirishini olardi)
-  //   - admin narxni o'zgartirdim deb o'ylardi, aslida hech narsa o'zgarmagan
-  //
-  // Ishlamaydigan tugmani qoldirgandan ko'ra olib tashlash to'g'ri. Tariflarni
-  // haqiqatan o'zgartirish uchun narxlar DB'ga ko'chirilishi kerak
-  // (PremiumPlan jadvali + admin API) — alohida vazifa sifatida rejalashtirilgan.
+  // Narxlar endi DB'da (premium_plans jadvali). Ilgari ular kodda edi va
+  // admin panelda "dasturchiga murojaat qiling" ogohlantirishi turardi.
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.adminGetPremiumPlans();
+      setPlans(res.plans || []);
+      setError("");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  function startEdit(plan) {
+    setEditingKey(plan.key);
+    setError("");
+    setDraft({
+      name: plan.name,
+      price: String(plan.price),
+      period: plan.period,
+      badge: plan.badge || "",
+      features: (plan.features || []).join("\n"),
+    });
+  }
+
+  async function save() {
+    if (!draft || saving) return;
+    setSaving(true);
+    setError("");
+    try {
+      await api.adminUpdatePremiumPlan(editingKey, {
+        name: draft.name,
+        price: Number(draft.price),
+        period: draft.period,
+        badge: draft.badge,
+        // Har satr — alohida xususiyat
+        features: draft.features.split("\n").map((f) => f.trim()).filter(Boolean),
+      });
+      setEditingKey(null);
+      setDraft(null);
+      await load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 size={22} className="animate-spin" color="var(--icon-muted)" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 pb-4">
-      <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 px-4 py-3">
-        <p className="text-amber-600 dark:text-amber-400 text-xs leading-relaxed">
-          {t("admin.plansReadOnly")}
+      <div className="rounded-2xl bg-card border border-card-border px-4 py-3">
+        <p className="text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+          {t("admin.plansEditableHint")}
         </p>
       </div>
 
-      {PREMIUM_PLANS.map((plan) => (
-        <div key={plan.key} className="rounded-2xl bg-card border border-card-border shadow-sm p-4">
-          <div className="flex items-baseline justify-between mb-3">
-            <p className="font-extrabold text-text-main text-sm uppercase tracking-wide">
-              {plan.name}
-            </p>
-            <p className="font-bold text-text-main text-sm">
-              {formatPrice(plan.price)}
-              <span className="text-text-muted font-medium text-xs"> so'm / {plan.period}</span>
-            </p>
+      {error && <p className="text-red-400 text-xs px-1">{error}</p>}
+
+      {plans.map((plan) => {
+        const isEditing = editingKey === plan.key;
+        return (
+          <div key={plan.key} className="rounded-2xl bg-card border border-card-border shadow-sm p-4">
+            {isEditing ? (
+              <div className="space-y-3">
+                <Field label={t("admin.planName")}>
+                  <input
+                    value={draft.name}
+                    onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                    className="w-full rounded-xl border border-card-border px-3 py-2 text-sm outline-none"
+                    style={{ color: "var(--text-primary)" }}
+                  />
+                </Field>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <Field label={t("admin.planPrice")}>
+                    <input
+                      value={draft.price}
+                      onChange={(e) => setDraft({ ...draft, price: e.target.value })}
+                      inputMode="numeric"
+                      className="w-full rounded-xl border border-card-border px-3 py-2 text-sm outline-none"
+                      style={{ color: "var(--text-primary)" }}
+                    />
+                  </Field>
+                  <Field label={t("admin.planPeriod")}>
+                    <input
+                      value={draft.period}
+                      onChange={(e) => setDraft({ ...draft, period: e.target.value })}
+                      className="w-full rounded-xl border border-card-border px-3 py-2 text-sm outline-none"
+                      style={{ color: "var(--text-primary)" }}
+                    />
+                  </Field>
+                </div>
+
+                <Field label={t("admin.planBadge")} hint={t("admin.planBadgeHint")}>
+                  <input
+                    value={draft.badge}
+                    onChange={(e) => setDraft({ ...draft, badge: e.target.value })}
+                    className="w-full rounded-xl border border-card-border px-3 py-2 text-sm outline-none"
+                    style={{ color: "var(--text-primary)" }}
+                  />
+                </Field>
+
+                <Field label={t("admin.planFeatures")} hint={t("admin.planFeaturesHint")}>
+                  <textarea
+                    value={draft.features}
+                    onChange={(e) => setDraft({ ...draft, features: e.target.value })}
+                    rows={4}
+                    className="w-full rounded-xl border border-card-border px-3 py-2 text-sm outline-none resize-none"
+                    style={{ color: "var(--text-primary)" }}
+                  />
+                </Field>
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={save}
+                    disabled={saving}
+                    className="flex-1 rounded-xl py-2.5 text-xs font-bold text-white disabled:opacity-50"
+                    style={{
+                      background: "linear-gradient(135deg, var(--accent-from), var(--accent-to))",
+                    }}
+                  >
+                    {saving ? t("admin.saving") : t("admin.save")}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingKey(null);
+                      setDraft(null);
+                      setError("");
+                    }}
+                    className="rounded-xl px-4 py-2.5 text-xs font-semibold bg-card-soft border border-card-border"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    {t("admin.cancel")}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-baseline justify-between mb-3">
+                  <p className="font-extrabold text-text-main text-sm uppercase tracking-wide">
+                    {plan.name}
+                  </p>
+                  <p className="font-bold text-text-main text-sm">
+                    {formatPrice(plan.price)}
+                    <span className="text-text-muted font-medium text-xs"> so'm / {plan.period}</span>
+                  </p>
+                </div>
+
+                {plan.badge && (
+                  <span className="inline-block mb-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-card-soft border border-card-border text-text-muted">
+                    {plan.badge}
+                  </span>
+                )}
+
+                <ul className="space-y-1 mb-3">
+                  {(plan.features || []).map((f, i) => (
+                    <li key={i} className="text-text-muted text-xs flex gap-1.5">
+                      <span>-</span>
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  onClick={() => startEdit(plan)}
+                  className="w-full rounded-xl py-2.5 text-xs font-bold bg-card-soft border border-card-border"
+                  style={{ color: "var(--accent-from)" }}
+                >
+                  {t("admin.editPlan")}
+                </button>
+              </>
+            )}
           </div>
+        );
+      })}
+    </div>
+  );
+}
 
-          {plan.badge && (
-            <span className="inline-block mb-2 text-[10px] font-bold px-2 py-0.5 rounded-full bg-card-soft border border-card-border text-text-muted">
-              {plan.badge}
-            </span>
-          )}
-
-          <ul className="space-y-1.5">
-            {plan.features.map((f, i) => (
-              <li key={i} className="text-xs text-text-muted leading-snug flex gap-2">
-                <span className="shrink-0">-</span>
-                <span>{f}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
+function Field({ label, hint, children }) {
+  return (
+    <div>
+      <label
+        className="block text-[11px] font-semibold mb-1.5"
+        style={{ color: "var(--text-secondary)" }}
+      >
+        {label}
+      </label>
+      {children}
+      {hint && (
+        <p className="text-[10px] mt-1" style={{ color: "var(--text-secondary)", opacity: 0.8 }}>
+          {hint}
+        </p>
+      )}
     </div>
   );
 }

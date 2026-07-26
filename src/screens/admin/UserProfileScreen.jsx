@@ -47,7 +47,7 @@ function AdminNotesBox({ userId, initialNotes }) {
       />
       <div className="flex items-center justify-between">
         {saved ? (
-          <span className="text-green-600 text-[11px] font-semibold flex items-center gap-1">
+          <span className="text-emerald-400 text-[11px] font-semibold flex items-center gap-1">
             <Check size={12} /> {t("admin.saved")}
           </span>
         ) : <span />}
@@ -196,7 +196,7 @@ export default function UserProfileScreen({ userId, onBack, onOpenChat, isSuperA
             <p className="text-text-muted text-xs truncate">{general.username ? `@${general.username}` : "—"}</p>
           </div>
           {general.isBlocked && (
-            <span className="text-[10px] font-bold text-red-600 bg-red-50 rounded-full px-2.5 py-1 shrink-0">
+            <span className="text-[10px] font-bold text-red-400 bg-red-500/15 rounded-full px-2.5 py-1 shrink-0">
               {t("admin.profile.blockedBadge")}
             </span>
           )}

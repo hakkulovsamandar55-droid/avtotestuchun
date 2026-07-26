@@ -6,6 +6,7 @@ import { asyncHandler } from "../asyncHandler.js";
 import { uploadImage, publicUrlFor, UPLOADS_DIR } from "../lib/upload.js";
 import { analyzeReceipt, computeReceiptHash } from "../services/receiptOcr.js";
 import { logActivity, logAdminAction, notifyAllAdmins } from "../services/activity.js";
+import * as premiumPlanSvc from "../services/premiumPlanService.js";
 import { findPlan } from "../data/premiumPlans.js";
 import { requireIdParam } from "../lib/validate.js";
 import path from "path";
@@ -21,8 +22,18 @@ const PREMIUM_DAYS_PER_PURCHASE = 30;
 // Narx endi shared/data/premiumPlans.js da SON sifatida saqlanadi.
 // Ilgari u "19 000" satri edi va har safar replace(/\D/g,"") bilan
 // tozalanardi — bu formatlash o'zgarsa jimgina noto'g'ri narx berardi.
-function planPrice(planKey) {
-  return findPlan(planKey)?.price ?? null;
+// MUHIM: narx endi DB'dan (premium_plans jadvali) o'qiladi, koddan emas.
+//
+// NIMA UCHUN: admin panelda narx o'zgartirilishi mumkin. Agar bu funksiya
+// koddagi eski narxni qaytarsa, foydalanuvchi YANGI narxni to'lardi, backend
+// esa ESKI narx bo'yicha chekni tekshirib "summa mos emas" deb rad etardi.
+// Ya'ni to'g'ri to'lagan odam pulini yo'qotardi.
+//
+// DB o'qilmasa premiumPlanService koddagi qiymatlarni zaxira sifatida
+// qaytaradi, shuning uchun bu chaqiruv hech qachon bo'sh qolmaydi.
+async function planPrice(planKey) {
+  const plan = await premiumPlanSvc.findPlanByKey(planKey);
+  return plan?.price ?? null;
 }
 
 // Karta ma'lumotlari endi .env emas, DB orqali boshqariladi — admin panelda
@@ -81,6 +92,13 @@ function serializePayment(p) {
 // ============================== FOYDALANUVCHI TOMONI ==============================
 
 // GET /api/payments/card-info — admin karta ma'lumotlari (to'lov qilishdan oldin ko'rsatiladi)
+// GET /api/payments/plans — tariflar ro'yxati (barcha foydalanuvchilar uchun).
+// Premium sahifasi shu yerdan narxni oladi, koddan emas — shunda admin
+// o'zgartirgan narx darhol hammaga ko'rinadi.
+paymentsRouter.get("/plans", asyncHandler(async (req, res) => {
+  res.json({ plans: await premiumPlanSvc.listPlans() });
+}));
+
 paymentsRouter.get("/card-info", requireAuth, loadCurrentUser, asyncHandler(async (_req, res) => {
   const settings = await getPaymentSettings();
   res.json({ cardNumber: settings.cardNumber, cardOwner: settings.cardOwner });
@@ -89,7 +107,7 @@ paymentsRouter.get("/card-info", requireAuth, loadCurrentUser, asyncHandler(asyn
 // GET /api/payments/plan-price/:planKey — chegirma hisobga olingan yakuniy narx
 paymentsRouter.get("/plan-price/:planKey", requireAuth, loadCurrentUser, asyncHandler(async (req, res) => {
   const { planKey } = req.params;
-  const base = planPrice(planKey);
+  const base = await planPrice(planKey);
   if (base == null) return res.status(404).json({ error: "Tarif topilmadi" });
 
   const discount = await prisma.discount.findUnique({ where: { userId: req.user.id } });
@@ -152,7 +170,7 @@ paymentsRouter.post("/submit", requireAuth, loadCurrentUser, uploadImage.single(
   const discount = await prisma.discount.findUnique({ where: { userId } });
   const isExpired = discount?.expiresAt && discount.expiresAt < new Date();
   const discountPercent = discount && !isExpired ? discount.percent : 0;
-  const baseAmount = planPrice(planKey) ?? 0;
+  const baseAmount = (await planPrice(planKey)) ?? 0;
   const finalAmount = Math.round(baseAmount * (1 - discountPercent / 100));
 
   const paymentSettings = await getPaymentSettings();
@@ -200,6 +218,33 @@ const adminPayments = Router();
 adminPayments.use(requireAuth, loadCurrentUser, requireAdminUser);
 
 // GET /api/admin/payments/settings — joriy to'lov karta ma'lumotlari
+// PATCH /api/admin/payments/plans/:key — tarifni tahrirlash (faqat admin).
+//
+// `key` va muddat (durationDays) o'zgartirilmaydi — ular kodda va biznes
+// mantiqiga ta'sir qiladi. Bu yerda faqat ko'rinadigan qiymatlar.
+adminPayments.patch("/plans/:key", asyncHandler(async (req, res) => {
+  const { name, price, period, badge, features } = req.body || {};
+  try {
+    const plan = await premiumPlanSvc.updatePlan(req.params.key, req.user.id, {
+      name,
+      price,
+      period,
+      badge,
+      features,
+    });
+    res.json({ plan });
+  } catch (err) {
+    const status = { not_found: 404, invalid_input: 400 }[err.code];
+    if (!status) throw err;
+    return res.status(status).json({ error: err.code, message: err.message });
+  }
+}));
+
+// GET /api/admin/payments/plans — admin panel uchun ro'yxat
+adminPayments.get("/plans", asyncHandler(async (_req, res) => {
+  res.json({ plans: await premiumPlanSvc.listPlans() });
+}));
+
 adminPayments.get("/settings", asyncHandler(async (_req, res) => {
   const settings = await getPaymentSettings();
   res.json({ cardNumber: settings.cardNumber, cardOwner: settings.cardOwner, updatedAt: settings.updatedAt });

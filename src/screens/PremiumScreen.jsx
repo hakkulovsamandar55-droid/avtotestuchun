@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ChevronLeft, Check, Sparkles, Clock } from "lucide-react";
-import { PREMIUM_PLANS, formatPrice } from "../data/premiumData";
+import { PREMIUM_PLANS, formatPrice } from "../../shared/data/premiumPlans";
 import { ACCENT_FROM, ACCENT_TO } from "../theme";
 import { api } from "../api";
 
@@ -11,7 +11,21 @@ import { api } from "../api";
 // muddatni tanlaydi (uzoqroq muddat — kunlik hisobda arzonroq).
 export default function PremiumScreen({ onBack, onSelectPlan }) {
   const { t } = useTranslation();
-  const plans = PREMIUM_PLANS;
+  // Narxlar serverdan olinadi (DB'da saqlanadi, admin panelidan
+  // o'zgartiriladi). So'rov muvaffaqiyatsiz bo'lsa koddagi qiymatlar
+  // zaxira sifatida ishlatiladi — narx sahifasi hech qachon bo'sh qolmaydi.
+  const [plans, setPlans] = useState(PREMIUM_PLANS);
+
+  useEffect(() => {
+    api
+      .getPremiumPlans()
+      .then((res) => {
+        if (Array.isArray(res.plans) && res.plans.length > 0) setPlans(res.plans);
+      })
+      .catch(() => {
+        // Zaxira qiymatlar allaqachon o'rnatilgan
+      });
+  }, []);
   const [prices, setPrices] = useState(null); // { [planKey]: { amount, originalAmount, discountPercent } }
   const [selectedKey, setSelectedKey] = useState(
     plans.find((p) => p.badge)?.key || plans[0]?.key

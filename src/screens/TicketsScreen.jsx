@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronLeft } from "lucide-react";
 import { TOTAL_TICKETS, QUESTIONS_PER_TICKET } from "../data/ticketsData";
 
-// Biletlar ekrani — 1 dan 61 gacha bilet kartochkalari, tungi (dark) uslub
+// Biletlar ekrani — barcha bilet kartochkalari (TOTAL_TICKETS soniga qarab)
 export default function TicketsScreen({ onBack, onSelectTicket }) {
   const { t } = useTranslation();
   const tickets = Array.from({ length: TOTAL_TICKETS }, (_, i) => i + 1);

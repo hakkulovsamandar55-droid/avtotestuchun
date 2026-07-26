@@ -5,11 +5,21 @@ export function createFakeDb() {
     examAttempt: [], examEvent: [], attempt: [], activityLog: [], user: [],
     school: [], group: [], membership: [], invitation: [], homework: [],
     homeworkSubmission: [], schoolChat: [], schoolMessage: [], notification: [],
+    savedQuestion: [], questionMistake: [], questionStat: [], premiumPlan: [],
   };
   let ids = {
     examAttempt: 1, examEvent: 1, attempt: 1, activityLog: 1,
     school: 1, group: 1, membership: 1, invitation: 1, homework: 1,
     homeworkSubmission: 1, schoolChat: 1, schoolMessage: 1, notification: 1,
+    savedQuestion: 1, questionMistake: 1, questionStat: 1, premiumPlan: 1,
+  };
+
+  // Har bir jadvalning unique kalitlari (schema.prisma dagi @@unique bilan mos)
+  const UNIQUES = {
+    savedQuestion: [["userId", "questionId"]],
+    questionMistake: [["userId", "questionId"]],
+    schoolChat: [["studentMembershipId", "teacherMembershipId"]],
+    homeworkSubmission: [["homeworkId", "membershipId"]],
   };
 
   const DEFAULTS = {
@@ -22,6 +32,10 @@ export function createFakeDb() {
     schoolChat: { unreadForStudent: 0, unreadForTeacher: 0 },
     schoolMessage: { isRead: false },
     notification: { isRead: false },
+    savedQuestion: {},
+    questionMistake: { wrongCount: 1, resolvedAt: null },
+    questionStat: { totalCount: 0, wrongCount: 0 },
+    premiumPlan: { badge: '', sortOrder: 0 },
   };
 
   function matchValue(actual, condition) {
@@ -95,10 +109,22 @@ export function createFakeDb() {
 
   function model(name) {
     return {
-      create: async ({ data }) => {
+      create: async ({ data, select }) => {
+        // UNIQUE cheklovlarni simulyatsiya qilamiz. Real bazada bu indekslar
+        // bor; ularsiz idempotentlik testlari (ikki marta saqlash) ma'nosiz
+        // bo'lib qolardi — dublikat jimgina yaratilib ketardi.
+        const uniques = UNIQUES[name] || [];
+        for (const fields of uniques) {
+          const dup = db[name].find((r) => fields.every((f) => r[f] === data[f]));
+          if (dup) {
+            const err = new Error("Unique constraint failed");
+            err.code = "P2002";
+            throw err;
+          }
+        }
         const row = { id: ids[name]++, ...(DEFAULTS[name] || {}), ...data };
         db[name].push(row);
-        return { ...row };
+        return applySelect(row, select);
       },
       findUnique: async ({ where, select }) => {
         // Prisma kompozit unique kalitni ichma-ich obyekt sifatida beradi:
@@ -149,6 +175,27 @@ export function createFakeDb() {
         }
         return { count: created };
       },
+      upsert: async ({ where, create, update }) => {
+        // Kompozit unique kalitni yoyamiz (findUnique bilan bir xil mantiq)
+        let flat = where;
+        const wk = Object.keys(where || {});
+        if (wk.length === 1 && wk[0].includes('_')) {
+          const inner = where[wk[0]];
+          if (inner && typeof inner === 'object' && !(inner instanceof Date)) flat = inner;
+        }
+        const row = db[name].find((r) => matches(r, flat));
+        if (row) {
+          for (const [k, v] of Object.entries(update)) {
+            if (v && typeof v === 'object' && 'increment' in v) row[k] = (row[k] || 0) + v.increment;
+            else if (v && typeof v === 'object' && 'decrement' in v) row[k] = (row[k] || 0) - v.decrement;
+            else row[k] = v;
+          }
+          return row;
+        }
+        const created = { id: ids[name]++, ...(DEFAULTS[name] || {}), ...create };
+        db[name].push(created);
+        return created;
+      },
       count: async ({ where }) => db[name].filter((r) => matches(r, where)).length,
       update: async ({ where, data, select }) => {
         const row = db[name].find((r) => matches(r, where.id !== undefined ? { id: where.id } : where));
@@ -178,6 +225,13 @@ export function createFakeDb() {
           }
         });
         return { count: rows.length };
+      },
+      deleteMany: async ({ where }) => {
+        const before = db[name].length;
+        const keep = db[name].filter((r) => !matches(r, where));
+        db[name].length = 0;
+        db[name].push(...keep);
+        return { count: before - db[name].length };
       },
       delete: async ({ where }) => {
         const idx = db[name].findIndex((r) => matches(r, where));

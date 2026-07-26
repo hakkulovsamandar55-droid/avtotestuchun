@@ -1,17 +1,24 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { THEMES, THEME_ORDER } from "./themes";
+import { THEMES, THEME_ORDER, DEFAULT_THEME } from "./themes";
 
 const ThemeContext = createContext(null);
 const STORAGE_KEY = "tezprava-theme";
 
 // Olib tashlangan temalarning o'rnini bosuvchi xarita.
 //
-// NIMA UCHUN KERAK: "pink" temasi "aurora" bilan almashtirildi. Uni tanlagan
-// foydalanuvchilarda localStorage'da hali ham "pink" saqlanib turibdi.
-// Migratsiyasiz ular jimgina "light" ga tushib qolardi — bu "mening temam
-// yo'qoldi" bo'lib ko'rinadi. Yangi temaga o'tkazish to'g'riroq.
+// NIMA UCHUN KERAK: barcha eski temalar (light/dark/aurora/amber/crimson va
+// undan oldingi pink) yangi "frosted glass" uslubidagi temalar bilan
+// almashtirildi. Foydalanuvchilarda localStorage'da hali eski kalit turibdi.
+// Migratsiyasiz ular jimgina standart temaga tushib qolardi — bu "mening
+// temam yo'qoldi" bo'lib ko'rinadi. Eng yaqin yangi temaga o'tkazamiz:
+// yorug'lar -> day, quyuqlar -> night, rangdorlar -> mos rang varianti.
 const THEME_MIGRATIONS = {
-  pink: "aurora",
+  light: "day",
+  aurora: "day",
+  dark: "night",
+  pink: "ink",
+  crimson: "ink",
+  amber: "dune",
 };
 
 function getInitialTheme() {
@@ -25,10 +32,11 @@ function getInitialTheme() {
   } catch (e) {
     // localStorage yo'q bo'lishi mumkin — jim o'tkazamiz
   }
-  if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
-    return "dark";
+  // Tizim sozlamasini hurmat qilamiz
+  if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+    return "day";
   }
-  return "light";
+  return DEFAULT_THEME;
 }
 
 export function ThemeProvider({ children }) {
@@ -54,6 +62,11 @@ export function ThemeProvider({ children }) {
     root.style.setProperty("--accent-to", theme.accentTo);
 
     root.setAttribute("data-theme", themeKey);
+
+    // Telegram Mini App sarlavha rangi fon bilan mos bo'lishi kerak — aks
+    // holda ilova tepasida begona rangli chiziq ko'rinadi.
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", theme.vars["--bg-app"]);
 
     try {
       localStorage.setItem(STORAGE_KEY, themeKey);

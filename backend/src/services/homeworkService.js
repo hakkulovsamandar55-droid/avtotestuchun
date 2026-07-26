@@ -1,4 +1,6 @@
 import { prisma } from "../db.js";
+import { TOTAL_TICKETS } from "../../../shared/data/ticketsData.js";
+import { CATEGORIES as SIGN_CATEGORIES } from "../../../shared/data/signsData.js";
 
 // ============================================================================
 // UY VAZIFALARI (Homework)
@@ -36,7 +38,12 @@ function parseParams(raw) {
 }
 
 /** O'qituvchi yangi homework yaratadi va guruhdagi barcha faol talabalar uchun PENDING submission ochadi. */
-export async function createHomework(schoolId, groupId, createdById, { title, type, params, minScore, deadline }) {
+export async function createHomework(
+  schoolId,
+  groupId,
+  createdById,
+  { title, type, params, minScore, deadline, targetMembershipIds }
+) {
   if (!title || !title.trim()) throw new HomeworkError("invalid_input", "Sarlavha kiritilishi shart");
   if (!["PRACTICE", "OFFICIAL_EXAM", "TICKETS", "SIGNS"].includes(type)) {
     throw new HomeworkError("invalid_input", "Noto'g'ri homework turi");
@@ -49,6 +56,15 @@ export async function createHomework(schoolId, groupId, createdById, { title, ty
   const group = await prisma.group.findUnique({ where: { id: groupId } });
   if (!group || group.schoolId !== schoolId) throw notFound("Guruh");
 
+  // PARAMS VALIDATSIYASI.
+  //
+  // NIMA UCHUN KERAK: avval params tekshirilmasdan JSON.stringify qilinardi.
+  // O'qituvchi 999-biletni yoki mavjud bo'lmagan belgi toifasini ko'rsatsa,
+  // vazifa YARATILARDI lekin uni BAJARISH IMKONSIZ bo'lardi — talaba
+  // bunday biletni topa olmaydi, submission esa muddat tugagach MISSED
+  // bo'lib, talaba aybdor bo'lib chiqardi.
+  const cleanParams = validateParams(type, params);
+
   const homework = await prisma.homework.create({
     data: {
       schoolId,
@@ -56,27 +72,53 @@ export async function createHomework(schoolId, groupId, createdById, { title, ty
       createdById,
       title: title.trim(),
       type,
-      params: JSON.stringify(params || {}),
+      params: JSON.stringify(cleanParams),
       minScore: minScore ?? null,
       deadline: deadlineDate,
+      isTargeted: Array.isArray(targetMembershipIds) && targetMembershipIds.length > 0,
     },
   });
 
-  // Guruhdagi barcha faol talabalar uchun darhol PENDING submission yaratamiz.
-  // Bu o'qituvchiga "kim hali bajarmagan" ro'yxatini so'rovsiz ko'rsatish imkonini beradi.
-  const students = await prisma.membership.findMany({
+  // Kimga beriladi?
+  //
+  // MAQSADLI vazifa: faqat tanlangan talabalar. O'qituvchi talaba profilida
+  // zaiflikni ko'rib, aynan o'sha odamga vazifa berishi mumkin bo'lishi kerak.
+  //
+  // MUHIM: tanlangan ID'lar ROSTDAN HAM shu guruhning faol talabalari
+  // ekanini tekshiramiz. Aks holda o'qituvchi boshqa guruh (yoki boshqa
+  // maktab) talabasining membershipId sini yozib, unga vazifa "ilib"
+  // qo'yishi mumkin bo'lardi.
+  const groupStudents = await prisma.membership.findMany({
     where: { groupId, role: "STUDENT", status: "ACTIVE" },
     select: { id: true },
   });
+  const allowedIds = new Set(groupStudents.map((m) => m.id));
 
-  // createMany — bitta so'rov. Avval har talaba uchun alohida create()
-  // yuborilardi (50 talaba = 50 so'rov). skipDuplicates unique cheklovga
+  let recipients;
+  if (homework.isTargeted) {
+    const requested = [...new Set(targetMembershipIds.map(Number))];
+    recipients = requested.filter((id) => allowedIds.has(id));
+    if (recipients.length === 0) {
+      // Yaratilgan vazifani qoldirib ketmaymiz — hech kimga tegishli bo'lmagan
+      // vazifa ma'lumot bazasida axlat bo'lib qoladi va o'qituvchi ro'yxatida
+      // "0 talaba" bo'lib chalkashtiradi.
+      await prisma.homework.delete({ where: { id: homework.id } });
+      throw new HomeworkError(
+        "invalid_input",
+        "Tanlangan talabalar bu guruhda topilmadi"
+      );
+    }
+  } else {
+    recipients = [...allowedIds];
+  }
+
+  // createMany — bitta so'rov. skipDuplicates unique cheklovga
   // (homeworkId + membershipId) urilishdan himoya qiladi.
-  if (students.length > 0) {
+  if (recipients.length > 0) {
     await prisma.homeworkSubmission.createMany({
-      data: students.map((s) => ({
+      data: recipients.map((membershipId) => ({
         homeworkId: homework.id,
-        membershipId: s.id,
+        membershipId,
         status: "PENDING",
       })),
       skipDuplicates: true,
@@ -86,18 +128,31 @@ export async function createHomework(schoolId, groupId, createdById, { title, ty
   return homework;
 }
 
-/** Yangi talaba guruhga qo'shilganda, guruhning tugamagan homeworklariga ham qo'shiladi. */
+/**
+ * Yangi talaba guruhga qo'shilganda, guruhning tugamagan vazifalariga yoziladi.
+ *
+ * MUHIM: MAQSADLI vazifalar (isTargeted) TASHLAB KETILADI. Ular aynan
+ * tanlangan talabalar uchun yaratilgan — masalan o'qituvchi zaif talabaga
+ * qo'shimcha mashq bergan. Yangi kelgan odamni unga yozish mantiqsiz:
+ * u vazifani bajarmagan bo'lib chiqadi va statistikasi asossiz buziladi.
+ */
 export async function enrollMembershipInGroupHomeworks(membershipId, groupId) {
   const openHomeworks = await prisma.homework.findMany({
-    where: { groupId, deadline: { gt: new Date() } },
+    where: { groupId, deadline: { gt: new Date() }, isTargeted: false },
+    select: { id: true },
   });
-  await Promise.all(
-    openHomeworks.map((hw) =>
-      prisma.homeworkSubmission.create({
-        data: { homeworkId: hw.id, membershipId, status: "PENDING" },
-      })
-    )
-  );
+  if (openHomeworks.length === 0) return;
+
+  // createMany — bitta so'rov. skipDuplicates: talaba avval shu guruhda
+  // bo'lib, qaytib kelgan bo'lsa submission allaqachon bor bo'lishi mumkin.
+  await prisma.homeworkSubmission.createMany({
+    data: openHomeworks.map((hw) => ({
+      homeworkId: hw.id,
+      membershipId,
+      status: "PENDING",
+    })),
+    skipDuplicates: true,
+  });
 }
 
 /** O'qituvchi/Owner: guruhning barcha homeworklari + bajarilish foizi. */
@@ -153,30 +208,55 @@ export async function listMyHomework(membershipId) {
  * yoki mos homework bo'lmasa, jimgina hech narsa qilmaydi. Sabab: bu hook
  * asosiy oqimning (test topshirish) muvaffaqiyatini blok qilmasligi kerak.
  */
-export async function recordAttemptForHomework(userId, { type, score, attemptId, examAttemptId, ticketNumber }) {
+export async function recordAttemptForHomework(
+  userId,
+  { type, score, attemptId, examAttemptId, ticketNumber, signsCategory }
+) {
   try {
     const membership = await prisma.membership.findFirst({
       where: { userId, status: "ACTIVE", role: "STUDENT" },
     });
     if (!membership) return null; // talaba hech qanday maktabga a'zo emas
 
+    // MUHIM TUZATISH — LATE/MISSED nomuvofiqligi.
+    //
+    // AVVAL: bu so'rov faqat PENDING submission'larni olardi. Ammo
+    // expireOverdueSubmissions() muddati o'tganlarni MISSED qilib qo'yadi va
+    // u o'qituvchi ro'yxatni ochganda ishga tushadi. Natijada talabaning
+    // holati O'QITUVCHI SAHIFANI QACHON OCHGANIGA bog'liq bo'lardi:
+    //   - o'qituvchi ochmagan bo'lsa  -> submission PENDING -> LATE beriladi
+    //   - o'qituvchi ochgan bo'lsa    -> submission MISSED  -> hech nima
+    // Bir xil harakat uchun ikki xil natija — bu mantiqsiz.
+    //
+    // ENDI: MISSED ham hisobga olinadi. Muddatdan keyin bajarilgan ish
+    // har doim LATE bo'ladi, kim qachon nimaga qaraganidan qat'i nazar.
     const candidates = await prisma.homeworkSubmission.findMany({
-      where: { membershipId: membership.id, status: "PENDING" },
+      where: { membershipId: membership.id, status: { in: ["PENDING", "MISSED"] } },
       orderBy: { createdAt: "asc" },
     });
     if (candidates.length === 0) return null;
 
-    for (const sub of candidates) {
-      const homework = await prisma.homework.findUnique({ where: { id: sub.homeworkId } });
-      if (!homework || !isMatchingHomeworkType(homework, type, ticketNumber)) continue;
+    // N+1 EMAS: barcha vazifalar bitta so'rovda olinadi.
+    // Avval har submission uchun alohida findUnique yuborilardi.
+    const homeworks = await prisma.homework.findMany({
+      where: { id: { in: candidates.map((c) => c.homeworkId) } },
+    });
+    const hwById = new Map(homeworks.map((h) => [h.id, h]));
 
-      // Minimal ball talabi bo'lsa va unga yetmasa — bajarilgan deb hisoblanmaydi,
-      // submission PENDING holida qoladi (talaba qayta urinishi mumkin).
+    const now = new Date();
+    const closed = [];
+
+    for (const sub of candidates) {
+      const homework = hwById.get(sub.homeworkId);
+      if (!homework || !isMatchingHomeworkType(homework, type, ticketNumber, signsCategory)) continue;
+
+      // Minimal ball talabi bo'lsa va unga yetmasa — bajarilgan deb
+      // hisoblanmaydi, submission holicha qoladi (talaba qayta urinishi mumkin).
       if (homework.minScore != null && score != null && score < homework.minScore) {
         continue;
       }
 
-      const isLate = new Date() > homework.deadline;
+      const isLate = now > homework.deadline;
       const updated = await prisma.homeworkSubmission.update({
         where: { id: sub.id },
         data: {
@@ -184,13 +264,20 @@ export async function recordAttemptForHomework(userId, { type, score, attemptId,
           score: score ?? null,
           attemptId: attemptId ?? null,
           examAttemptId: examAttemptId ?? null,
-          completedAt: new Date(),
+          completedAt: now,
         },
       });
-      return updated; // bir martada faqat bitta homework yopiladi
+      closed.push(updated);
     }
 
-    return null;
+    // BARCHA mos vazifalar yopiladi, bittasi emas.
+    //
+    // AVVAL: `return updated` bilan birinchi mos vazifada to'xtardi. Agar
+    // talabaga bir vaqtda "12-biletni ishla" va "istalgan mashq qil" degan
+    // ikki vazifa berilgan bo'lsa, u 12-biletni ishlaganda IKKALASI ham
+    // haqiqatan bajarilgan bo'ladi — lekin faqat bittasi yopilardi va
+    // ikkinchisi muddat tugagach MISSED bo'lib, talaba aybdor ko'rinardi.
+    return closed.length > 0 ? closed[0] : null;
   } catch (err) {
     // Hook xatosi asosiy oqimni (masalan imtihon topshirishni) buzmasligi kerak
     console.error("Homework hook xatosi:", err);
@@ -198,14 +285,7 @@ export async function recordAttemptForHomework(userId, { type, score, attemptId,
   }
 }
 
-// MUHIM: bu funksiyaga keladigan `attemptType` mavjud AttemptType enumidan
-// EMAS — u chaqiruvchi tomonidan quyidagicha normallashtiriladi:
-//   stats.js (mashq: bilet)      -> "TICKETS"
-//   stats.js (mashq: erkin/aralash) -> "PRACTICE"
-//   examService.js (rasmiy imtihon) -> "OFFICIAL_EXAM"
-// Bu normalizatsiya shu yerda emas, chaqiruvchi joyda qilinadi, chunki har
-// bir chaqiruvchi o'zining kontekstini (TICKET vs EXAM enum qiymati) biladi.
-function isMatchingHomeworkType(homework, attemptType, ticketNumber) {
+function isMatchingHomeworkType(homework, attemptType, ticketNumber, signsCategory) {
   if (homework.type === "OFFICIAL_EXAM") return attemptType === "OFFICIAL_EXAM";
   if (homework.type === "PRACTICE") return attemptType === "PRACTICE" || attemptType === "TICKETS";
   if (homework.type === "TICKETS") {
@@ -214,7 +294,15 @@ function isMatchingHomeworkType(homework, attemptType, ticketNumber) {
     const wanted = Array.isArray(params.ticketNumbers) ? params.ticketNumbers : null;
     return !wanted || (ticketNumber != null && wanted.includes(ticketNumber));
   }
-  if (homework.type === "SIGNS") return attemptType === "SIGNS";
+  if (homework.type === "SIGNS") {
+    if (attemptType !== "SIGNS") return false;
+    // Toifa ko'rsatilgan bo'lsa, talaba AYNAN shu toifadan test ishlashi kerak.
+    // Aks holda "ogohlantiruvchi belgilarni o'rgan" vazifasini xizmat
+    // belgilaridan test ishlab yopib qo'yish mumkin bo'lardi.
+    const params = parseParams(homework.params);
+    if (!params.category) return true; // barcha toifalar
+    return signsCategory === params.category;
+  }
   return false;
 }
 
@@ -235,3 +323,44 @@ export async function expireOverdueSubmissions(groupId) {
 }
 
 export { HomeworkError };
+
+/**
+ * Vazifa parametrlarini tekshiradi va tozalaydi.
+ *
+ * Har bir tur uchun o'z qoidasi:
+ *   TICKETS — ticketNumbers: mavjud bilet raqamlari (1..TOTAL_TICKETS)
+ *   SIGNS   — category: mavjud belgi toifasi yoki null (barcha belgilar)
+ *   PRACTICE / OFFICIAL_EXAM — parametr talab qilinmaydi
+ */
+function validateParams(type, params) {
+  const p = params && typeof params === "object" ? params : {};
+
+  if (type === "TICKETS") {
+    const raw = Array.isArray(p.ticketNumbers) ? p.ticketNumbers : [];
+    const nums = [...new Set(raw.map(Number))].filter(
+      (n) => Number.isInteger(n) && n >= 1 && n <= TOTAL_TICKETS
+    );
+    if (nums.length === 0) {
+      throw new HomeworkError(
+        "invalid_input",
+        `Kamida bitta bilet tanlanishi kerak (1-${TOTAL_TICKETS})`
+      );
+    }
+    return { ticketNumbers: nums.sort((a, b) => a - b) };
+  }
+
+  if (type === "SIGNS") {
+    // null = barcha toifalar. Aks holda toifa mavjud bo'lishi shart.
+    const cat = p.category ?? null;
+    if (cat !== null && !SIGN_CATEGORIES.includes(cat)) {
+      throw new HomeworkError("invalid_input", "Noto'g'ri belgi toifasi");
+    }
+    const count = Number(p.questionCount) || 15;
+    if (!Number.isInteger(count) || count < 5 || count > 50) {
+      throw new HomeworkError("invalid_input", "Savol soni 5-50 oralig'ida bo'lishi kerak");
+    }
+    return { category: cat, questionCount: count };
+  }
+
+  return {};
+}
