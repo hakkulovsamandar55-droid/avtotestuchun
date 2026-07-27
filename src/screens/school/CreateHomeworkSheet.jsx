@@ -51,7 +51,7 @@ export default function CreateHomeworkSheet({ schoolId, groupId, onClose, onCrea
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  // Kimga: null = butun guruh, massiv = tanlangan talabalar
+  // Kimga: null = butun guruh, massiv = tanlangan talabalarga
   const [targets, setTargets] = useState(null);
   const [students, setStudents] = useState([]);
 
