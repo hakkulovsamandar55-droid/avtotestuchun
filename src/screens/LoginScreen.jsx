@@ -113,8 +113,8 @@ export default function LoginScreen({ onLogin, externalNotice }) {
   // yuklanish holatini ko'rsatamiz (forma umuman ko'rinmaydi).
   if (!needsForm) {
     return (
-      <div className="flex flex-col h-full bg-[#0B0B14] text-white px-6 items-center justify-center gap-4">
-        <GradientIcon />
+      <div className="flex flex-col h-full bg-[#0B0B14] text-white px-6 items-center justify-center gap-5">
+        <GradientIcon size={140} />
         <span className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
         {error && (
           <p className="text-center text-red-400 text-xs leading-relaxed px-2 max-w-xs">
