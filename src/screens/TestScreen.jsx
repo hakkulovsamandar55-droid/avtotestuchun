@@ -19,10 +19,10 @@ import { ACCENT_FROM, ACCENT_TO, ACCENT_WARM } from "../theme";
  * @param {string} [customTitle] sarlavha (mavzu nomi)
  */
 export default function TestScreen({ ticketNumber, customQuestions, customTitle, onExit }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const questions = useMemo(
-    () => (customQuestions?.length ? customQuestions : getTicketQuestions(ticketNumber)),
-    [customQuestions, ticketNumber]
+    () => (customQuestions?.length ? customQuestions : getTicketQuestions(ticketNumber, i18n.language)),
+    [customQuestions, ticketNumber, i18n.language]
   );
 
   // Saqlangan savollar — test davomida belgilash uchun.

@@ -19,7 +19,7 @@ import { api } from "../api";
  * ularni tarmoq orqali qayta yuklash ma'nosiz trafik.
  */
 export default function QuestionListScreen({ mode, onBack }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [items, setItems] = useState([]);
   const [savedIds, setSavedIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
@@ -30,9 +30,9 @@ export default function QuestionListScreen({ mode, onBack }) {
   // har render'da qayta qurmaslik kerak.
   const questionById = useMemo(() => {
     const map = new Map();
-    for (const q of getAllQuestions()) map.set(q.id, q);
+    for (const q of getAllQuestions(i18n.language)) map.set(q.id, q);
     return map;
-  }, []);
+  }, [i18n.language]);
 
   const load = useCallback(async () => {
     setLoading(true);

@@ -51,8 +51,8 @@ const ICONS = {
  * ko'rsatiladi — foydalanuvchi qancha material borligini biladi.
  */
 export default function TopicTestsScreen({ onBack, onStartTopic }) {
-  const { t } = useTranslation();
-  const topics = getTopicSummary(getAllQuestions());
+  const { t, i18n } = useTranslation();
+  const topics = getTopicSummary(getAllQuestions(i18n.language));
 
   return (
     <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-8 animate-slide-in">

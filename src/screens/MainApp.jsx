@@ -26,7 +26,7 @@ import { getQuestionsForTopic } from "../../shared/data/questionTopics";
 
 // 3-EKRAN: login+loading dan keyingi asosiy ilova — 3 bo'lim + pastki nav
 export default function MainApp({ user }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [active, setActive] = useState("home");
   const [showTickets, setShowTickets] = useState(false);
   const [activeTicket, setActiveTicket] = useState(null);
@@ -144,7 +144,7 @@ export default function MainApp({ user }) {
 
   // Mavzuli test ishga tushdi — TestScreen qayta ishlatiladi
   if (topicKey) {
-    const questions = getQuestionsForTopic(getAllQuestions(), topicKey);
+    const questions = getQuestionsForTopic(getAllQuestions(i18n.language), topicKey);
     return (
       <div className="flex flex-col h-full">
         <TestScreen

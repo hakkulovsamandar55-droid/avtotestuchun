@@ -16,9 +16,9 @@ function formatTime(totalSeconds) {
 // Imtihon rejimi — barcha biletlardan tasodifiy 20 ta savol, 25 daqiqa vaqt,
 // 2 marta xato qilinsa imtihon avtomatik yakunlanadi (yiqilish)
 export default function ExamScreen({ onExit }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [attempt, setAttempt] = useState(0);
-  const questions = useMemo(() => getRandomExamQuestions(), [attempt]);
+  const questions = useMemo(() => getRandomExamQuestions(i18n.language), [attempt, i18n.language]);
 
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState(null);

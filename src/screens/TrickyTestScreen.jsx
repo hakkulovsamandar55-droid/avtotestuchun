@@ -22,7 +22,7 @@ import TestScreen from "./TestScreen";
  * xato ko'rsatishdan yaxshiroq.
  */
 export default function TrickyTestScreen({ onBack }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [questionIds, setQuestionIds] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -38,11 +38,11 @@ export default function TrickyTestScreen({ onBack }) {
   // ID -> savol. Matnlar mahalliy bazadan olinadi.
   const questions = useMemo(() => {
     if (!questionIds || questionIds.length === 0) return [];
-    const byId = new Map(getAllQuestions().map((q) => [q.id, q]));
+    const byId = new Map(getAllQuestions(i18n.language).map((q) => [q.id, q]));
     // Topilmagan ID'lar tashlab yuboriladi — savollar bazasi yangilangan
     // bo'lsa eski ID statistikada qolgan bo'lishi mumkin.
     return questionIds.map((id) => byId.get(id)).filter(Boolean);
-  }, [questionIds]);
+  }, [questionIds, i18n.language]);
 
   if (loading) {
     return (
