@@ -282,8 +282,8 @@ function CategoryView({ catKey, onBack, onSelectSign, onStartQuiz }) {
 }
 
 function SignDetail({ sign, onBack, onSelectSign }) {
-  const description = getSignDescription(sign.code);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const description = getSignDescription(sign.code, i18n.language);
   const meta = CATEGORY_META[sign.cat];
 
   // Shu kategoriyadagi qo'shni belgilar (o'xshashlarni ko'rish uchun)

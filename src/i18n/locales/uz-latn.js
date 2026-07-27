@@ -1,4 +1,48 @@
 export default {
+  onboarding: {
+    back: "Orqaga",
+    skip: "O'tkazib yuborish",
+    next: "Keyingi",
+    start: "Boshlash",
+    slides: {
+      welcome: {
+        title: "TezPrava'ga xush kelibsiz!",
+        desc: "Haydovchilik guvohnomasi imtihoniga tayyorlanish uchun kerakli barcha vositalar shu yerda. Keling, nima borligini birga ko'rib chiqamiz.",
+      },
+      officialExam: {
+        title: "Rasmiy imtihon simulyatsiyasi",
+        desc: "Haqiqiy imtihon sharoitida sinab ko'ring: 20 savol, 20 daqiqa, kamida 18 to'g'ri javob kerak. Natijangiz statistika va reytingga yoziladi.",
+      },
+      tickets: {
+        title: "120 bilet va mavzuli testlar",
+        desc: "Rasmiy 120 biletning barchasini navbat bilan ishlang, yoki kerakli mavzuni (svetofor, imtiyoz va h.k.) tanlab faqat o'shanga oid savollarni mashq qiling.",
+      },
+      signs: {
+        title: "Yo'l belgilari",
+        desc: "Barcha yo'l belgilarini guruhlar bo'yicha o'rganing va bilimingizni alohida test bilan darhol tekshiring.",
+      },
+      practiceTools: {
+        title: "Xatolarni tuzating, qiyinlarini mashq qiling",
+        desc: "Ko'p xato qilinadigan savollar (chalkash testlar), o'zingiz saqlagan savollar va shaxsiy xatolaringiz — barchasi alohida bo'limlarda kutib turadi.",
+      },
+      duel: {
+        title: "Do'stingiz bilan bellashing",
+        desc: "Duel rejimida boshqa foydalanuvchi bilan bir xil savollarga real vaqtda javob bering — kim ko'proq va tezroq to'g'ri javob berishini bilib oling.",
+      },
+      stats: {
+        title: "Tayyorligingizni kuzating",
+        desc: "Haftalik faollik, imtihonga tayyorlik foizi va o'tish ehtimoli — barchasi Statistika bo'limida, har kuni yangilanib boradi.",
+      },
+      language: {
+        title: "3 tilda ishlang",
+        desc: "Ilovani o'zbek lotin, o'zbek kirill yoki rus tilida ishlatishingiz mumkin — Sozlamalar bo'limidan istalgan vaqtda almashtiring.",
+      },
+      ready: {
+        title: "Tayyor! Boshlaymiz",
+        desc: "Endi bosh sahifaga o'tib, o'zingizga mos bo'limni tanlang. Omad tilaymiz!",
+      },
+    },
+  },
   officialExam: {
     title: "Rasmiy imtihon",
     introSubtitle: "Haqiqiy haydovchilik guvohnomasi imtihoni sharoitida sinov. Natijangiz statistika va reytingga yoziladi.",

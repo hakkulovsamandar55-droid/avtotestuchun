@@ -21,6 +21,10 @@ import MistakesHubScreen from "./MistakesHubScreen";
 import QuestionListScreen from "./QuestionListScreen";
 import TrickyTestScreen from "./TrickyTestScreen";
 import ReferralScreen from "./ReferralScreen";
+import OnboardingSlideshow, {
+  hasSeenOnboarding,
+  markOnboardingSeen,
+} from "../components/OnboardingSlideshow";
 import { getAllQuestions } from "../../shared/data/ticketsData";
 import { getQuestionsForTopic } from "../../shared/data/questionTopics";
 
@@ -28,6 +32,10 @@ import { getQuestionsForTopic } from "../../shared/data/questionTopics";
 export default function MainApp({ user }) {
   const { t, i18n } = useTranslation();
   const [active, setActive] = useState("home");
+  // Birinchi marta kirgan foydalanuvchiga ko'rsatiladi. Lazy initializer
+  // ishlatilyapti — har renderda emas, faqat komponent birinchi
+  // yaratilganda localStorage tekshiriladi.
+  const [showOnboarding, setShowOnboarding] = useState(() => !hasSeenOnboarding());
   const [showTickets, setShowTickets] = useState(false);
   const [activeTicket, setActiveTicket] = useState(null);
   const [showExam, setShowExam] = useState(false); // mashq imtihoni (eski)
@@ -47,6 +55,17 @@ export default function MainApp({ user }) {
   // Mavzuli test: tanlangan mavzu kaliti
   const [topicKey, setTopicKey] = useState(null);
   const [paymentPlan, setPaymentPlan] = useState(null);
+
+  if (showOnboarding) {
+    return (
+      <OnboardingSlideshow
+        onFinish={() => {
+          markOnboardingSeen();
+          setShowOnboarding(false);
+        }}
+      />
+    );
+  }
 
   if (showOfficialExam) {
     return (
