@@ -100,10 +100,25 @@ body::after {
    Panel gradient bo'lishi SHART: tekis shaffoflik plastik ko'rinadi.
    145° burchak — yorug'lik yuqori chapdan tushadi degan mantiq, butun
    ilovada izchil saqlanadi. */
+/* UNUMDORLIK: bu yerda ilgari backdrop-filter: blur(24-28px) saturate(1.35)
+   turardi va u 148 ta elementga qo'llanardi. backdrop-filter bo'lgan har
+   bir element alohida kompozit qatlam oladi va brauzer SKROLL PAYTIDA HAR
+   KADRDA uning orqasidagi hamma narsani qayta o'qib, qayta blur qilishi
+   kerak. Ekranda 8 ta karta bo'lsa — sekundiga 60 marta 8 ta katta radiusli
+   blur. Telegram WebView'da bu sezilarli "past Hz" effektini berardi.
+
+   NIMA UCHUN OLIB TASHLASH XAVFSIZ: kartalar ortida faqat body::before
+   dagi SILLIQ radial gradientlar va vinyetka turadi — o'tkir detal yo'q.
+   Silliq gradientni blur qilish natijasi deyarli o'ziga teng, ya'ni
+   effekt ko'rinmasdi, lekin narxi to'liq to'lanardi.
+
+   nav'da blur SAQLANDI (pastga qarang) — u chindan ham harakatlanuvchi
+   mazmun ustida turadi va bitta element, narxi cheklangan.
+
+   Agar panellar juda "yupqa" ko'rinsa: themes.js dagi --bg-card /
+   --bg-card-soft shaffofligini biroz oshirish kifoya. */
 .bg-card,
 .bg-card-soft {
-  backdrop-filter: blur(var(--glass-blur)) saturate(1.35);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.35);
   background-image: linear-gradient(155deg, var(--glass-hi-fill), transparent 65%);
   box-shadow:
     var(--glass-shadow),
@@ -147,8 +162,9 @@ input,
 textarea,
 select {
   background: var(--bg-card-soft);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  /* blur(14px) olib tashlandi: inputlar kartalar USTIDA turadi, ya'ni
+     ularning orqasida allaqachon tekis fon bor — blur qiladigan narsa
+     yo'q edi, faqat qo'shimcha kompozit qatlam yaratardi. */
   border-color: var(--border-card);
   box-shadow: inset 0 2px 6px var(--glass-lo);
 }
@@ -163,27 +179,14 @@ select:focus {
   background: var(--track);
 }
 
-/* backdrop-filter qo'llab-quvvatlanmasa (juda eski brauzer): shaffoflikni
-   oshiramiz, aks holda matn o'qilmaydi */
-@supports not (backdrop-filter: blur(1px)) {
-  .bg-card {
-    background-color: var(--bg-card-fallback, var(--bg-card));
-  }
-  [data-theme="night"],
-  [data-theme="ink"],
-  [data-theme="forest"] {
-    --bg-card-fallback: rgba(20, 24, 33, 0.92);
-  }
-  [data-theme="day"],
-  [data-theme="dune"] {
-    --bg-card-fallback: rgba(255, 255, 255, 0.94);
-  }
-}
+/* Eski brauzerlar uchun @supports zaxirasi OLIB TASHLANDI: kartalarda
+   backdrop-filter umuman ishlatilmaydi, shuning uchun "qo'llab-quvvatlanmasa"
+   holati endi mavjud emas. */
 
-/* Harakat kamaytirilgan rejim — blur og'ir effekt */
+/* Harakat kamaytirilgan rejim yoki sekin qurilma — nav'dagi blur ham
+   kamaytiriladi. Bu yagona qolgan backdrop-filter, shuning uchun faqat
+   shu yerda. */
 @media (prefers-reduced-motion: reduce) {
-  .bg-card,
-  .bg-card-soft,
   nav {
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);

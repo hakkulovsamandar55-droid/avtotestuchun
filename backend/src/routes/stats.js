@@ -4,6 +4,7 @@ import { requireAuth } from "../authMiddleware.js";
 import { loadCurrentUser } from "../services/userState.js";
 import { asyncHandler } from "../asyncHandler.js";
 import { generateUniqueReferralCode } from "../services/referral.js";
+import * as settingsSvc from "../services/settingsService.js";
 import { CATEGORIES as SIGN_CATEGORIES } from "../../../shared/data/signsData.js";
 import { TOTAL_TICKETS } from "../data/ticketsData.js";
 // Kun chegarasi mahalliy vaqtga (UTC+5) ko'ra hisoblanadi — lib/time.js ga qarang.
@@ -335,6 +336,14 @@ function buildWeeklyActivity(dayCounts) {
   return out;
 }
 
+// GET /api/stats/settings — ochiq (maxfiy bo'lmagan) global sozlamalar
+//
+// Frontend shundan biladi: global bepul rejim yoqilganmi, qaysi
+// imkoniyat pullik, "Telegram" tugmasi qaysi havolaga olib boradi.
+statsRouter.get("/settings", asyncHandler(async (_req, res) => {
+  res.json(await settingsSvc.getPublicSettings());
+}));
+
 // GET /api/stats/referral — foydalanuvchining o'z taklif ma'lumoti
 //
 // NIMA UCHUN KERAK: referral tizimi bazada allaqachon ishlaydi (kod
@@ -393,7 +402,12 @@ statsRouter.get("/referral", asyncHandler(async (req, res) => {
   // SHART: BotFather'da botning "Main Mini App" (Bot Settings ->
   // Configure Mini App yoki Menu Button -> Web App sifatida sozlangan)
   // yoqilgan bo'lishi kerak — aks holda bu havola oddiy chatni ochadi.
-  const botUsername = process.env.BOT_USERNAME || null;
+  // Bot username ADMIN PANELIDAN olinadi (ENV — zaxira). Sabab: ilgari
+  // faqat ENV dan o'qilardi, u serverda sozlanmagan bo'lsa link null
+  // bo'lib, tugma umuman ko'rinmasdi va foydalanuvchi "referal ishlamayapti"
+  // holatiga tushardi. Endi admin uni ilova ichidan kirita oladi.
+  const settings = await settingsSvc.getSettings();
+  const botUsername = settings.botUsername;
   const link = botUsername ? `https://t.me/${botUsername}?startapp=ref_${code}` : null;
 
   res.json({

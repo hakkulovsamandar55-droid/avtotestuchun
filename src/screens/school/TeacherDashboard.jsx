@@ -79,6 +79,10 @@ export default function TeacherDashboard({
   const [unread, setUnread] = useState(0);
   const [leaving, setLeaving] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  // KO'P GURUH: o'qituvchi bir nechta guruhga dars berishi mumkin.
+  // groupId prop — "asosiy" guruh (boshlang'ich qiymat), keyin
+  // foydalanuvchi pastdagi chiplar orqali almashtira oladi.
+  const [activeGroupId, setActiveGroupId] = useState(groupId);
 
   // O'qituvchi maktabdan o'z xohishi bilan chiqadi. Backend buni
   // talabalar bilan bir xil /api/school/leave orqali qo'llab-quvvatlaydi
@@ -124,8 +128,8 @@ export default function TeacherDashboard({
     setError("");
     try {
       const [dashboard, hw] = await Promise.all([
-        api.schoolTeacherDashboard(schoolId, groupId),
-        api.schoolGroupHomework(schoolId, groupId),
+        api.schoolTeacherDashboard(schoolId, activeGroupId),
+        api.schoolGroupHomework(schoolId, activeGroupId),
       ]);
       setData(dashboard);
       setHomework(hw.homework || []);
@@ -134,7 +138,7 @@ export default function TeacherDashboard({
     } finally {
       setLoading(false);
     }
-  }, [schoolId, groupId]);
+  }, [schoolId, activeGroupId]);
 
   useEffect(() => {
     load();
@@ -218,6 +222,38 @@ export default function TeacherDashboard({
           )}
         </button>
       </div>
+
+      {/* Guruh almashtirish — faqat bir nechta guruh bo'lsa ko'rinadi.
+          Bitta guruhli o'qituvchi uchun ortiqcha element chiqmaydi. */}
+      {(data.myGroups?.length ?? 0) > 1 && (
+        <div className="flex gap-2 overflow-x-auto mb-4 -mx-5 px-5 no-scrollbar">
+          {data.myGroups.map((g) => {
+            const active = g.id === activeGroupId;
+            return (
+              <button
+                key={g.id}
+                onClick={() => setActiveGroupId(g.id)}
+                className="shrink-0 rounded-full px-4 py-2 text-xs font-bold whitespace-nowrap transition-transform active:scale-95"
+                style={
+                  active
+                    ? {
+                        background:
+                          "linear-gradient(135deg, var(--accent-from), var(--accent-to))",
+                        color: "#FFFFFF",
+                      }
+                    : {
+                        background: "rgba(255,255,255,0.05)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        color: "#9CA3AF",
+                      }
+                }
+              >
+                {g.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Kunlik ko'rsatkichlar */}
       <div className="grid grid-cols-3 gap-2 mb-2">
@@ -342,7 +378,7 @@ export default function TeacherDashboard({
       {showCreateHomework && (
         <CreateHomeworkSheet
           schoolId={schoolId}
-          groupId={groupId}
+          groupId={activeGroupId}
           onClose={() => setShowCreateHomework(false)}
           onCreated={() => {
             setShowCreateHomework(false);

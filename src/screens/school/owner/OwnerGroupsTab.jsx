@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Users, X, ChevronRight } from "lucide-react";
+import { Plus, Users, X, ChevronRight, Copy, Check, Share2 } from "lucide-react";
 import { api } from "../../../api";
 
 /** Owner: guruhlarni boshqarish. */
@@ -10,6 +10,35 @@ export default function OwnerGroupsTab({ schoolId, onChanged, onOpenGroup }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
+  const [copiedId, setCopiedId] = useState(null);
+
+  // Guruh kodini nusxalaydi. Telegram Mini App ichida clipboard API
+  // ba'zan bloklanadi, shuning uchun xato jimgina yutiladi — foydalanuvchi
+  // kodni baribir ekranda ko'rib turadi va qo'lda ko'chira oladi.
+  function copyCode(code, groupId) {
+    navigator.clipboard?.writeText(code).then(
+      () => {
+        setCopiedId(groupId);
+        setTimeout(() => setCopiedId(null), 1500);
+      },
+      () => {}
+    );
+  }
+
+  // Telegram orqali ulashish — deep link talabani to'g'ridan-to'g'ri
+  // tasdiqlash oynasiga olib boradi (kod yozish shart emas).
+  function shareGroup(group) {
+    const botUsername = import.meta.env.VITE_BOT_USERNAME;
+    if (!botUsername) {
+      copyCode(group.inviteCode, group.id);
+      return;
+    }
+    const deepLink = `https://t.me/${botUsername}?startapp=join_${group.inviteCode}`;
+    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(deepLink)}`;
+    const tg = window.Telegram?.WebApp;
+    if (tg?.openTelegramLink) tg.openTelegramLink(shareUrl);
+    else window.open(shareUrl, "_blank");
+  }
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
 
@@ -71,23 +100,57 @@ export default function OwnerGroupsTab({ schoolId, onChanged, onOpenGroup }) {
 
       <div className="space-y-2.5">
         {groups.map((g) => (
-          <button
+          <div
             key={g.id}
-            onClick={() => onOpenGroup?.(g.id)}
-            disabled={!onOpenGroup}
-            className="w-full text-left flex items-center gap-3 rounded-2xl bg-white/[0.03] border border-white/[0.06] px-4 py-3.5 hover:bg-white/[0.06] active:bg-white/[0.08] transition-colors disabled:hover:bg-white/[0.03]"
+            className="rounded-2xl bg-white/[0.03] border border-white/[0.06] overflow-hidden"
           >
-            <div className="w-9 h-9 rounded-full bg-white/[0.06] flex items-center justify-center shrink-0">
-              <Users size={15} color="#9CA3AF" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm truncate">{g.name}</p>
-              <p className="text-gray-500 text-[11px] mt-0.5">
-                {t("school.studentsCount", { count: g.studentCount })}
-              </p>
-            </div>
-            {onOpenGroup && <ChevronRight size={16} className="text-gray-600 shrink-0" />}
-          </button>
+            <button
+              onClick={() => onOpenGroup?.(g.id)}
+              disabled={!onOpenGroup}
+              className="w-full text-left flex items-center gap-3 px-4 py-3.5 hover:bg-white/[0.04] active:bg-white/[0.06] transition-colors disabled:hover:bg-transparent"
+            >
+              <div className="w-9 h-9 rounded-full bg-white/[0.06] flex items-center justify-center shrink-0">
+                <Users size={15} color="#9CA3AF" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm truncate">{g.name}</p>
+                <p className="text-gray-500 text-[11px] mt-0.5">
+                  {t("school.studentsCount", { count: g.studentCount })}
+                </p>
+              </div>
+              {onOpenGroup && <ChevronRight size={16} className="text-gray-600 shrink-0" />}
+            </button>
+
+            {/* Qo'shilish kodi — talaba shuni kiritib o'zi qo'shiladi */}
+            {g.inviteCode && (
+              <div className="flex items-center gap-2 px-4 py-2.5 border-t border-white/[0.06]">
+                <span className="text-gray-500 text-[10px] uppercase tracking-wide shrink-0">
+                  {t("school.inviteCodeLabel")}
+                </span>
+                <code className="flex-1 min-w-0 font-mono text-xs tracking-widest truncate">
+                  {g.inviteCode}
+                </code>
+                <button
+                  onClick={() => copyCode(g.inviteCode, g.id)}
+                  className="w-7 h-7 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0"
+                  aria-label={t("referral.copied")}
+                >
+                  {copiedId === g.id ? (
+                    <Check size={13} color="#34D399" />
+                  ) : (
+                    <Copy size={13} color="#9CA3AF" />
+                  )}
+                </button>
+                <button
+                  onClick={() => shareGroup(g)}
+                  className="w-7 h-7 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0"
+                  aria-label={t("school.shareGroupLink")}
+                >
+                  <Share2 size={13} color="#9CA3AF" />
+                </button>
+              </div>
+            )}
+          </div>
         ))}
       </div>
 

@@ -12,6 +12,7 @@ import AdminBroadcastTab from "./admin/AdminBroadcastTab";
 import AdminLogTab from "./admin/AdminLogTab";
 import AdminExamAnalyticsTab from "./admin/AdminExamAnalyticsTab";
 import AdminSchoolsTab from "./admin/AdminSchoolsTab";
+import AdminSettingsScreen from "./admin/AdminSettingsScreen";
 import NotificationsBell from "./admin/NotificationsBell";
 
 function initials(name) {
@@ -115,7 +116,7 @@ export default function AdminPanelScreen({ onBack, currentUserId, isSuperAdmin }
     );
   }
 
-  const TABS = ["users", "exam", "schools", "premium", "support", "payments", "broadcast", "logs"];
+  const TABS = ["users", "exam", "schools", "premium", "support", "payments", "broadcast", "logs", "settings"];
 
   return (
     <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-6 bg-app min-h-full animate-slide-in">
@@ -212,6 +213,7 @@ export default function AdminPanelScreen({ onBack, currentUserId, isSuperAdmin }
       {tab === "payments" && <AdminPaymentsTab />}
       {tab === "broadcast" && <AdminBroadcastTab />}
       {tab === "logs" && <AdminLogTab />}
+      {tab === "settings" && <AdminSettingsScreen onBack={() => setTab("users")} />}
     </div>
   );
 }

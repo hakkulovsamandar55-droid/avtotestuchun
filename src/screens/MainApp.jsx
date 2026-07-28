@@ -46,7 +46,21 @@ export default function MainApp({ user }) {
   const [showPremium, setShowPremium] = useState(false);
   const [showDuel, setShowDuel] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
-  const [showSchool, setShowSchool] = useState(false);
+  // Guruhga qo'shilish deep link'i bilan ochilganmi (?startapp=join_KOD).
+  // Shunday bo'lsa maktab bo'limi DARHOL ochiladi — foydalanuvchi qo'lda
+  // "Maktab" tugmasini qidirib topishi shart emas.
+  //
+  // NIMA UCHUN lazy initializer: bu bir martalik tekshiruv, har renderda
+  // qayta hisoblash ma'nosiz.
+  const [showSchool, setShowSchool] = useState(() => {
+    try {
+      const fromUrl = new URLSearchParams(window.location.search).get("startapp");
+      const fromTg = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+      return String(fromUrl || fromTg || "").startsWith("join_");
+    } catch (e) {
+      return false;
+    }
+  });
   const [showTopics, setShowTopics] = useState(false);
   const [showMistakes, setShowMistakes] = useState(false);
   const [showTricky, setShowTricky] = useState(false);
@@ -292,6 +306,7 @@ export default function MainApp({ user }) {
           onOpenSaved={() => setQuestionList("saved")}
           onOpenTricky={() => setShowTricky(true)}
           onOpenCheatSheet={() => setShowCheatSheet(true)}
+          onOpenPremium={() => setShowPremium(true)}
         />
       )}
       {active === "stats" && <StatsTab />}

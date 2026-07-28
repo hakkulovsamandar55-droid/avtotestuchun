@@ -61,6 +61,53 @@ function canConverse(a, b) {
  * edi. DB'dagi @@unique([studentMembershipId, teacherMembershipId]) buni
  * to'sadi — P2002 xatosini ushlab, mavjud chatni qaytaramiz.
  */
+/**
+ * Xom schoolChat yozuvini UI kutgan shaklga keltiradi: { id, lastMessageAt,
+ * lastMessageText, unreadCount, other: {...} }.
+ *
+ * NIMA UCHUN ALOHIDA FUNKSIYA: ilgari bu mantiq faqat listChats() ichida
+ * bor edi. getOrCreateChat() esa xom Prisma yozuvini qaytarardi — shuning
+ * uchun UI (frontend) chat yaratilgach uni ko'rsatish uchun QO'SHIMCHA
+ * so'rov (chatlar ro'yxatini qayta yuklash) qilishga majbur edi. Bu esa
+ * "talaba/o'qituvchi -> Yozish -> ro'yxatga o't -> yana bosish" kabi
+ * keraksiz qo'shimcha qadamga olib kelardi. Endi ikkalasi ham shu bitta
+ * funksiyadan foydalanadi — chat yaratilgan zahoti to'liq (suhbatdosh
+ * ismi/rasmi bilan) qaytadi va UI to'g'ridan-to'g'ri suhbat oynasini
+ * ochishi mumkin.
+ */
+async function enrichChat(chat, membership) {
+  const isStudent = membership.role === "STUDENT";
+  const otherId = isStudent ? chat.teacherMembershipId : chat.studentMembershipId;
+
+  const other = await prisma.membership.findUnique({
+    where: { id: otherId },
+    select: { id: true, userId: true, role: true, status: true },
+  });
+  const user = other
+    ? await prisma.user.findUnique({
+        where: { id: other.userId },
+        select: { id: true, name: true, avatarUrl: true, lastOnlineAt: true },
+      })
+    : null;
+
+  return {
+    id: chat.id,
+    lastMessageAt: chat.lastMessageAt,
+    lastMessageText: chat.lastMessageText,
+    unreadCount: isStudent ? chat.unreadForStudent : chat.unreadForTeacher,
+    other: {
+      membershipId: otherId,
+      // Suhbatdosh o'chirilgan bo'lsa ham chat ko'rinishi kerak —
+      // xabar tarixi yo'qolmasligi uchun xavfsiz standart qiymatlar
+      name: user?.name ?? "—",
+      avatarUrl: user?.avatarUrl ?? null,
+      lastOnlineAt: user?.lastOnlineAt ?? null,
+      role: other?.role ?? null,
+      isActive: other?.status === "ACTIVE",
+    },
+  };
+}
+
 export async function getOrCreateChat(schoolId, membershipA, membershipB) {
   if (!canConverse(membershipA, membershipB)) {
     throw forbidden("Bu foydalanuvchi bilan yozishish huquqingiz yo'q");
@@ -88,16 +135,17 @@ export async function getOrCreateChat(schoolId, membershipA, membershipB) {
       },
     },
   });
-  if (existing) return existing;
+  if (existing) return enrichChat(existing, membershipA);
 
   try {
-    return await prisma.schoolChat.create({
+    const created = await prisma.schoolChat.create({
       data: {
         schoolId,
         studentMembershipId: student.id,
         teacherMembershipId: teacher.id,
       },
     });
+    return enrichChat(created, membershipA);
   } catch (err) {
     // Poyga: boshqa so'rov bizdan oldin yaratdi
     if (err?.code === "P2002") {
@@ -109,7 +157,7 @@ export async function getOrCreateChat(schoolId, membershipA, membershipB) {
           },
         },
       });
-      if (chat) return chat;
+      if (chat) return enrichChat(chat, membershipA);
     }
     throw err;
   }

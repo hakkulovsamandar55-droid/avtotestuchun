@@ -10,6 +10,8 @@ import {
   getQuestionDifficultyStats,
   getUserExamSummary,
 } from "../services/examAnalyticsService.js";
+import * as settingsSvc from "../services/settingsService.js";
+import { FEATURES, FEATURE_KEYS, SETTING_KEYS } from "../../../shared/config/features.js";
 
 export const adminRouter = Router();
 
@@ -648,4 +650,94 @@ adminRouter.get("/users/:id/exam-summary", requireIdParam, asyncHandler(async (r
   const user = await prisma.user.findUnique({ where: { id: req.id }, select: { id: true } });
   if (!user) return res.status(404).json({ error: "Foydalanuvchi topilmadi" });
   res.json(await getUserExamSummary(req.id));
+}));
+
+// ============================================================================
+// GLOBAL SOZLAMALAR
+// ============================================================================
+
+// GET /api/admin/settings — barcha sozlamalar + imkoniyatlar ro'yxati
+//
+// FEATURES ro'yxati ham qaytariladi, chunki admin paneli qaysi
+// imkoniyatlar mavjudligini shundan biladi — frontendda ro'yxatni
+// takrorlash kerak emas (ikki joyda saqlansa, ular bir-biridan uzilib
+// qolishi muqarrar edi).
+adminRouter.get("/settings", asyncHandler(async (_req, res) => {
+  const s = await settingsSvc.getSettings();
+  res.json({
+    globalFreeMode: s.globalFreeMode,
+    featureAccess: s.featureAccess,
+    supportLink: s.supportLink,
+    botUsername: s.botUsername,
+    features: FEATURES,
+  });
+}));
+
+// PATCH /api/admin/settings — sozlamalarni yangilash
+//
+// Bir nechta sozlamani bitta so'rovda yuborish mumkin. Har biri
+// ixtiyoriy — faqat kelganlari yoziladi.
+adminRouter.patch("/settings", asyncHandler(async (req, res) => {
+  const { globalFreeMode, featureAccess, supportLink, botUsername } = req.body || {};
+  const changes = [];
+
+  if (globalFreeMode !== undefined) {
+    await settingsSvc.setSetting(
+      SETTING_KEYS.GLOBAL_FREE_MODE,
+      globalFreeMode ? "true" : "false",
+      req.user.id
+    );
+    changes.push(`global_free_mode=${globalFreeMode ? "true" : "false"}`);
+  }
+
+  if (featureAccess !== undefined) {
+    if (typeof featureAccess !== "object" || featureAccess === null) {
+      return res.status(400).json({ error: "featureAccess obyekt bo'lishi kerak" });
+    }
+    // FAQAT tanish kalitlar va tanish qiymatlar. Aks holda admin panelidagi
+    // xato yoki eskirgan mijoz bazaga axlat yozib qo'yishi mumkin edi.
+    const clean = {};
+    for (const key of FEATURE_KEYS) {
+      const v = featureAccess[key];
+      if (v === "FREE" || v === "PREMIUM") clean[key] = v;
+    }
+    await settingsSvc.setSetting(SETTING_KEYS.FEATURE_ACCESS, JSON.stringify(clean), req.user.id);
+    changes.push("feature_access");
+  }
+
+  if (supportLink !== undefined) {
+    const link = String(supportLink || "").trim();
+    // Bo'sh qiymatga ruxsat (tugmani o'chirish uchun), lekin to'ldirilgan
+    // bo'lsa https:// yoki t.me bo'lishi kerak — noto'g'ri havola
+    // foydalanuvchini hech qayerga olib bormaydi.
+    if (link && !/^https:\/\//i.test(link)) {
+      return res.status(400).json({ error: "Havola https:// bilan boshlanishi kerak" });
+    }
+    await settingsSvc.setSetting(SETTING_KEYS.SUPPORT_LINK, link, req.user.id);
+    changes.push("support_link");
+  }
+
+  if (botUsername !== undefined) {
+    // @ belgisi va havola qismlari kiritilishi mumkin — tozalaymiz.
+    const clean = String(botUsername || "")
+      .trim()
+      .replace(/^@/, "")
+      .replace(/^https?:\/\/t\.me\//i, "")
+      .replace(/\/.*$/, "");
+    await settingsSvc.setSetting(SETTING_KEYS.BOT_USERNAME, clean, req.user.id);
+    changes.push("bot_username");
+  }
+
+  if (changes.length > 0) {
+    await logAdminAction(req.user.id, "SETTINGS_UPDATED", `Sozlamalar: ${changes.join(", ")}`);
+  }
+
+  const s = await settingsSvc.getSettings();
+  res.json({
+    globalFreeMode: s.globalFreeMode,
+    featureAccess: s.featureAccess,
+    supportLink: s.supportLink,
+    botUsername: s.botUsername,
+    features: FEATURES,
+  });
 }));

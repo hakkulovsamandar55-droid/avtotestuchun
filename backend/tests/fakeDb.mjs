@@ -6,12 +6,14 @@ export function createFakeDb() {
     school: [], group: [], membership: [], invitation: [], homework: [],
     homeworkSubmission: [], schoolChat: [], schoolMessage: [], notification: [],
     savedQuestion: [], questionMistake: [], questionStat: [], premiumPlan: [],
+    groupTeacher: [], appSetting: [],
   };
   let ids = {
     examAttempt: 1, examEvent: 1, attempt: 1, activityLog: 1,
     school: 1, group: 1, membership: 1, invitation: 1, homework: 1,
     homeworkSubmission: 1, schoolChat: 1, schoolMessage: 1, notification: 1,
     savedQuestion: 1, questionMistake: 1, questionStat: 1, premiumPlan: 1,
+    groupTeacher: 1, appSetting: 1,
   };
 
   // Har bir jadvalning unique kalitlari (schema.prisma dagi @@unique bilan mos)
@@ -20,6 +22,7 @@ export function createFakeDb() {
     questionMistake: [["userId", "questionId"]],
     schoolChat: [["studentMembershipId", "teacherMembershipId"]],
     homeworkSubmission: [["homeworkId", "membershipId"]],
+    groupTeacher: [["groupId", "membershipId"]],
   };
 
   const DEFAULTS = {
@@ -36,6 +39,7 @@ export function createFakeDb() {
     questionMistake: { wrongCount: 1, resolvedAt: null },
     questionStat: { totalCount: 0, wrongCount: 0 },
     premiumPlan: { badge: '', sortOrder: 0 },
+    groupTeacher: {},
   };
 
   function matchValue(actual, condition) {

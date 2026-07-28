@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSettings } from "./SettingsContext";
 import LoginScreen from "./screens/LoginScreen";
 import MainApp from "./screens/MainApp";
 import { setSessionExpiredHandler } from "./api";
@@ -28,10 +29,18 @@ export default function App() {
   // Sessiya tugagani/hisob bloklangani haqida LoginScreen'ga ko'rsatiladigan xabar.
   const [sessionNotice, setSessionNotice] = useState(null);
 
+  const { reload: reloadSettings } = useSettings();
+
   const handleLogin = (loggedInUser) => {
     setUser(loggedInUser);
     setSessionNotice(null);
     setStage("app");
+    // MUHIM: /api/stats/settings AUTH TALAB QILADI. SettingsProvider esa
+    // ilova ishga tushganda, ya'ni LOGIN'DAN OLDIN yuklaydi — o'sha so'rov
+    // 401 bilan tugaydi va boshlang'ich qiymatlar bilan qolib ketardi.
+    // Natijada admin yoqqan "global bepul rejim" ilova qayta ochilmaguncha
+    // ta'sir qilmasdi. Login tugagach qayta yuklaymiz.
+    reloadSettings();
   };
 
   // MUHIM: ilgari 401 (token muddati tugagan) yoki 403 (bloklangan) javoblar

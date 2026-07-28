@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { ThemeProvider } from "./ThemeContext";
+import { SettingsProvider } from "./SettingsContext";
 import { FontSizeProvider } from "./FontSizeContext";
 import "./index.css";
 import "./i18n";
@@ -17,7 +18,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ThemeProvider>
       <FontSizeProvider>
-        <App />
+        <SettingsProvider>
+          <App />
+        </SettingsProvider>
       </FontSizeProvider>
     </ThemeProvider>
   </React.StrictMode>

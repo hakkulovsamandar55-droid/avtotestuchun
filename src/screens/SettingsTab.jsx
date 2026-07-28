@@ -5,6 +5,7 @@ import { ACCENT_FROM } from "../theme";
 import { useTheme } from "../ThemeContext";
 import { useFontSize } from "../FontSizeContext";
 import { api } from "../api";
+import { useSettings, useFeature } from "../SettingsContext";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 
 function PremiumRow({ onClick }) {
@@ -303,7 +304,11 @@ export default function SettingsTab({
 }) {
   const { t } = useTranslation();
   const isAdmin = user?.role === "ADMIN";
-  const isPremium = Boolean(user?.isPremium) || isAdmin;
+  const { supportLink } = useSettings();
+  // Premium ranglar endi sozlanadigan imkoniyat: global bepul rejim
+  // yoqilgan yoki admin buni TEKIN qilgan bo'lsa, qulf ochiladi.
+  const themesUnlocked = useFeature("premium_themes", user);
+  const isPremium = themesUnlocked || isAdmin;
 
   return (
     <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-4 animate-fade-in">
@@ -349,19 +354,37 @@ export default function SettingsTab({
         />
       </div>
 
-      <div
-        className="mt-3 rounded-2xl px-4 py-4 flex items-center gap-3 text-white"
-        style={{ background: "linear-gradient(90deg,#0EA5E9,#0369A1)" }}
-      >
-        <Send size={18} />
-        <div className="flex-1">
-          <p className="font-bold text-sm">{t("settings.channelTitle")}</p>
-          <p className="text-white/70 text-xs">
-            {t("settings.channelSubtitle")}
-          </p>
-        </div>
-        <ChevronRight size={18} color="white" />
-      </div>
+      {/* Telegram tugmasi. ILGARIGI XATO: bu element umuman bosilmasdi —
+          onClick yo'q edi, shuning uchun hech qayerga olib bormasdi.
+          Endi havola admin panelidan sozlanadi va sozlanmagan bo'lsa
+          tugma KO'RSATILMAYDI (bosib bo'lmaydigan tugmadan ko'ra yaxshi). */}
+      {supportLink && (
+        <button
+          onClick={() => {
+            const tg = window.Telegram?.WebApp;
+            // Telegram ichida openTelegramLink to'g'ri ishlaydi (ilovadan
+            // chiqmasdan chatni ochadi). Tashqarida oddiy yangi oyna.
+            if (tg?.openTelegramLink && /^https:\/\/t\.me\//i.test(supportLink)) {
+              tg.openTelegramLink(supportLink);
+            } else if (tg?.openLink) {
+              tg.openLink(supportLink);
+            } else {
+              window.open(supportLink, "_blank");
+            }
+          }}
+          className="w-full mt-3 rounded-2xl px-4 py-4 flex items-center gap-3 text-white text-left active:scale-[0.99] transition-transform"
+          style={{ background: "linear-gradient(90deg,#0EA5E9,#0369A1)" }}
+        >
+          <Send size={18} />
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-sm">{t("settings.channelTitle")}</p>
+            <p className="text-white/70 text-xs">
+              {t("settings.channelSubtitle")}
+            </p>
+          </div>
+          <ChevronRight size={18} color="white" />
+        </button>
+      )}
 
       {isAdmin && (
         <div className="mt-3">

@@ -13,8 +13,10 @@ import {
   ClipboardCheck,
   Flame,
   NotebookText,
+  Lock,
 } from "lucide-react";
 import { api } from "../api";
+import { useSettings } from "../SettingsContext";
 
 /**
  * BOSH SAHIFA — frosted glass uslubi.
@@ -48,6 +50,7 @@ export default function HomeTab({
   onOpenSaved,
   onOpenTricky,
   onOpenCheatSheet,
+  onOpenPremium,
 }) {
   const { t } = useTranslation();
   const [stats, setStats] = useState(null);
@@ -65,6 +68,34 @@ export default function HomeTab({
   const learned = clampPct(s.learnedQuestionsPct);
   const streak = s.streakDays || 0;
   const weekly = s.weeklyActivity || [];
+
+  // KAFEL -> IMKONIYAT xaritasi. Admin panelidagi ro'yxat bilan bog'lanadi:
+  // admin biror imkoniyatni PREMIUM qilsa, mos kafelda qulf paydo bo'ladi.
+  //
+  // Ro'yxatda yo'q kafellar (practice, tickets, signs, school) HAR DOIM
+  // ochiq — bular ilovaning asosiy mazmuni, ularni yopish mantiqsiz.
+  const { globalFreeMode, featureAccess } = useSettings();
+
+  const TILE_FEATURE = {
+    topics: "topic_tests",
+    mistakes: "mistakes",
+    saved: "saved_questions",
+    tricky: "tricky_tests",
+    cheatSheet: "cheat_sheet",
+    duel: "duel",
+  };
+
+  // MUHIM: bu FAQAT UI qulfi. Haqiqiy cheklov backendda bo'lishi kerak —
+  // mijoz tomonini chetlab o'tish mumkin. Mahalliy ma'lumotga tayanadigan
+  // bo'limlar (shpargalka, mavzuli testlar) uchun bu amalda yagona to'siq,
+  // shuning uchun ular "yumshoq" cheklov hisoblanadi.
+  function isLocked(tileKey) {
+    const feature = TILE_FEATURE[tileKey];
+    if (!feature) return false;
+    if (globalFreeMode) return false;
+    if (featureAccess[feature] !== "PREMIUM") return false;
+    return !user?.isPremium;
+  }
 
   const tiles = [
     {
@@ -210,9 +241,19 @@ export default function HomeTab({
 
       {/* KAFELLAR */}
       <div className="grid grid-cols-2 gap-[11px] mt-[13px]">
-        {tiles.map((tile) => (
-          <Tile key={tile.key} {...tile} />
-        ))}
+        {tiles.map((tile) => {
+          const locked = isLocked(tile.key);
+          return (
+            <Tile
+              key={tile.key}
+              {...tile}
+              locked={locked}
+              // Qulflangan kafel bosilganda premium ekraniga olib boradi —
+              // shunchaki "ishlamaydi" holatida qoldirmaymiz.
+              onClick={locked ? onOpenPremium : tile.onClick}
+            />
+          );
+        })}
       </div>
     </div>
   );
@@ -300,13 +341,21 @@ function Metric({ value, label }) {
   );
 }
 
-function Tile({ icon: Icon, title, sub, onClick }) {
+function Tile({ icon: Icon, title, sub, onClick, locked }) {
   return (
     <button
       onClick={onClick}
-      className="rounded-[19px] bg-card border border-card-border p-[15px] text-left active:scale-[0.985] transition-transform"
+      className="rounded-[19px] bg-card border border-card-border p-[15px] text-left active:scale-[0.985] transition-transform relative"
     >
-      <Icon size={18} color="var(--accent-from)" />
+      {locked && (
+        <span
+          className="absolute top-3 right-3 w-5 h-5 rounded-full flex items-center justify-center"
+          style={{ background: "rgba(224,166,46,0.16)" }}
+        >
+          <Lock size={11} color="#E0A62E" />
+        </span>
+      )}
+      <Icon size={18} color={locked ? "var(--icon-muted)" : "var(--accent-from)"} />
       <div
         className="text-[12.5px] font-bold mt-2.5"
         style={{ color: "var(--text-primary)" }}

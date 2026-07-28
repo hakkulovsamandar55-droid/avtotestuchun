@@ -183,7 +183,12 @@ export async function createSchool(ceoUser, { name, ownerUserId, address, phone,
           address: address || null,
           phone: phone || null,
           brandColor: brandColor || null,
-          status: "PENDING",
+          // SODDALASHTIRISH: ilgari "PENDING" bo'lib, CEO alohida
+          // tasdiqlashi kerak edi. Lekin maktabni CEO ning O'ZI yaratmoqda —
+          // o'zi yaratgan narsani yana o'zi tasdiqlashi ortiqcha qadam.
+          // Endi darhol ishga tushadi. (PENDING holati enum'da qoladi:
+          // eski yozuvlar va kelajakda kerak bo'lishi mumkin.)
+          status: "ACTIVE",
           ownerId: ownerUserId,
           createdById: ceoUser.id,
         },
@@ -274,11 +279,42 @@ export async function deleteSchool(ceoUser, schoolId) {
 // OWNER — o'qituvchi va guruh boshqaruvi
 // ============================================================================
 
+// Taklif kodi alifbosi — chalkashadigan belgilar (0/O, 1/I/L) ATAYLAB
+// olib tashlangan. Kod og'zaki aytiladi va qo'lda kiritiladi, shuning
+// uchun "0 mi yoki O mi" degan savol tug'ilmasligi kerak.
+const INVITE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+
+function randomCodeBlock(len = 4) {
+  let out = "";
+  for (let i = 0; i < len; i++) {
+    out += INVITE_ALPHABET[Math.floor(Math.random() * INVITE_ALPHABET.length)];
+  }
+  return out;
+}
+
+/**
+ * Takrorlanmaydigan guruh taklif kodi ("AB12-X7KF" ko'rinishida).
+ *
+ * To'qnashuv ehtimoli juda past (31^8 ≈ 850 mlrd), lekin nolga teng emas —
+ * shuning uchun bazadan tekshiramiz va bir necha marta urinib ko'ramiz.
+ */
+export async function generateGroupInviteCode(attempts = 8) {
+  for (let i = 0; i < attempts; i++) {
+    const code = `${randomCodeBlock()}-${randomCodeBlock()}`;
+    const existing = await prisma.group.findUnique({ where: { inviteCode: code } });
+    if (!existing) return code;
+  }
+  throw new SchoolError("internal", "Taklif kodi generatsiya qilinmadi, qayta urinib ko'ring");
+}
+
 export async function createGroup(schoolId, name) {
   if (!name || !name.trim()) {
     throw new SchoolError("invalid_input", "Guruh nomi kiritilishi shart");
   }
-  return prisma.group.create({ data: { schoolId, name: name.trim() } });
+  // Kod guruh bilan BIRGA yaratiladi — Owner alohida "kod yarat" tugmasini
+  // bosishi shart emas. Guruh bor ekan, unga qo'shilish kodi ham bor.
+  const inviteCode = await generateGroupInviteCode();
+  return prisma.group.create({ data: { schoolId, name: name.trim(), inviteCode } });
 }
 
 export async function listGroups(schoolId) {
@@ -331,11 +367,51 @@ export async function inviteTeacherDirect(schoolId, teacherUserId) {
 }
 
 /**
- * O'qituvchini guruhga tayinlaydi (yoki guruhdan chiqaradi — groupId: null).
+ * O'qituvchi dars beradigan BARCHA guruh ID lari.
  *
- * MUHIM: bitta guruhda bir nechta o'qituvchi bo'lishi mumkin — bu ataylab
- * shunday. Kichik maktabda bir guruhga ikki o'qituvchi (masalan nazariya va
- * amaliyot) tayinlanishi normal holat.
+ * MOSLIK: yangi tizimda manba — school_group_teachers jadvali. Lekin
+ * migratsiyagacha yaratilgan yozuvlarda faqat Membership.groupId
+ * to'ldirilgan bo'lishi mumkin, shuning uchun u ham qo'shiladi. Shu
+ * sababli eski ma'lumot hech narsa qilmasdan ishlashda davom etadi.
+ */
+export async function getTeacherGroupIds(membership) {
+  if (!membership) return [];
+  if (membership.role !== "TEACHER") {
+    return membership.groupId ? [membership.groupId] : [];
+  }
+  // XAVFSIZLIK CHORASI: jadval hali yaratilmagan bo'lishi mumkin
+  // (migratsiya ishlatilmagan yoki deploy yarim yo'lda). Bunday holatda
+  // o'qituvchi paneli BUTUNLAY yiqilib qolmasligi kerak — eski
+  // Membership.groupId ga qaytamiz va ilova ishlashda davom etadi.
+  let rows = [];
+  try {
+    rows = await prisma.groupTeacher.findMany({
+      where: { membershipId: membership.id },
+      select: { groupId: true },
+    });
+  } catch (err) {
+    rows = [];
+  }
+  const ids = rows.map((r) => r.groupId);
+  if (membership.groupId && !ids.includes(membership.groupId)) {
+    ids.push(membership.groupId);
+  }
+  return ids;
+}
+
+/** O'qituvchi shu guruhga dars beradimi (ruxsat tekshiruvi uchun). */
+export async function teacherTeachesGroup(membership, groupId) {
+  const ids = await getTeacherGroupIds(membership);
+  return ids.includes(Number(groupId));
+}
+
+/**
+ * O'qituvchini guruhga tayinlaydi. Bir o'qituvchi bir nechta guruhga
+ * tayinlanishi mumkin (ertalabki + kechki) — shuning uchun bu yerda
+ * ALMASHTIRISH emas, QO'SHISH bo'ladi.
+ *
+ * Bitta guruhda bir nechta o'qituvchi bo'lishi ham mumkin (nazariya va
+ * amaliyot) — bu ham ataylab shunday.
  */
 export async function assignTeacherToGroup(schoolId, membershipId, groupId) {
   const membership = await prisma.membership.findUnique({ where: { id: membershipId } });
@@ -346,17 +422,50 @@ export async function assignTeacherToGroup(schoolId, membershipId, groupId) {
   // Guruh ROSTDAN HAM shu maktabga tegishlimi — aks holda boshqa maktabning
   // guruh ID sini yozib, o'qituvchini o'zga maktab guruhiga tayinlash va
   // shu orqali begona talabalar ma'lumotiga kirish mumkin bo'lardi.
-  if (groupId != null) {
-    const group = await prisma.group.findUnique({ where: { id: groupId } });
-    if (!group || group.schoolId !== schoolId) {
-      throw notFound("Guruh");
-    }
+  const group = await prisma.group.findUnique({ where: { id: groupId } });
+  if (!group || group.schoolId !== schoolId) {
+    throw notFound("Guruh");
   }
 
-  return prisma.membership.update({
-    where: { id: membershipId },
-    data: { groupId },
+  await prisma.groupTeacher.upsert({
+    where: { groupId_membershipId: { groupId, membershipId } },
+    create: { groupId, membershipId },
+    update: {}, // idempotent — ikki marta tayinlansa xato bermaydi
   });
+
+  // Membership.groupId ni ham to'ldiramiz, agar bo'sh bo'lsa. Sabab:
+  // eski kodning ba'zi joylari (va chat mantig'i) hali shu maydonni
+  // o'qiydi. Bu "asosiy guruh" sifatida ishlaydi.
+  if (membership.groupId == null) {
+    await prisma.membership.update({ where: { id: membershipId }, data: { groupId } });
+  }
+
+  return { membershipId, groupId };
+}
+
+/** O'qituvchini guruhdan chiqaradi (boshqa guruhlari saqlanib qoladi). */
+export async function removeTeacherFromGroup(schoolId, membershipId, groupId) {
+  const membership = await prisma.membership.findUnique({ where: { id: membershipId } });
+  if (!membership || membership.schoolId !== schoolId || membership.role !== "TEACHER") {
+    throw notFound("O'qituvchi a'zoligi");
+  }
+
+  await prisma.groupTeacher.deleteMany({ where: { membershipId, groupId } });
+
+  // Asosiy guruh shu bo'lsa, qolganlaridan birini asosiy qilamiz —
+  // aks holda Membership.groupId o'chirilgan guruhga ishora qilib qolardi.
+  if (membership.groupId === groupId) {
+    const remaining = await prisma.groupTeacher.findFirst({
+      where: { membershipId },
+      select: { groupId: true },
+    });
+    await prisma.membership.update({
+      where: { id: membershipId },
+      data: { groupId: remaining?.groupId ?? null },
+    });
+  }
+
+  return { membershipId, groupId, removed: true };
 }
 
 /** Owner o'qituvchini vaqtincha to'xtatadi (kirish huquqi yo'qoladi). */
@@ -576,6 +685,101 @@ export async function joinSchoolByCode(user, code) {
   );
 
   return { membership: result, school };
+}
+
+// ============================================================================
+// GURUH TAKLIF KODI ORQALI O'ZI QO'SHILISH (soddalashtirilgan onboarding)
+//
+// Eski oqim: Owner Invitation yaratadi -> talabaga yuboradi -> talaba
+// kiritadi. Owner har safar aralashishi kerak edi.
+//
+// Yangi oqim: har guruhda DOIMIY kod bor -> talaba kodni kiritadi ->
+// tasdiqlaydi -> qo'shiladi. Hech kimning tasdig'i kerak emas.
+// ============================================================================
+
+/** Kod bo'yicha guruhni topadi (umumiy tekshiruvlar bilan). */
+async function resolveGroupByInviteCode(code) {
+  if (typeof code !== "string" || !code.trim()) {
+    throw new SchoolError("invalid_code", "Kod kiritilishi shart");
+  }
+  // Foydalanuvchi chiziqchasiz yoki kichik harfda yozishi mumkin —
+  // ikkalasini ham qabul qilamiz.
+  let normalized = code.trim().toUpperCase().replace(/\s+/g, "");
+  if (!normalized.includes("-") && normalized.length === 8) {
+    normalized = `${normalized.slice(0, 4)}-${normalized.slice(4)}`;
+  }
+
+  const group = await prisma.group.findUnique({ where: { inviteCode: normalized } });
+  if (!group) throw new SchoolError("invalid_code", "Kod topilmadi");
+
+  const school = await prisma.school.findUnique({ where: { id: group.schoolId } });
+  if (!school || school.status !== "ACTIVE") {
+    throw new SchoolError("school_unavailable", "Bu maktab hozircha faol emas");
+  }
+
+  return { group, school };
+}
+
+/**
+ * Tasdiqlash oynasi uchun: "Siz <Maktab>, <Guruh> guruhiga qo'shilmoqchisiz."
+ * Hech narsani o'zgartirmaydi — faqat o'qiydi.
+ */
+export async function previewGroupInvite(code) {
+  const { group, school } = await resolveGroupByInviteCode(code);
+  return {
+    school: { id: school.id, name: school.name, logoUrl: school.logoUrl },
+    group: { id: group.id, name: group.name },
+  };
+}
+
+/** Talaba kod orqali guruhga qo'shiladi. Tasdiqlash talab qilinmaydi. */
+export async function joinGroupByInviteCode(user, code) {
+  const { group, school } = await resolveGroupByInviteCode(code);
+
+  const already = await getActiveMembership(user.id, school.id);
+  if (already) {
+    throw new SchoolError("already_member", "Siz allaqachon bu maktabga a'zosiz");
+  }
+
+  let membership;
+  try {
+    membership = await prisma.$transaction(async (tx) => {
+      // Boshqa maktabdagi faol a'zolik arxivlanadi — bitta odam bir
+      // vaqtda faqat bitta maktabda bo'lishi qoidasi saqlanadi.
+      const existing = await tx.membership.findFirst({
+        where: { userId: user.id, status: "ACTIVE" },
+      });
+      if (existing) {
+        await tx.membership.update({
+          where: { id: existing.id },
+          data: { status: "ARCHIVED", endedAt: new Date() },
+        });
+      }
+
+      return tx.membership.create({
+        data: {
+          userId: user.id,
+          schoolId: school.id,
+          groupId: group.id,
+          role: "STUDENT",
+          status: "ACTIVE",
+        },
+      });
+    });
+  } catch (err) {
+    if (err?.code === "P2002") {
+      throw new SchoolError("already_member", "Siz allaqachon boshqa maktabda faolsiz");
+    }
+    throw err;
+  }
+
+  await safeLog(() =>
+    logActivity(user.id, "SCHOOL_JOINED", `"${school.name}" maktabiga qo'shildi`, {
+      schoolId: school.id,
+    })
+  );
+
+  return { membership, school, group };
 }
 
 /** Talaba/o'qituvchi maktabdan o'z xohishi bilan chiqadi. */

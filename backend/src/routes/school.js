@@ -175,7 +175,32 @@ schoolRouter.get("/me", asyncHandler(async (req, res) => {
     ? await prisma.group.findUnique({ where: { id: membership.groupId } })
     : null;
 
-  res.json({ membership, school, group });
+  // Talaba uchun: o'z guruhidagi o'qituvchi(lar) ro'yxati — frontend
+  // shundan foydalanib bevosita "O'qituvchiga yozish" tugmasini
+  // ko'rsatadi (chat ro'yxatiga o'tib, birinchi bo'lib kutish shart
+  // emas). Odatda bitta o'qituvchi bo'ladi, lekin sxema bir nechtasiga
+  // yo'l qo'yadi — shuning uchun ro'yxat qaytariladi.
+  let teachers = [];
+  if (membership.role === "STUDENT" && group) {
+    const teacherMemberships = await prisma.membership.findMany({
+      where: { groupId: group.id, role: "TEACHER", status: "ACTIVE" },
+      select: { id: true, userId: true },
+    });
+    if (teacherMemberships.length > 0) {
+      const teacherUsers = await prisma.user.findMany({
+        where: { id: { in: teacherMemberships.map((m) => m.userId) } },
+        select: { id: true, name: true, avatarUrl: true },
+      });
+      const userById = new Map(teacherUsers.map((u) => [u.id, u]));
+      teachers = teacherMemberships.map((m) => ({
+        membershipId: m.id,
+        name: userById.get(m.userId)?.name ?? "—",
+        avatarUrl: userById.get(m.userId)?.avatarUrl ?? null,
+      }));
+    }
+  }
+
+  res.json({ membership, school, group, teachers });
 }));
 
 // POST /api/school/join  { code }
@@ -202,6 +227,51 @@ schoolRouter.post("/join", rateLimit({
       await hwSvc.enrollMembershipInGroupHomeworks(membership.id, membership.groupId);
     }
     res.status(201).json({ membership, school });
+  } catch (err) {
+    return sendServiceError(res, err);
+  }
+}));
+
+// GET /api/school/invite/:code — kodni tekshirish (tasdiqlash oynasi uchun)
+//
+// Hech narsani o'zgartirmaydi, faqat "qaysi maktab / qaysi guruh" ekanini
+// qaytaradi. Talaba tasdiqlashdan OLDIN nimaga qo'shilayotganini ko'radi.
+//
+// RATE LIMIT: /join bilan bir xil sabab — kod qisqa, brute-force'dan
+// himoya kerak. Bu endpoint hech narsa yozmasa ham, kod mavjudligini
+// oshkor qiladi, shuning uchun cheklanadi.
+schoolRouter.get("/invite/:code", rateLimit({
+  name: "school-invite-preview",
+  max: 20,
+  windowMs: 10 * 60 * 1000,
+  message: "Juda ko'p urinish. 10 daqiqadan keyin qayta urinib ko'ring.",
+}), asyncHandler(async (req, res) => {
+  try {
+    res.json(await schoolSvc.previewGroupInvite(req.params.code));
+  } catch (err) {
+    return sendServiceError(res, err);
+  }
+}));
+
+// POST /api/school/join-group  { code }
+// Talaba guruh kodi orqali O'ZI qo'shiladi — Owner/CEO tasdig'i kerak emas.
+schoolRouter.post("/join-group", rateLimit({
+  name: "school-join-group",
+  max: 8,
+  windowMs: 10 * 60 * 1000,
+  message: "Juda ko'p urinish. 10 daqiqadan keyin qayta urinib ko'ring.",
+}), asyncHandler(async (req, res) => {
+  try {
+    const { membership, school, group } = await schoolSvc.joinGroupByInviteCode(
+      req.user,
+      req.body?.code
+    );
+    // Yangi talaba ochiq (tugamagan) homeworklarga ham yoziladi —
+    // eski /join oqimidagi bilan bir xil xatti-harakat.
+    if (membership.groupId) {
+      await hwSvc.enrollMembershipInGroupHomeworks(membership.id, membership.groupId);
+    }
+    res.status(201).json({ membership, school, group });
   } catch (err) {
     return sendServiceError(res, err);
   }
@@ -441,12 +511,73 @@ schoolRouter.patch(
     }
 
     try {
-      const membership = await schoolSvc.assignTeacherToGroup(
-        req.schoolId,
-        membershipId,
-        groupId
-      );
+      if (groupId == null) {
+        // ESKI XATTI-HARAKAT SAQLANADI: null yuborilsa o'qituvchi BARCHA
+        // guruhlardan chiqariladi. Ilgari groupId bitta bo'lgani uchun
+        // "null = guruhsiz" degani edi; ko'p guruhli tizimda buning
+        // to'g'ri ekvivalenti — hammasidan chiqarish.
+        const membership = await prisma.membership.findUnique({
+          where: { id: membershipId },
+        });
+        if (!membership || membership.schoolId !== req.schoolId) {
+          return res.status(404).json({ error: "O'qituvchi a'zoligi topilmadi" });
+        }
+        await prisma.groupTeacher.deleteMany({ where: { membershipId } });
+        const updated = await prisma.membership.update({
+          where: { id: membershipId },
+          data: { groupId: null },
+        });
+        return res.json({ membership: updated });
+      }
+
+      await schoolSvc.assignTeacherToGroup(req.schoolId, membershipId, groupId);
+      const membership = await prisma.membership.findUnique({ where: { id: membershipId } });
       res.json({ membership });
+    } catch (err) {
+      return sendServiceError(res, err);
+    }
+  })
+);
+
+// POST /api/school/:schoolId/groups/:groupId/teachers  { membershipId }
+// O'qituvchini guruhga QO'SHADI (mavjud guruhlari saqlanib qoladi).
+schoolRouter.post(
+  "/:schoolId/groups/:groupId/teachers",
+  requireSchool(["OWNER"]),
+  asyncHandler(async (req, res) => {
+    const groupId = parseParam(req, res, "groupId");
+    if (groupId === null) return;
+
+    const membershipId = Number(req.body?.membershipId);
+    if (!Number.isInteger(membershipId) || membershipId <= 0) {
+      return res.status(400).json({ error: "Noto'g'ri o'qituvchi ID" });
+    }
+
+    try {
+      res.status(201).json(
+        await schoolSvc.assignTeacherToGroup(req.schoolId, membershipId, groupId)
+      );
+    } catch (err) {
+      return sendServiceError(res, err);
+    }
+  })
+);
+
+// DELETE /api/school/:schoolId/groups/:groupId/teachers/:membershipId
+// O'qituvchini FAQAT shu guruhdan chiqaradi.
+schoolRouter.delete(
+  "/:schoolId/groups/:groupId/teachers/:membershipId",
+  requireSchool(["OWNER"]),
+  asyncHandler(async (req, res) => {
+    const groupId = parseParam(req, res, "groupId");
+    if (groupId === null) return;
+    const membershipId = parseParam(req, res, "membershipId");
+    if (membershipId === null) return;
+
+    try {
+      res.json(
+        await schoolSvc.removeTeacherFromGroup(req.schoolId, membershipId, groupId)
+      );
     } catch (err) {
       return sendServiceError(res, err);
     }
@@ -526,10 +657,13 @@ schoolRouter.get(
     // Bunday o'qituvchi hech kimni ko'rmasligi kerak.
     const isTeacher = !req.isCeo && req.membership?.role === "TEACHER";
     if (isTeacher) {
-      if (req.membership.groupId == null) {
+      // KO'P GURUH: o'qituvchi bir nechta guruhga dars berishi mumkin,
+      // shuning uchun bitta groupId emas, ro'yxat bo'yicha filtrlanadi.
+      const myGroupIds = await schoolSvc.getTeacherGroupIds(req.membership);
+      if (myGroupIds.length === 0) {
         return res.json({ students: [] });
       }
-      where.groupId = req.membership.groupId;
+      where.groupId = { in: myGroupIds };
     }
 
     // query.groupId faqat Owner/CEO uchun ruxsat — aks holda o'qituvchi
@@ -671,7 +805,11 @@ schoolRouter.post(
   asyncHandler(async (req, res) => {
     const groupId = parseParam(req, res, "groupId");
     if (groupId === null) return;
-    if (!req.isCeo && req.membership.role === "TEACHER" && req.membership.groupId !== groupId) {
+    if (
+      !req.isCeo &&
+      req.membership.role === "TEACHER" &&
+      !(await schoolSvc.teacherTeachesGroup(req.membership, groupId))
+    ) {
       return res.status(403).json({ error: "Faqat o'z guruhingizga vazifa bera olasiz" });
     }
     try {
@@ -721,17 +859,36 @@ schoolRouter.get(
   "/:schoolId/teacher/dashboard",
   requireSchool(["OWNER", "TEACHER"]),
   asyncHandler(async (req, res) => {
-    // Owner ham bu endpointga kira oladi (requireSchool ruxsat beradi), lekin
-    // Owner uchun membership.groupId odatda null — shuning uchun Owner/CEO
-    // uchun ?groupId= majburiy.
     const isTeacher = !req.isCeo && req.membership?.role === "TEACHER";
 
     let groupId;
+    let myGroups = [];
     if (isTeacher) {
-      groupId = req.membership.groupId;
-      if (groupId == null) {
+      // KO'P GURUH: o'qituvchi bir nechta guruhga dars berishi mumkin.
+      // ?groupId= berilsa — u ROSTDAN ham shu o'qituvchiniki ekanini
+      // tekshiramiz (aks holda begona guruh statistikasini ko'rardi).
+      // Berilmasa — birinchisi ochiladi.
+      const myGroupIds = await schoolSvc.getTeacherGroupIds(req.membership);
+      if (myGroupIds.length === 0) {
         return res.status(409).json({ error: "Siz hali biror guruhga tayinlanmagansiz" });
       }
+
+      if (req.query.groupId != null && req.query.groupId !== "") {
+        const requested = Number(req.query.groupId);
+        if (!Number.isInteger(requested) || !myGroupIds.includes(requested)) {
+          return res.status(403).json({ error: "Bu guruh sizga biriktirilmagan" });
+        }
+        groupId = requested;
+      } else {
+        groupId = myGroupIds[0];
+      }
+
+      // UI guruhlar o'rtasida almashish uchun ro'yxatni ham oladi.
+      myGroups = await prisma.group.findMany({
+        where: { id: { in: myGroupIds } },
+        select: { id: true, name: true, inviteCode: true },
+        orderBy: { createdAt: "asc" },
+      });
     } else {
       groupId = Number(req.query.groupId);
       if (!Number.isInteger(groupId) || groupId <= 0) {
@@ -740,7 +897,8 @@ schoolRouter.get(
     }
 
     try {
-      res.json(await schoolAnalytics.getTeacherDashboard(req.schoolId, groupId));
+      const data = await schoolAnalytics.getTeacherDashboard(req.schoolId, groupId);
+      res.json({ ...data, myGroups });
     } catch (err) {
       return sendServiceError(res, err);
     }
@@ -767,7 +925,8 @@ schoolRouter.get(
 
     // 2) O'qituvchi bo'lsa — faqat O'Z guruhi talabasini ko'radi
     if (!req.isCeo && req.membership?.role === "TEACHER") {
-      if (req.membership.groupId == null || target.groupId !== req.membership.groupId) {
+      const myGroupIds = await schoolSvc.getTeacherGroupIds(req.membership);
+      if (target.groupId == null || !myGroupIds.includes(target.groupId)) {
         return res.status(403).json({ error: "Bu talaba sizning guruhingizda emas" });
       }
     }

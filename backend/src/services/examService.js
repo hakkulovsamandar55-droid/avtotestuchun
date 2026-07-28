@@ -3,6 +3,7 @@ import { prisma } from "../db.js";
 import { startOfLocalDay } from "../lib/time.js";
 import { logActivity } from "./activity.js";
 import { recordAttemptForHomework } from "./homeworkService.js";
+import { isFeatureAvailable } from "./settingsService.js";
 import {
   OFFICIAL_EXAM_VERSION,
   getExamRules,
@@ -192,9 +193,16 @@ export async function getActiveAttempt(userId) {
 export async function checkEligibility(user) {
   const active = await getActiveAttempt(user.id);
 
-  if (user.isPremium) {
+  // Cheksiz imtihon endi sozlanadigan imkoniyat: global bepul rejim
+  // yoqilgan yoki admin buni FREE deb belgilagan bo'lsa, premium bo'lmagan
+  // foydalanuvchi ham cheklovsiz topshiradi.
+  const unlimited = await isFeatureAvailable(user, "unlimited_exam");
+
+  if (unlimited) {
     return {
       canStart: true,
+      // UI shu bayroqqa qarab "limit" blokini yashiradi. Nomi tarixiy
+      // sabablarga ko'ra isPremium, lekin ma'nosi "cheklov yo'q".
       isPremium: true,
       usedToday: 0,
       dailyLimit: null, // cheksiz

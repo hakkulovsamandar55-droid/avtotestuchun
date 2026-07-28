@@ -57,7 +57,8 @@ console.log("--- CEO: maktab yaratish va tasdiqlash ---");
     body: { name: "Test Maktab", ownerUserId: 2 },
   });
   check("201 qaytdi", status === 201);
-  check("PENDING holatida", json.school.status === "PENDING");
+  // SODDALASHTIRILGAN ONBOARDING: CEO yaratgan maktab darhol ishga tushadi
+  check("ACTIVE holatida", json.school.status === "ACTIVE");
 
   const notCeo = await req("POST", "/api/school/admin/schools", {
     user: ownerRow,

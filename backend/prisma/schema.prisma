@@ -505,12 +505,47 @@ model Group {
   name      String   // "Ertalabki", "Kechki", "VIP" va h.k. — erkin matn
   createdAt DateTime @default(now()) @map("created_at")
 
+  // Guruhga qo'shilish kodi — guruh yaratilganda AVTOMATIK generatsiya
+  // qilinadi (masalan "AB12-X7KF"). Talaba shu kodni kiritib o'zi
+  // qo'shiladi, Owner/CEO tasdig'i kerak emas.
+  //
+  // NIMA UCHUN Invitation modeli emas: Invitation bir martalik/muddatli
+  // taklif uchun mo'ljallangan (maxUses, expiresAt). Guruh kodi esa
+  // guruhning DOIMIY xususiyati — guruh mavjud ekan, kod ham amal qiladi.
+  // Ikkalasi birga yashaydi: Invitation eski oqim uchun saqlanib qoladi.
+  inviteCode String  @unique @map("invite_code")
+
   memberships Membership[]
   invitations Invitation[]
   homeworks   Homework[]
+  teachers    GroupTeacher[]
 
   @@map("school_groups")
   @@index([schoolId])
+}
+
+// O'qituvchi <-> Guruh (ko'pga-ko'p).
+//
+// NIMA UCHUN KERAK: haqiqiy avto maktabda bitta o'qituvchi bir nechta
+// guruhga (ertalabki + kechki) dars beradi. Membership.groupId esa
+// bitta maydon — faqat bitta guruhni ko'rsata oladi.
+//
+// MOSLIK: Membership.groupId OLIB TASHLANMADI. Talaba uchun u asosiy
+// manba bo'lib qoladi. O'qituvchi uchun esa shu jadval asosiy manba,
+// lekin eski ma'lumotda (migratsiyagacha) faqat groupId to'ldirilgan
+// bo'lishi mumkin — getTeacherGroupIds() ikkalasini ham hisobga oladi,
+// shuning uchun eski yozuvlar ishlashda davom etadi.
+model GroupTeacher {
+  id           Int        @id @default(autoincrement())
+  groupId      Int        @map("group_id")
+  group        Group      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  membershipId Int        @map("membership_id")
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  assignedAt   DateTime   @default(now()) @map("assigned_at")
+
+  @@map("school_group_teachers")
+  @@unique([groupId, membershipId])
+  @@index([membershipId])
 }
 
 // Foydalanuvchi <-> Maktab bog'lanishi. Rol shu yerda saqlanadi.
@@ -533,6 +568,7 @@ model Membership {
   sentMessages        SchoolMessage[]     @relation("SchoolMessageSender")
   chatsAsStudent      SchoolChat[]        @relation("SchoolChatStudent")
   chatsAsTeacher      SchoolChat[]        @relation("SchoolChatTeacher")
+  taughtGroups        GroupTeacher[]
 
   @@map("school_memberships")
   @@index([userId, status])
@@ -728,4 +764,26 @@ model PremiumPlan {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("premium_plans")
+}
+
+// Global sozlamalar — kalit/qiymat jadvali.
+//
+// NIMA UCHUN JADVAL, ENV EMAS: bu qiymatlarni ADMIN ilova ichidan
+// o'zgartira olishi kerak (qayta deploy qilmasdan). ENV o'zgaruvchisi
+// buni bera olmaydi — uni o'zgartirish uchun serverga kirish kerak.
+//
+// NIMA UCHUN KALIT/QIYMAT, alohida ustunlar emas: sozlamalar ro'yxati
+// o'sib boradi (yangi feature -> yangi flag). Har safar migratsiya
+// yozmaslik uchun umumiy jadval.
+//
+// Qiymat har doim STRING sifatida saqlanadi. Murakkab qiymatlar
+// (masalan feature flaglar xaritasi) JSON matn sifatida yoziladi va
+// settingsService ichida parse qilinadi.
+model AppSetting {
+  key         String   @id
+  value       String
+  updatedById Int?     @map("updated_by_id")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
 }

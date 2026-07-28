@@ -331,8 +331,10 @@ function Option({ option, kind, state, onClick }) {
         borderColor: styles.border,
         background: styles.bg,
         opacity: styles.opacity,
-        backdropFilter: "blur(var(--glass-blur))",
-        WebkitBackdropFilter: "blur(var(--glass-blur))",
+        // backdrop-filter OLIB TASHLANDI: yuqoridagi izohga ko'ra fon
+        // allaqachon solid (color-mix) rangga o'tkazilgan, shuning uchun
+        // blur vizual jihatdan hech narsa qo'shmasdi. Har savolda 4 ta
+        // variant qayta render bo'ladi, ya'ni narxi bekorga to'lanardi.
       }}
     >
       {isSignOption ? (

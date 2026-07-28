@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import SchoolChatListScreen from "./SchoolChatListScreen";
+import SchoolChatScreen from "./SchoolChatScreen";
 import { useTranslation } from "react-i18next";
 import {
   School,
@@ -87,6 +88,8 @@ export default function StudentSchoolTab({ onBack, onOpenJoin, onOpenLeaderboard
   const [leaving, setLeaving] = useState(false);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [showChats, setShowChats] = useState(false);
+  const [openChat, setOpenChat] = useState(null); // to'g'ridan-to'g'ri ochilgan suhbat
+  const [messageError, setMessageError] = useState("");
   const [unread, setUnread] = useState(0);
 
   const load = useCallback(async () => {
@@ -133,8 +136,46 @@ export default function StudentSchoolTab({ onBack, onOpenJoin, onOpenLeaderboard
     }
   }
 
-  // Talaba o'z o'qituvchisi bilan yozisha oladi — bu chat tizimining
-  // ikkinchi yarmi. O'qituvchi tomonidan TeacherDashboard'da ochiladi.
+  // Talaba o'qituvchiga BIRINCHI bo'lib yozadi. Backend /school/me endi
+  // guruh o'qituvchilarini ham qaytaradi, shuning uchun qo'shimcha
+  // so'rov kerak emas. Bitta o'qituvchi bo'lsa (odatiy holat) suhbat
+  // darhol ochiladi; bir nechta bo'lsa chatlar ro'yxatiga o'tamiz.
+  async function handleMessageTeacher() {
+    const teachers = data?.teachers || [];
+    if (teachers.length === 0) return;
+    if (teachers.length > 1) {
+      setShowChats(true);
+      return;
+    }
+    setMessageError("");
+    try {
+      const res = await api.schoolOpenChat(data.membership.schoolId, teachers[0].membershipId);
+      setOpenChat(res.chat);
+    } catch (err) {
+      setMessageError(err.message);
+    }
+  }
+
+  // MUHIM TUZATISH: ilgari talaba faqat mavjud chatlar RO'YXATINI ko'ra
+  // olardi — birinchi bo'lib yozishni FAQAT o'qituvchi boshlay olardi
+  // (TeacherDashboard'da). Agar o'qituvchi hali yozmagan bo'lsa, talaba
+  // "hali xabar yo'q" degan bo'sh ro'yxatni ko'rib, hech narsa qila
+  // olmasdi. Endi handleMessageTeacher() orqali talaba ham suhbatni
+  // BEVOSITA boshlashi mumkin (ro'yxatga o'tmasdan, to'g'ridan-to'g'ri).
+  if (openChat && data?.membership) {
+    return (
+      <SchoolChatScreen
+        schoolId={data.membership.schoolId}
+        chat={{ ...openChat, myMembershipId: data.membership.id }}
+        onBack={() => {
+          setOpenChat(null);
+          loadUnread(data.membership.schoolId);
+        }}
+        onRead={() => {}}
+      />
+    );
+  }
+
   if (showChats && data?.membership) {
     return (
       <SchoolChatListScreen
@@ -196,6 +237,8 @@ export default function StudentSchoolTab({ onBack, onOpenJoin, onOpenLeaderboard
           homework={homework}
           unread={unread}
           onOpenChats={() => setShowChats(true)}
+          onMessageTeacher={handleMessageTeacher}
+          messageError={messageError}
           onOpenLeaderboard={onOpenLeaderboard}
           onRequestLeave={() => setConfirmLeave(true)}
         />
@@ -236,11 +279,14 @@ function StudentSchoolContent({
   homework,
   unread,
   onOpenChats,
+  onMessageTeacher,
+  messageError,
   onOpenLeaderboard,
   onRequestLeave,
 }) {
   const { t } = useTranslation();
   const { school, group } = data;
+  const teachers = data.teachers || [];
   const pending = homework.filter((h) => h.status === "PENDING");
   const others = homework.filter((h) => h.status !== "PENDING");
 
@@ -269,6 +315,46 @@ function StudentSchoolContent({
           </div>
         </div>
       </div>
+
+      {/* O'qituvchi — talaba unga bevosita yozishi mumkin */}
+      {teachers.length > 0 && (
+        <div className="rounded-2xl bg-white/[0.04] border border-white/10 p-4 mb-5">
+          <div className="flex items-center gap-3">
+            {teachers[0].avatarUrl ? (
+              <img
+                src={teachers[0].avatarUrl}
+                alt=""
+                className="w-10 h-10 rounded-full object-cover shrink-0"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+                <span className="text-sm font-bold">
+                  {(teachers[0].name || "?").charAt(0).toUpperCase()}
+                </span>
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-gray-500 text-[11px]">{t("school.yourTeacher")}</p>
+              <p className="font-semibold text-sm truncate">
+                {teachers.length > 1
+                  ? t("school.teacherCount", { count: teachers.length })
+                  : teachers[0].name}
+              </p>
+            </div>
+            <button
+              onClick={onMessageTeacher}
+              className="shrink-0 rounded-xl px-3.5 py-2 text-xs font-bold text-white flex items-center gap-1.5"
+              style={{ background: `linear-gradient(135deg, ${ACCENT_FROM}, ${ACCENT_TO})` }}
+            >
+              <MessageCircle size={13} />
+              {t("school.writeToTeacher")}
+            </button>
+          </div>
+          {messageError && (
+            <p className="text-red-400 text-xs mt-2.5">{messageError}</p>
+          )}
+        </div>
+      )}
 
       {/* Tezkor havolalar */}
       <div className="grid grid-cols-2 gap-3 mb-5">

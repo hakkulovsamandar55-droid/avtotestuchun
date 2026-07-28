@@ -19,7 +19,9 @@ const ceo = { id: 1, role: "ADMIN" };
 console.log("--- Maktab yaratish (CEO) ---");
 const school = await svc.createSchool(ceo, { name: "  Tezlik Auto Maktab  ", ownerUserId: 2 });
 check("maktab yaratildi", school && school.name === "Tezlik Auto Maktab");
-check("status PENDING", school.status === "PENDING");
+// SODDALASHTIRILGAN ONBOARDING: maktabni CEO ning o'zi yaratadi,
+// shuning uchun alohida tasdiqlash bosqichi olib tashlandi — darhol ACTIVE.
+check("status ACTIVE", school.status === "ACTIVE");
 check("owner tayinlandi", school.ownerId === 2);
 
 const ownerMembership = await svc.getMyActiveMembership(2);
@@ -108,12 +110,16 @@ check("eski a'zolik ARCHIVED", oldMembership.status === "ARCHIVED");
 check("eski a'zolikda endedAt bor", oldMembership.endedAt !== null);
 
 console.log("--- Faol bo'lmagan maktabga qo'shilib bo'lmaydi ---");
+// Maktab endi yaratilganda darhol ACTIVE bo'ladi, shuning uchun
+// "faol emas" holatini sinash uchun uni ataylab DISABLED qilamiz.
+// Himoya mantig'i o'zgarmagan — faqat sinov usuli o'zgardi.
 await prisma.user.create({ data: { id: 8, telegramId: 8n, name: "Owner 3" } });
-const pendingSchool = await svc.createSchool(ceo, { name: "Kutilayotgan maktab", ownerUserId: 8 });
-const inviteForPending = await svc.createInvitation(pendingSchool.id, 8, { type: "SCHOOL" });
+const disabledSchool = await svc.createSchool(ceo, { name: "To'xtatilgan maktab", ownerUserId: 8 });
+const inviteForDisabled = await svc.createInvitation(disabledSchool.id, 8, { type: "SCHOOL" });
+await prisma.school.update({ where: { id: disabledSchool.id }, data: { status: "DISABLED" } });
 await prisma.user.create({ data: { id: 9, telegramId: 9n, name: "Student 9" } });
-await checkThrows("PENDING maktabga qo'shilib bo'lmaydi", "school_unavailable", () =>
-  svc.joinSchoolByCode({ id: 9 }, inviteForPending.code));
+await checkThrows("faol bo'lmagan maktabga qo'shilib bo'lmaydi", "school_unavailable", () =>
+  svc.joinSchoolByCode({ id: 9 }, inviteForDisabled.code));
 
 console.log("--- Owner o'qituvchini to'xtatadi/faollashtiradi ---");
 const suspended = await svc.suspendTeacher(school.id, teacherM.id);

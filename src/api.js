@@ -227,7 +227,26 @@ export const api = {
 
   // ===== Haydovchilik maktablari (Driving School) =====
   schoolMe: () => request("/api/school/me"),
+  // Global sozlamalar
+  getPublicSettings: () => request("/api/stats/settings"),
+  getAdminSettings: () => request("/api/admin/settings"),
+  updateAdminSettings: (body) =>
+    request("/api/admin/settings", { method: "PATCH", body }),
+
   schoolJoin: (code) => request("/api/school/join", { method: "POST", body: { code } }),
+  // Guruh kodi oqimi: avval preview (tasdiqlash oynasi), keyin join.
+  schoolInvitePreview: (code) => request(`/api/school/invite/${encodeURIComponent(code)}`),
+  schoolJoinGroup: (code) =>
+    request("/api/school/join-group", { method: "POST", body: { code } }),
+  schoolAddTeacherToGroup: (schoolId, groupId, membershipId) =>
+    request(`/api/school/${schoolId}/groups/${groupId}/teachers`, {
+      method: "POST",
+      body: { membershipId },
+    }),
+  schoolRemoveTeacherFromGroup: (schoolId, groupId, membershipId) =>
+    request(`/api/school/${schoolId}/groups/${groupId}/teachers/${membershipId}`, {
+      method: "DELETE",
+    }),
   schoolLeave: () => request("/api/school/leave", { method: "POST" }),
   schoolMyHomework: () => request("/api/school/my-homework"),
 
