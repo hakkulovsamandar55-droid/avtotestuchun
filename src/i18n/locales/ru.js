@@ -387,6 +387,8 @@ export default {
     hardestQuestions: "Сложные вопросы",
     school: "Автошкола",
     schoolSubtitle: "Группа и задания",
+    cheatSheet: "Шпаргалка",
+    cheatSheetSubtitle: "Важные цифры в одном месте",
     officialExam: "Официальный экзамен",
     officialExamSubtitle: "20 вопросов · 20 минут · как на настоящем",
     practiceExam: "Тренировочный экзамен",
@@ -542,6 +544,13 @@ export default {
     copyFailed: "Не удалось скопировать. Запишите код вручную.",
     invitedCount: "Приглашено: {{count}}",
     noneYet: "Вы пока никого не пригласили. Отправьте свой код друзьям.",
+  },
+  cheatSheet: {
+    title: "Шпаргалка",
+    subtitle: "{{count}} важных фактов — в одном месте",
+    searchPlaceholder: "Поиск факта...",
+    allCategories: "Все",
+    noResults: "Ничего не найдено",
   },
   signs: {
     sourceNote: "Источник: Правила дорожного движения (ПКМ №172, приложение 1)",

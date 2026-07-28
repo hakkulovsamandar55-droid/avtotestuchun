@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { randomUUID } from "crypto";
 import { prisma } from "./db.js";
 import { getRandomExamQuestions } from "./data/ticketsData.js";
+import { recordAnswers } from "./services/questionBankService.js";
 
 // === Duel (jonli musobaqa) rejimi ===
 // Ikkita foydalanuvchi bir xil 20 ta savolni bir vaqtda yechadi.
@@ -310,6 +311,16 @@ export function initDuelSocket(httpServer, { isOriginAllowed } = {}) {
       const question = session.questions[questionIndex];
       const isCorrect = chosenIndex === question.correct;
       player.answers[questionIndex] = { chosenIndex, isCorrect };
+
+      // MUHIM TUZATISH: duel javoblari ilgari faqat xotirada (session
+      // ichida) turardi — g'olibni aniqlash uchun ishlatilardi, lekin
+      // "Mening xatolarim" bo'limiga umuman yozilmasdi. Endi duelda
+      // qilingan xato ham boshqa rejimlardagi kabi darhol saqlanadi.
+      if (question?.id) {
+        recordAnswers(Number(userId), [{ questionId: question.id, isCorrect }]).catch(() => {
+          // Statistika saqlanmasa ham duel davom etadi
+        });
+      }
 
       const answeredCount = player.answers.filter((a) => a !== null).length;
 

@@ -387,6 +387,8 @@ export default {
     hardestQuestions: "Қийин саволлар",
     school: "Автомактаб",
     schoolSubtitle: "Гуруҳ ва топшириқлар",
+    cheatSheet: "Шпаргалка",
+    cheatSheetSubtitle: "Муҳим рақамлар бир жойда",
     officialExam: "Расмий имтиҳон",
     officialExamSubtitle: "20 савол · 20 дақиқа · ҳақиқий шароит",
     practiceExam: "Машқ имтиҳони",
@@ -542,6 +544,13 @@ export default {
     copyFailed: "Нусха олиб бўлмади. Кодни қўлда ёзиб олинг.",
     invitedCount: "Таклиф қилганлар: {{count}}",
     noneYet: "Ҳали ҳеч кимни таклиф қилмагансиз. Кодингизни дўстларингизга юборинг.",
+  },
+  cheatSheet: {
+    title: "Шпаргалка",
+    subtitle: "{{count}} та муҳим факт — бир жойда",
+    searchPlaceholder: "Факт қидириш...",
+    allCategories: "Ҳаммаси",
+    noResults: "Ҳеч нарса топилмади",
   },
   signs: {
     sourceNote: "Манба: Йўл ҳаракати қоидалари (ВМ 172-сон қарори, 1-илова)",

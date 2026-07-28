@@ -38,7 +38,7 @@ function sanitizeProfile(profile) {
 }
 
 authRouter.post("/telegram", asyncHandler(async (req, res) => {
-  const { initData, profile } = req.body;
+  const { initData, profile, fallbackStartParam } = req.body;
 
   const result = verifyTelegramInitData(initData, process.env.BOT_TOKEN);
   if (!result.ok) {
@@ -57,7 +57,17 @@ authRouter.post("/telegram", asyncHandler(async (req, res) => {
   let newReferralCode = null;
   if (!existing) {
     newReferralCode = await generateUniqueReferralCode();
-    referrer = await resolveReferrer(result.startParam, telegramId);
+    // Avval IMZOLANGAN manba (Telegram Direct Mini App Link orqali
+    // kelgan, tasdiqlangan start_param) tekshiriladi. Faqat u bo'lmasa
+    // (masalan bot.py orqali "?startapp=" bilan, imzosiz URL
+    // parametri sifatida kelgan bo'lsa), fallbackStartParam ishlatiladi.
+    // MUHIM: fallbackStartParam soxtalashtirilishi mumkin (imzosiz),
+    // lekin hozircha referral hech qanday moddiy mukofot bermaydi —
+    // faqat kuzatuv/reyting uchun. Kelajakda referral uchun bonus
+    // qo'shilsa, bu qatorni olib tashlash yoki qat'iyroq tekshirish kerak.
+    const refCode =
+      result.startParam || (typeof fallbackStartParam === "string" ? fallbackStartParam : null);
+    referrer = await resolveReferrer(refCode, telegramId);
   }
 
   // Ro'yxatdan o'tish formasi faqat birinchi marta (yoki hali to'ldirilmagan

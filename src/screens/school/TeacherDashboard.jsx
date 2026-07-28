@@ -11,6 +11,7 @@ import {
   Activity,
   ChevronRight,
   MessageCircle,
+  LogOut,
 } from "lucide-react";
 import { api } from "../../api";
 import { ACCENT_FROM, ACCENT_TO } from "../../theme";
@@ -65,6 +66,7 @@ export default function TeacherDashboard({
   myMembershipId,
   onBack,
   onOpenLeaderboard,
+  onLeft,
 }) {
   const { t } = useTranslation();
   const [data, setData] = useState(null);
@@ -75,6 +77,23 @@ export default function TeacherDashboard({
   const [openStudentId, setOpenStudentId] = useState(null);
   const [showChats, setShowChats] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [leaving, setLeaving] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+
+  // O'qituvchi maktabdan o'z xohishi bilan chiqadi. Backend buni
+  // talabalar bilan bir xil /api/school/leave orqali qo'llab-quvvatlaydi
+  // (faqat OWNER chiqa olmaydi) — ilgari bu tugma shunchaki UI'da yo'q edi.
+  async function handleLeave() {
+    setLeaving(true);
+    try {
+      await api.schoolLeave();
+      setConfirmLeave(false);
+      onLeft?.();
+    } catch (err) {
+      setError(err.message);
+      setLeaving(false);
+    }
+  }
 
   const loadUnread = useCallback(async () => {
     try {
@@ -330,6 +349,41 @@ export default function TeacherDashboard({
             load();
           }}
         />
+      )}
+
+      {/* Chiqish */}
+      <button
+        onClick={() => setConfirmLeave(true)}
+        className="w-full mt-6 rounded-2xl py-3 font-semibold text-sm text-red-400/80 flex items-center justify-center gap-2"
+      >
+        <LogOut size={14} />
+        {t("school.leaveSchool")}
+      </button>
+
+      {confirmLeave && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-5 pb-8">
+          <div className="w-full max-w-sm rounded-3xl bg-[#161B2E] border border-white/10 p-5">
+            <p className="font-bold text-base mb-2">{t("school.leaveConfirmTitle")}</p>
+            <p className="text-gray-400 text-sm leading-relaxed mb-5">
+              {t("school.leaveConfirmBody")}
+            </p>
+            <div className="space-y-2.5">
+              <button
+                onClick={handleLeave}
+                disabled={leaving}
+                className="w-full rounded-2xl py-3.5 font-bold text-white text-sm bg-red-500/80 disabled:opacity-50"
+              >
+                {t("school.leaveConfirmYes")}
+              </button>
+              <button
+                onClick={() => setConfirmLeave(false)}
+                className="w-full rounded-2xl py-3 font-semibold text-sm text-gray-400 border border-white/10"
+              >
+                {t("officialExam.back")}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

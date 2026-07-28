@@ -70,6 +70,19 @@ export default function ExamScreen({ onExit }) {
     const record = { qIndex: index, chosen: optIdx, correct: question.correct, isCorrect };
     const newMistakes = isCorrect ? mistakes : mistakes + 1;
 
+    // MUHIM TUZATISH: ilgari rasmiy imtihon rejimida javoblar hech qachon
+    // /api/questions/answers'ga yuborilmasdi — faqat umumiy natija
+    // (recordAttempt) saqlanardi. Natijada imtihonda qilingan xatolar
+    // "Mening xatolarim" bo'limida HECH QACHON ko'rinmasdi. Endi har bir
+    // javob berilgan zahoti (to'g'ri yoki xato — ikkalasi ham serverga
+    // ketishi kerak, chunki to'g'ri javob avvalgi xatoni "hal qilingan"
+    // deb belgilaydi) darhol yuboriladi.
+    if (question?.id) {
+      api.recordAnswers([{ questionId: question.id, isCorrect }]).catch(() => {
+        // Xatolar statistikasi saqlanmasa ham imtihon davom etadi
+      });
+    }
+
     advanceTimer.current = setTimeout(() => {
       setAnswers((prev) => [...prev, record]);
       if (!isCorrect) setMistakes(newMistakes);

@@ -95,26 +95,22 @@ export default function TestScreen({ ticketNumber, customQuestions, customTitle,
     const nextAnswers = [...answers, record];
     setAnswers(nextAnswers);
 
+    // HAR SAVOLDAN KEYIN DARHOL yuboriladi (testning oxirigacha
+    // KUTILMAYDI). Sabab: foydalanuvchi 1-savolda xato qilib, testni
+    // tugatmasdan chiqib ketsa ("Orqaga" tugmasi), ilgari bu xato
+    // umuman saqlanmasdi — "mening xatolarim" bo'limi bo'sh qolardi.
+    // Endi xato qilingan zahoti serverga ketadi, test tugashini
+    // kutmaydi.
+    if (question?.id) {
+      api.recordAnswers([{ questionId: question.id, isCorrect: record.isCorrect }]).catch(() => {
+        // Xatolar statistikasi saqlanmasa ham test to'xtamaydi
+      });
+    }
+
     if (isLast) {
       setFinished(true);
       const correctCount = nextAnswers.filter((a) => a.isCorrect).length;
       const pct = Math.round((correctCount / total) * 100);
-
-      // HAR SAVOL natijasi alohida yuboriladi — "mening xatolarim" va
-      // "ko'pchilik xato qiladigan savollar" bo'limlari shundan to'ladi.
-      // Umumiy statistika (correctCount/totalCount) esa alohida endpointga
-      // ketadi, chunki u boshqa narsani hisoblaydi (examReadiness).
-      const perQuestion = nextAnswers
-        .map((a) => {
-          const q = questions[a.qIndex];
-          return q?.id ? { questionId: q.id, isCorrect: a.isCorrect } : null;
-        })
-        .filter(Boolean);
-      if (perQuestion.length > 0) {
-        api.recordAnswers(perQuestion).catch(() => {
-          // Xatolar statistikasi saqlanmasa ham natija ko'rsatilishda davom etadi
-        });
-      }
 
       // Mavzuli testda bilet raqami yo'q — umumiy urinish "PRACTICE" bo'ladi.
       api

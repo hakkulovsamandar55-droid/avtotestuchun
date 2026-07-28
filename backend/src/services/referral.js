@@ -17,9 +17,17 @@ export async function generateUniqueReferralCode() {
 // Ro'yxatdan o'tish paytida referral kodni topib, taklif qiluvchiga bog'laydi.
 // O'zini-o'zi taklif qilish yoki mavjud bo'lmagan kod jimgina e'tiborsiz qoldiriladi
 // (ro'yxatdan o'tishni bloklamaydi).
+//
+// MUHIM TUZATISH: havoladagi start_param "ref_KOD" ko'rinishida keladi
+// (masalan "ref_A3F9K2"), lekin bazada faqat "A3F9K2" saqlanadi. Bu
+// prefiks ilgari olib tashlanmasdi — natijada referralCode qidiruvi
+// HECH QACHON topilmasdi va referrer doim null qaytardi, hatto havola
+// to'g'ri ochilgan taqdirda ham.
 export async function resolveReferrer(refCode, newUserTelegramId) {
   if (!refCode) return null;
-  const referrer = await prisma.user.findUnique({ where: { referralCode: refCode } });
+  const code = refCode.startsWith("ref_") ? refCode.slice(4) : refCode;
+  if (!code) return null;
+  const referrer = await prisma.user.findUnique({ where: { referralCode: code } });
   if (!referrer) return null;
   if (referrer.telegramId === newUserTelegramId) return null;
   return referrer;

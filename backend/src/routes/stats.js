@@ -371,10 +371,30 @@ statsRouter.get("/referral", asyncHandler(async (req, res) => {
     select: { name: true, createdAt: true, isPremium: true },
   });
 
-  // Havola bot username'iga bog'liq. Env'da bo'lmasa null qaytaramiz —
-  // UI faqat kodni ko'rsatadi, havolani yashiradi.
+  // MUHIM TUZATISH: havola ilgari "https://t.me/BOT?start=ref_KOD" (bot
+  // buyrug'i) formatida edi. Bu FORMAT XATO edi — Telegram bu formatda
+  // botga oddiy CHATni ochadi, Mini App'ni EMAS. Foydalanuvchi botga
+  // /start yozgandan keyin yana "Ilovani ochish" tugmasini bosishi kerak
+  // bo'lardi, VA eng yomoni — bu holatda referral kodi Mini App'ga
+  // umuman yetib bormasdi (bot.py static URL bilan tugma yuboradi,
+  // koddan mustaqil). Natijada: "havolani bossam saytga kirmayapti".
+  //
+  // TO'G'RI FORMAT (rasmiy Telegram hujjati, core.telegram.org/bots/webapps
+  // -> "Launching the main Mini App"):
+  //   https://t.me/<bot_username>?startapp=<kod>
+  // (Qisqa ilova nomi (/newapp) SHART EMAS — bu "Main Mini App" havolasi,
+  // botning asosiy Menu Button'iga bog'langan Web App'ni bevosita ochadi.)
+  //
+  // Bu havola foydalanuvchini BEVOSITA Mini App'ga olib kiradi (bot
+  // chatisiz, qo'shimcha tugmasiz) va Telegram o'zi start_param'ni
+  // imzolangan initData ichiga qo'shadi — aynan shu narsani
+  // telegramAuth.js allaqachon o'qiydi.
+  //
+  // SHART: BotFather'da botning "Main Mini App" (Bot Settings ->
+  // Configure Mini App yoki Menu Button -> Web App sifatida sozlangan)
+  // yoqilgan bo'lishi kerak — aks holda bu havola oddiy chatni ochadi.
   const botUsername = process.env.BOT_USERNAME || null;
-  const link = botUsername ? `https://t.me/${botUsername}?start=ref_${code}` : null;
+  const link = botUsername ? `https://t.me/${botUsername}?startapp=ref_${code}` : null;
 
   res.json({
     code,

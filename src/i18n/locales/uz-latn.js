@@ -387,6 +387,8 @@ export default {
     hardestQuestions: "Qiyin savollar",
     school: "Avtomaktab",
     schoolSubtitle: "Guruh va topshiriqlar",
+    cheatSheet: "Shpargalka",
+    cheatSheetSubtitle: "Muhim raqamlar bir joyda",
     officialExam: "Rasmiy imtihon",
     officialExamSubtitle: "20 savol · 20 daqiqa · haqiqiy sharoit",
     practiceExam: "Mashq imtihoni",
@@ -542,6 +544,13 @@ export default {
     copyFailed: "Nusxa olib bo'lmadi. Kodni qo'lda yozib oling.",
     invitedCount: "Taklif qilganlar: {{count}}",
     noneYet: "Hali hech kimni taklif qilmagansiz. Kodingizni do'stlaringizga yuboring.",
+  },
+  cheatSheet: {
+    title: "Shpargalka",
+    subtitle: "{{count}} ta muhim fakt — bir joyda",
+    searchPlaceholder: "Fakt qidirish...",
+    allCategories: "Hammasi",
+    noResults: "Hech narsa topilmadi",
   },
   signs: {
     sourceNote: "Manba: Yo'l harakati qoidalari (VM 172-son qarori, 1-ilova)",

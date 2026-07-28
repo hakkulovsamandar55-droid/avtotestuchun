@@ -12,6 +12,7 @@ import {
   Shuffle,
   ClipboardCheck,
   Flame,
+  NotebookText,
 } from "lucide-react";
 import { api } from "../api";
 
@@ -46,6 +47,7 @@ export default function HomeTab({
   onOpenMistakes,
   onOpenSaved,
   onOpenTricky,
+  onOpenCheatSheet,
 }) {
   const { t } = useTranslation();
   const [stats, setStats] = useState(null);
@@ -113,6 +115,13 @@ export default function HomeTab({
       title: t("home.trickyTests"),
       sub: t("home.trickyTestsSubtitle"),
       onClick: onOpenTricky,
+    },
+    {
+      key: "cheatSheet",
+      icon: NotebookText,
+      title: t("home.cheatSheet"),
+      sub: t("home.cheatSheetSubtitle"),
+      onClick: onOpenCheatSheet,
     },
     {
       key: "duel",

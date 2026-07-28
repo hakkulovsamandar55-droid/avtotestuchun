@@ -139,6 +139,10 @@ export default function StudentSchoolContainer({ currentUserId, onExit }) {
           setLeaderboardCtx({ schoolId: membership.schoolId, groupId: membership.groupId });
           setStage("leaderboard");
         }}
+        onLeft={() => {
+          setStage("join");
+          load();
+        }}
       />
     );
   }

@@ -59,10 +59,13 @@ questionBankRouter.get(
 );
 
 // GET /api/questions/hardest — ko'pchilik xato qiladigan savollar
+// TOP 10 — bu "eng qiyin savollar reytingi", cheksiz ro'yxat emas.
+// Ko'p bo'lsa foydalanuvchi uchun ma'nosini yo'qotadi (deyarli barcha
+// savollar biroz xato qilingan bo'lishi mumkin).
 questionBankRouter.get(
   "/hardest",
   asyncHandler(async (req, res) => {
-    res.json({ questions: await svc.listHardestQuestions() });
+    res.json({ questions: await svc.listHardestQuestions({ limit: 10 }) });
   })
 );
 

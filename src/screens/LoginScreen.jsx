@@ -69,9 +69,15 @@ export default function LoginScreen({ onLogin, externalNotice }) {
       return;
     }
 
+    // Zaxira yo'l — bot.py orqali "?startapp=ref_KOD" bilan ochilgan
+    // bo'lsa (imzolanmagan, oddiy URL parametri sifatida) shu yerdan
+    // o'qiladi. Backend buni faqat imzolangan start_param topilmasa
+    // ishlatadi.
+    const fallbackStartParam = new URLSearchParams(window.location.search).get("startapp");
+
     setConnecting(true);
     try {
-      const { token, user } = await api.loginWithTelegram(initData, profile);
+      const { token, user } = await api.loginWithTelegram(initData, profile, fallbackStartParam);
       setToken(token);
       if (profile) saveProfile(profile);
       onLogin(user);
@@ -244,7 +250,7 @@ export default function LoginScreen({ onLogin, externalNotice }) {
       </div>
 
       <div className="pb-8 mt-auto text-center text-white/25 text-xs">
-        @TezPrava_Bot
+        @{import.meta.env.VITE_BOT_USERNAME || "pravatezbot"}
       </div>
     </div>
   );

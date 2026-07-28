@@ -170,9 +170,15 @@ export default function DuelScreen({ onExit }) {
     const shareText = t("duel.shareText", { code: lobbyCode });
     const tg = window.Telegram?.WebApp;
 
+    // MUHIM: referral havolasidagi bilan bir xil tuzatish — "?start="
+    // (bot buyrug'i) o'rniga "?startapp=" (Telegramning rasmiy "Main
+    // Mini App" havolasi) ishlatiladi, aks holda do'st bosgan havola
+    // faqat bot chatini ochib, duelga bevosita kiritmaydi. Qisqa ilova
+    // nomi shart emas — botning Menu Button/Main Mini App sifatida
+    // sozlangan Web App'i shu bilan bevosita ochiladi.
     if (botUsername) {
       const startParam = `duel_${lobbyCode}`;
-      const deepLink = `https://t.me/${botUsername}?start=${startParam}`;
+      const deepLink = `https://t.me/${botUsername}?startapp=${startParam}`;
       const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(
         deepLink
       )}&text=${encodeURIComponent(shareText)}`;

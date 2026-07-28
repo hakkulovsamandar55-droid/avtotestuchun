@@ -8,3 +8,4 @@ backend/uploads/
 .tp-update-tmp/
 *.log
 .DS_Store
+bot/__pycache__/

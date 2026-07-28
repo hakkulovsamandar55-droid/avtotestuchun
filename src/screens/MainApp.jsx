@@ -20,6 +20,7 @@ import TopicTestsScreen from "./TopicTestsScreen";
 import MistakesHubScreen from "./MistakesHubScreen";
 import QuestionListScreen from "./QuestionListScreen";
 import TrickyTestScreen from "./TrickyTestScreen";
+import CheatSheetScreen from "./CheatSheetScreen";
 import ReferralScreen from "./ReferralScreen";
 import OnboardingSlideshow, {
   hasSeenOnboarding,
@@ -49,6 +50,7 @@ export default function MainApp({ user }) {
   const [showTopics, setShowTopics] = useState(false);
   const [showMistakes, setShowMistakes] = useState(false);
   const [showTricky, setShowTricky] = useState(false);
+  const [showCheatSheet, setShowCheatSheet] = useState(false);
   const [showReferral, setShowReferral] = useState(false);
   // questionList: null | "saved" | "mistakes" | "hardest"
   const [questionList, setQuestionList] = useState(null);
@@ -237,6 +239,14 @@ export default function MainApp({ user }) {
     );
   }
 
+  if (showCheatSheet) {
+    return (
+      <div className="flex flex-col h-full">
+        <CheatSheetScreen onBack={() => setShowCheatSheet(false)} />
+      </div>
+    );
+  }
+
   if (showReferral) {
     return (
       <div className="flex flex-col h-full">
@@ -281,6 +291,7 @@ export default function MainApp({ user }) {
           onOpenMistakes={() => setShowMistakes(true)}
           onOpenSaved={() => setQuestionList("saved")}
           onOpenTricky={() => setShowTricky(true)}
+          onOpenCheatSheet={() => setShowCheatSheet(true)}
         />
       )}
       {active === "stats" && <StatsTab />}

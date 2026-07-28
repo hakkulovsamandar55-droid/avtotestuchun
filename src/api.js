@@ -111,8 +111,21 @@ export function resolveUploadUrl(relativeUrl) {
 }
 
 export const api = {
-  loginWithTelegram: (initData, profile) =>
-    request("/api/auth/telegram", { method: "POST", body: { initData, profile }, auth: false }),
+  // fallbackStartParam — MUHIM ZAXIRA YO'L: agar foydalanuvchi eski
+  // uslubdagi "?start=" havoladan yoki botga qo'lda "/start ref_KOD"
+  // yozib kirgan bo'lsa (bot.py shu holatda "?startapp=KOD" bilan
+  // ilovaga yo'naltiradi), bu qiymat Telegramning IMZOLANGAN initData
+  // ichida KELMAYDI — chunki ilova signed mexanizm orqali emas, oddiy
+  // "web_app" tugmasi orqali ochilgan. Shuning uchun uni URL'dan
+  // (query string) alohida o'qib, alohida maydon sifatida yuboramiz.
+  // Backend buni FAQAT signed start_param bo'lmagan holatdagina
+  // ishlatadi — imzolangan manba doim ustuvor.
+  loginWithTelegram: (initData, profile, fallbackStartParam) =>
+    request("/api/auth/telegram", {
+      method: "POST",
+      body: { initData, profile, fallbackStartParam },
+      auth: false,
+    }),
   searchUsers: (query, filters = []) => {
     const params = new URLSearchParams();
     if (query) params.set("query", query);
