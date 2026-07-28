@@ -22,6 +22,8 @@ export default function QuestionListScreen({ mode, onBack }) {
   const { t, i18n } = useTranslation();
   const [items, setItems] = useState([]);
   const [savedIds, setSavedIds] = useState(new Set());
+  const [confirmClearAll, setConfirmClearAll] = useState(false);
+  const [clearingAll, setClearingAll] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
@@ -95,6 +97,34 @@ export default function QuestionListScreen({ mode, onBack }) {
     [savedIds, mode]
   );
 
+  // Bitta xatoni ro'yxatdan chiqarish. Server javobini kutmasdan
+  // ro'yxatdan olib tashlaymiz (optimistik) — bosilgan zahoti yo'qoladi,
+  // aks holda tarmoq sekin bo'lsa tugma "ishlamayotgandek" tuyulardi.
+  // Xato bo'lsa qaytarib qo'yamiz.
+  const clearOne = useCallback(async (questionId) => {
+    const snapshot = items;
+    setItems((prev) => prev.filter((i) => i.questionId !== questionId));
+    try {
+      await api.clearMistake(questionId);
+    } catch (err) {
+      setItems(snapshot);
+      setError(err.message);
+    }
+  }, [items]);
+
+  const clearAll = useCallback(async () => {
+    setClearingAll(true);
+    try {
+      await api.clearAllMistakes();
+      setItems([]);
+      setConfirmClearAll(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setClearingAll(false);
+    }
+  }, []);
+
   const title =
     mode === "saved"
       ? t("home.savedQuestions")
@@ -111,9 +141,18 @@ export default function QuestionListScreen({ mode, onBack }) {
         >
           <ChevronLeft size={17} color="var(--icon-muted)" />
         </button>
-        <h1 className="text-lg font-extrabold" style={{ color: "var(--text-primary)" }}>
+        <h1 className="text-lg font-extrabold flex-1 min-w-0 truncate" style={{ color: "var(--text-primary)" }}>
           {title}
         </h1>
+        {mode === "mistakes" && items.length > 0 && !loading && (
+          <button
+            onClick={() => setConfirmClearAll(true)}
+            className="shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold"
+            style={{ background: "rgba(239,68,68,0.14)", color: "#F87171" }}
+          >
+            {t("mistakes.clearAll")}
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -140,10 +179,43 @@ export default function QuestionListScreen({ mode, onBack }) {
                 isSaved={savedIds.has(item.questionId)}
                 busy={busyId === item.questionId}
                 onToggleSave={() => toggleSave(item.questionId)}
+                onClear={mode === "mistakes" ? () => clearOne(item.questionId) : null}
                 t={t}
               />
             );
           })}
+        </div>
+      )}
+
+      {/* Hammasini tozalash tasdig'i. Ro'yxat bo'shaydi, shuning uchun
+          tasdiq so'raladi. */}
+      {confirmClearAll && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 px-5 pb-8">
+          <div className="w-full max-w-sm rounded-3xl bg-card border border-card-border p-5">
+            <p className="font-bold text-base mb-2" style={{ color: "var(--text-primary)" }}>
+              {t("mistakes.clearAllTitle")}
+            </p>
+            <p className="text-sm leading-relaxed mb-5" style={{ color: "var(--text-secondary)" }}>
+              {t("mistakes.clearAllBody", { count: items.length })}
+            </p>
+            <div className="space-y-2.5">
+              <button
+                onClick={clearAll}
+                disabled={clearingAll}
+                className="w-full rounded-2xl py-3.5 font-bold text-white text-sm disabled:opacity-50"
+                style={{ background: "rgba(239,68,68,0.85)" }}
+              >
+                {clearingAll ? t("mistakes.clearing") : t("mistakes.clearAllConfirm")}
+              </button>
+              <button
+                onClick={() => setConfirmClearAll(false)}
+                className="w-full rounded-2xl py-3 font-semibold text-sm border border-card-border"
+                style={{ color: "var(--text-secondary)" }}
+              >
+                {t("officialExam.back")}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -166,7 +238,7 @@ function EmptyState({ mode, t }) {
   );
 }
 
-function QuestionCard({ question, meta, mode, isSaved, busy, onToggleSave, t }) {
+function QuestionCard({ question, meta, mode, isSaved, busy, onToggleSave, onClear, t }) {
   const [revealed, setRevealed] = useState(false);
 
   return (
@@ -192,6 +264,18 @@ function QuestionCard({ question, meta, mode, isSaved, busy, onToggleSave, t }) 
             <Bookmark size={15} color="var(--icon-muted)" />
           )}
         </button>
+        {/* Xatoni ro'yxatdan chiqarish — savolni o'qib, tushunib bo'lgach.
+            Faqat "mening xatolarim" ro'yxatida ko'rinadi. */}
+        {onClear && (
+          <button
+            onClick={onClear}
+            className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
+            style={{ background: "rgba(239,68,68,0.12)" }}
+            aria-label={t("mistakes.clearOne")}
+          >
+            <X size={15} color="#F87171" />
+          </button>
+        )}
       </div>
 
       {/* Qo'shimcha ma'lumot — rejimga qarab */}

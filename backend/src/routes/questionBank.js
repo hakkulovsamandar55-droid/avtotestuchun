@@ -58,6 +58,30 @@ questionBankRouter.get(
   })
 );
 
+// DELETE /api/questions/mistakes — barcha xatolarni tozalash
+//
+// TARTIB MUHIM: bu marshrut ":questionId" li marshrutdan OLDIN turishi
+// kerak, aks holda Express "mistakes" so'zini questionId deb qabul
+// qilib, noto'g'ri handler'ga yuborardi.
+questionBankRouter.delete(
+  "/mistakes",
+  asyncHandler(async (req, res) => {
+    res.json(await svc.resolveAllMistakes(req.user.id));
+  })
+);
+
+// DELETE /api/questions/mistakes/:questionId — bitta xatoni tozalash
+questionBankRouter.delete(
+  "/mistakes/:questionId",
+  asyncHandler(async (req, res) => {
+    try {
+      res.json(await svc.resolveMistake(req.user.id, req.params.questionId));
+    } catch (err) {
+      return sendError(res, err);
+    }
+  })
+);
+
 // GET /api/questions/hardest — ko'pchilik xato qiladigan savollar
 // TOP 10 — bu "eng qiyin savollar reytingi", cheksiz ro'yxat emas.
 // Ko'p bo'lsa foydalanuvchi uchun ma'nosini yo'qotadi (deyarli barcha

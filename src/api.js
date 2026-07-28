@@ -321,6 +321,9 @@ export const api = {
   unsaveQuestion: (questionId) =>
     request(`/api/questions/saved/${encodeURIComponent(questionId)}`, { method: "DELETE" }),
   getMyMistakes: () => request("/api/questions/mistakes"),
+  clearMistake: (questionId) =>
+    request(`/api/questions/mistakes/${encodeURIComponent(questionId)}`, { method: "DELETE" }),
+  clearAllMistakes: () => request("/api/questions/mistakes", { method: "DELETE" }),
   getHardestQuestions: () => request("/api/questions/hardest"),
   getTrickyQuestions: () => request("/api/questions/tricky"),
   recordAnswers: (answers) =>

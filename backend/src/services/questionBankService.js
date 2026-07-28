@@ -125,6 +125,43 @@ export async function listMyMistakes(userId, { limit = 100 } = {}) {
 }
 
 /**
+ * Bitta xatoni ro'yxatdan chiqaradi ("o'qib bo'ldim, tushundim").
+ *
+ * NIMA UCHUN O'CHIRMAYMIZ, BALKI resolvedAt QO'YAMIZ: yozuv o'chirilsa,
+ * foydalanuvchi keyin o'sha savolda YANA xato qilsa, wrongCount noldan
+ * boshlanardi va "necha marta xato qilgan" tarixi yo'qolardi. resolvedAt
+ * bilan yozuv qoladi, faqat ro'yxatdan chiqadi (listMyMistakes
+ * resolvedAt: null bo'yicha filtrlaydi).
+ *
+ * QAYTA XATO QILINSA: recordAnswers resolvedAt ni qayta null ga
+ * qaytaradi, ya'ni savol ro'yxatga qaytadi — bu to'g'ri xatti-harakat.
+ */
+export async function resolveMistake(userId, questionId) {
+  if (typeof questionId !== "string" || !questionId.trim()) {
+    const err = new Error("Savol ID kiritilmadi");
+    err.code = "invalid_input";
+    throw err;
+  }
+  // updateMany ishlatilyapti (update emas): yozuv topilmasa xato
+  // tashlamaydi — foydalanuvchi ikki marta bosib yuborsa yoki savol
+  // allaqachon tozalangan bo'lsa, jimgina o'tadi.
+  const res = await prisma.questionMistake.updateMany({
+    where: { userId, questionId, resolvedAt: null },
+    data: { resolvedAt: new Date() },
+  });
+  return { questionId, cleared: res.count > 0 };
+}
+
+/** Barcha hal qilinmagan xatolarni ro'yxatdan chiqaradi. */
+export async function resolveAllMistakes(userId) {
+  const res = await prisma.questionMistake.updateMany({
+    where: { userId, resolvedAt: null },
+    data: { resolvedAt: new Date() },
+  });
+  return { cleared: res.count };
+}
+
+/**
  * Ko'pchilik xato qiladigan savollar.
  *
  * MUHIM: `minAttempts` chegarasi bor. Chegarasiz bitta odam bir marta xato

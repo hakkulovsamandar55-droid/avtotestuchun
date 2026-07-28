@@ -6,12 +6,11 @@
 // uz_cyrl — uz_latn'dan avtomatik transliteratsiya (lotin-kirill kutubxonasi),
 // ru — qo'lda, rasmiy atamalarga mos tarjima qilingan (BHM -> BRV va h.k.).
 //
-// MUHIM: bu ma'lumotlar RASMIY EMAS. Har bir kategoriya/umumiy matnda buni
-// eslatuvchi ogohlantirish bor — CheatSheetScreen buni har doim ko'rsatishi kerak.
+// MANBA RASMIY. Shu sababli ilgari ekranda turgan "rasmiy emas"
+// ogohlantirishi OLIB TASHLANDI — u noto'g'ri ma'lumot berardi.
 // ============================================================================
 
 export const CHEAT_SHEET_META = {
-  disclaimer: { uz_latn: "Bu ma'lumotlar rasmiy emas — ochiq manbalar asosida tuzilgan qisqacha eslatma. Imtihon yoki nizoli holat uchun albatta lex.uz dagi asl matnni tekshiring.", uz_cyrl: "Бу маълумотлар расмий эмас — очиқ манбалар асосида тузилган қисқача эслатма. Имтиҳон ёки низоли ҳолат учун албатта lex.uz даги асл матнни текширинг.", ru: "Данные являются неофициальными — краткая памятка, составленная на основе открытых источников. Для экзамена или спорной ситуации обязательно сверяйтесь с оригинальным текстом на lex.uz." },
   sourcesNote: { uz_latn: "Manbalar: uzpdd.uz, osonprava.uz, amaliyhayot.uz, auto.ustabor.uz, brb.uz/gov.uz/spot.uz (BHM va MHTEKM rasmiy e'lonlari).", uz_cyrl: "Манбалар: uzpdd.uz, osonprava.uz, amaliyhayot.uz, auto.ustabor.uz, brb.uz/gov.uz/spot.uz (БҲМ ва МҲТЕКМ расмий эълонлари).", ru: "Источники: uzpdd.uz, osonprava.uz, amaliyhayot.uz, auto.ustabor.uz, brb.uz/gov.uz/spot.uz (официальные объявления о БРВ)." },
 };
 

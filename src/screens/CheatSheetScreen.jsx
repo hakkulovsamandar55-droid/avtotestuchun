@@ -95,20 +95,6 @@ export default function CheatSheetScreen({ onBack }) {
         {t("cheatSheet.subtitle", { count: totalFacts })}
       </p>
 
-      {/* Rasmiy emasligi haqida ogohlantirish — doim ko'rinib turadi */}
-      <div
-        className="flex items-start gap-2.5 rounded-2xl px-4 py-3 mb-4"
-        style={{
-          background: "color-mix(in srgb, #FDBA74 14%, transparent)",
-          border: "1px solid color-mix(in srgb, #FDBA74 30%, transparent)",
-        }}
-      >
-        <Info size={15} color="#FB923C" className="shrink-0 mt-0.5" />
-        <p className="text-xs leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-          {localizeText(CHEAT_SHEET_META.disclaimer, lang)}
-        </p>
-      </div>
-
       {/* Qidiruv */}
       <div className="relative">
         <Search size={17} color="#9CA3AF" className="absolute left-4 top-1/2 -translate-y-1/2" />
