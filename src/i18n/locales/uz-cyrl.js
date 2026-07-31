@@ -786,6 +786,8 @@ export default {
         giveDiscount: "Чегирма бериш",
         makeAdmin: "Админ қилиш",
         removeAdmin: "Админ ҳуқуқини олиш",
+        makeModerator: "Мини-админ қилиш",
+        removeModerator: "Мини-админ ҳуқуқини олиш",
         block: "Блоклаш",
         unblock: "Блокдан чиқариш",
         deleteAccount: "Ҳисобни ўчириш",

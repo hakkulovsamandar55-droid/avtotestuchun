@@ -165,6 +165,8 @@ export default function UserProfileScreen({ userId, onBack, onOpenChat, isSuperA
 
   const { general, statistics, premium, discount, referral, payments, timeline } = profile;
   const isAdmin = general.role === "ADMIN";
+  // Mini-admin: faqat to'lovlar/statistika/foydalanuvchilar ro'yxatiga kira oladi.
+  const isModerator = general.role === "MODERATOR";
 
   return (
     <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-8 bg-app min-h-full animate-slide-in">
@@ -191,6 +193,7 @@ export default function UserProfileScreen({ userId, onBack, onOpenChat, isSuperA
             <p className="font-extrabold text-text-main text-base truncate flex items-center gap-1.5">
               {general.name}
               {isAdmin && <ShieldCheck size={14} color={ACCENT_FROM} />}
+              {isModerator && <ShieldCheck size={14} color="#0EA5E9" />}
               {premium.isPremium && <Crown size={14} color="#E0A62E" />}
             </p>
             <p className="text-text-muted text-xs truncate">{general.username ? `@${general.username}` : "—"}</p>
@@ -329,13 +332,28 @@ export default function UserProfileScreen({ userId, onBack, onOpenChat, isSuperA
               busy={busy === "role"}
               onClick={() => runAction("role", () => api.setUserRole(userId, "USER"))}
             />
-          ) : (
+          ) : isModerator ? (
             <ActionButton
-              icon={ShieldCheck}
-              label={t("admin.profile.actions.makeAdmin")}
+              icon={ShieldOff}
+              label={t("admin.profile.actions.removeModerator")}
               busy={busy === "role"}
-              onClick={() => runAction("role", () => api.setUserRole(userId, "ADMIN"))}
+              onClick={() => runAction("role", () => api.setUserRole(userId, "USER"))}
             />
+          ) : (
+            <>
+              <ActionButton
+                icon={ShieldCheck}
+                label={t("admin.profile.actions.makeAdmin")}
+                busy={busy === "role"}
+                onClick={() => runAction("role", () => api.setUserRole(userId, "ADMIN"))}
+              />
+              <ActionButton
+                icon={ShieldCheck}
+                label={t("admin.profile.actions.makeModerator")}
+                busy={busy === "role"}
+                onClick={() => runAction("role", () => api.setUserRole(userId, "MODERATOR"))}
+              />
+            </>
           )}
 
           {general.isBlocked ? (

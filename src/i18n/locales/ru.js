@@ -786,6 +786,8 @@ export default {
         giveDiscount: "Дать скидку",
         makeAdmin: "Сделать админом",
         removeAdmin: "Забрать права админа",
+        makeModerator: "Сделать мини-админом",
+        removeModerator: "Забрать права мини-админа",
         block: "Заблокировать",
         unblock: "Разблокировать",
         deleteAccount: "Удалить аккаунт",

@@ -48,6 +48,7 @@ function UserRow({ user, onClick }) {
         <p className="font-bold text-text-main text-sm truncate flex items-center gap-1.5">
           {user.name}
           {user.role === "ADMIN" && <ShieldCheck size={13} color={ACCENT_FROM} />}
+          {user.role === "MODERATOR" && <ShieldCheck size={13} color="#0EA5E9" />}
           {user.isPremium && <Crown size={13} color="#E0A62E" />}
         </p>
         <p className="text-text-muted text-xs truncate">
