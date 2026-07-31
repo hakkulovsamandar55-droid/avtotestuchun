@@ -297,6 +297,7 @@ function FontSizePickerRow() {
 export default function SettingsTab({
   user,
   onOpenAdmin,
+  onOpenModerator,
   onOpenPremium,
   onOpenSupport,
   onOpenSchool,
@@ -304,6 +305,10 @@ export default function SettingsTab({
 }) {
   const { t } = useTranslation();
   const isAdmin = user?.role === "ADMIN";
+  // Mini-admin: faqat to'lovlar/statistika/foydalanuvchilar ro'yxati.
+  // ADMIN uchun to'liq panel ochiladi (yuqoridagi isAdmin), MODERATOR uchun
+  // esa cheklangan ModeratorPanelScreen.
+  const isModerator = user?.role === "MODERATOR";
   const { supportLink } = useSettings();
   // Premium ranglar endi sozlanadigan imkoniyat: global bepul rejim
   // yoqilgan yoki admin buni TEKIN qilgan bo'lsa, qulf ochiladi.
@@ -395,6 +400,21 @@ export default function SettingsTab({
             <ShieldCheck size={18} color="var(--icon-muted)" />
             <span className="flex-1 font-medium text-text-main text-sm">
               {t("settings.adminPanel")}
+            </span>
+            <ChevronRight size={18} color="var(--chevron)" />
+          </button>
+        </div>
+      )}
+
+      {isModerator && (
+        <div className="mt-3">
+          <button
+            onClick={onOpenModerator}
+            className="w-full flex items-center gap-3 rounded-2xl bg-card border border-card-border shadow-sm px-4 py-3.5 text-left"
+          >
+            <ShieldCheck size={18} color="var(--icon-muted)" />
+            <span className="flex-1 font-medium text-text-main text-sm">
+              {t("settings.moderatorPanel")}
             </span>
             <ChevronRight size={18} color="var(--chevron)" />
           </button>

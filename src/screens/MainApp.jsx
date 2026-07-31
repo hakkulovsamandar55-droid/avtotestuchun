@@ -10,7 +10,9 @@ import TestScreen from "./TestScreen";
 import ExamScreen from "./ExamScreen";
 import SignsScreen from "./SignsScreen";
 import AdminPanelScreen from "./AdminPanelScreen";
+import ModeratorPanelScreen from "./ModeratorPanelScreen";
 import PremiumScreen from "./PremiumScreen";
+import PremiumPopup from "./PremiumPopup";
 import DuelScreen from "./DuelScreen";
 import SupportChatScreen from "./SupportChatScreen";
 import PaymentScreen from "./PaymentScreen";
@@ -43,6 +45,7 @@ export default function MainApp({ user }) {
   const [showOfficialExam, setShowOfficialExam] = useState(false); // rasmiy imtihon (yangi)
   const [showSigns, setShowSigns] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [showModerator, setShowModerator] = useState(false);
   const [showPremium, setShowPremium] = useState(false);
   const [showDuel, setShowDuel] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
@@ -71,6 +74,16 @@ export default function MainApp({ user }) {
   // Mavzuli test: tanlangan mavzu kaliti
   const [topicKey, setTopicKey] = useState(null);
   const [paymentPlan, setPaymentPlan] = useState(null);
+
+  // Har safar ilova ochilganda premium bo'lmagan foydalanuvchiga tariflar
+  // popup ko'rsatiladi. "Har safar" — har SESSIYA (ilova qayta ochilganda)
+  // degani; bitta sessiya ichida bir marta yopilgach qayta chiqavermaydi
+  // (aks holda har ekran o'zgarishida qayta-qayta chiqib bezovta qilardi).
+  // Onboarding tugagunicha yoki guruhga qo'shilish havolasi bilan kirilgan
+  // holatda ko'rsatilmaydi — bu holatlar o'ziga xos ustuvor oqim.
+  const [showPremiumPopup, setShowPremiumPopup] = useState(
+    () => !user?.isPremium && !showOnboarding && !showSchool
+  );
 
   if (showOnboarding) {
     return (
@@ -289,8 +302,28 @@ export default function MainApp({ user }) {
     );
   }
 
+  // Mini-admin (MODERATOR) — to'liq admin panel emas, faqat to'lovlar,
+  // statistika va foydalanuvchilar ro'yxati (asosiy ma'lumot).
+  if (showModerator) {
+    return (
+      <div className="flex flex-col h-full">
+        <ModeratorPanelScreen onBack={() => setShowModerator(false)} />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full bg-app">
+      {showPremiumPopup && (
+        <PremiumPopup
+          onClose={() => setShowPremiumPopup(false)}
+          onSelectPlan={(plan) => {
+            setShowPremiumPopup(false);
+            setPaymentPlan(plan);
+            setShowPremium(true);
+          }}
+        />
+      )}
       {active === "home" && (
         <HomeTab
           user={user}
@@ -314,6 +347,7 @@ export default function MainApp({ user }) {
         <SettingsTab
           user={user}
           onOpenAdmin={() => setShowAdmin(true)}
+          onOpenModerator={() => setShowModerator(true)}
           onOpenPremium={() => setShowPremium(true)}
           onOpenSupport={() => setShowSupport(true)}
           onOpenSchool={() => setShowSchool(true)}

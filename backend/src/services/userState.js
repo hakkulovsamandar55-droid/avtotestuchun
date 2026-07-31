@@ -101,3 +101,17 @@ export function requireAdminUser(req, res, next) {
   }
   next();
 }
+
+/**
+ * Mini-admin (MODERATOR) YOKI to'liq ADMIN — to'lovlarni tasdiqlash/rad etish,
+ * statistika va foydalanuvchilar ro'yxatini ko'rish uchun ishlatiladi.
+ * MODERATOR'ga faqat shu cheklangan yo'nalishlarda ruxsat beriladi;
+ * boshqa hamma admin endpoint hali ham requireAdminUser (faqat ADMIN) bilan
+ * himoyalangan bo'lib qoladi.
+ */
+export function requireModeratorOrAdminUser(req, res, next) {
+  if (req.user?.role !== "ADMIN" && req.user?.role !== "MODERATOR") {
+    return res.status(403).json({ error: "Bu bo'lim faqat adminlar uchun" });
+  }
+  next();
+}

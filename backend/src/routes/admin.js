@@ -326,22 +326,25 @@ adminRouter.get("/users/:id/profile", requireIdParam, asyncHandler(async (req, r
 // ============================== ROL / BLOKLASH ==============================
 
 // PATCH /api/admin/users/:id/role  { role: "ADMIN" | "USER" }
+// MUHIM: MODERATOR (mini-admin) roli ham shu endpoint orqali beriladi/olinadi,
+// lekin bu endpoint hali ham faqat to'liq ADMIN uchun ochiq (router boshidagi
+// requireAdminUser tufayli) — moderator o'ziga yoki boshqalarga rol bera olmaydi.
 adminRouter.patch("/users/:id/role", requireIdParam, asyncHandler(async (req, res) => {
   const id = req.id;
   const { role } = req.body;
 
-  if (role !== "ADMIN" && role !== "USER") {
-    return res.status(400).json({ error: "role ADMIN yoki USER bo'lishi kerak" });
+  if (!["ADMIN", "MODERATOR", "USER"].includes(role)) {
+    return res.status(400).json({ error: "role ADMIN, MODERATOR yoki USER bo'lishi kerak" });
   }
 
   const target = await prisma.user.findUnique({ where: { id } });
   if (!target) return res.status(404).json({ error: "Foydalanuvchi topilmadi" });
 
-  if (isSuperAdmin(target.telegramId) && role === "USER") {
+  if (isSuperAdmin(target.telegramId) && role !== "ADMIN") {
     return res.status(403).json({ error: "Bosh adminning rolini bu yerdan o'zgartirib bo'lmaydi" });
   }
   // Admin o'zidan admin huquqini olib tashlasa, ortga qaytara olmaydi
-  if (id === req.user.id && role === "USER") {
+  if (id === req.user.id && role !== "ADMIN") {
     return res.status(400).json({ error: "O'zingizdan admin huquqini olib tashlay olmaysiz" });
   }
 
@@ -351,8 +354,10 @@ adminRouter.patch("/users/:id/role", requireIdParam, asyncHandler(async (req, re
     select: { id: true, name: true, username: true, role: true, isPremium: true },
   });
 
-  await logActivity(id, role === "ADMIN" ? "MADE_ADMIN" : "REMOVED_ADMIN", role === "ADMIN" ? "Admin etib tayinlandi" : "Admin huquqi olib tashlandi");
-  await logAdminAction(req.user.id, role === "ADMIN" ? "ADMIN_GRANTED" : "ADMIN_REMOVED", { targetUserId: id, targetLabel: target.name });
+  const actionLabel = { ADMIN: "Admin etib tayinlandi", MODERATOR: "Mini-admin (moderator) etib tayinlandi", USER: "Admin/moderator huquqi olib tashlandi" }[role];
+  const activityType = { ADMIN: "MADE_ADMIN", MODERATOR: "MADE_MODERATOR", USER: "REMOVED_ADMIN" }[role];
+  await logActivity(id, activityType, actionLabel);
+  await logAdminAction(req.user.id, activityType === "REMOVED_ADMIN" ? "ADMIN_REMOVED" : "ADMIN_GRANTED", { targetUserId: id, targetLabel: target.name });
 
   res.json({ user });
 }));

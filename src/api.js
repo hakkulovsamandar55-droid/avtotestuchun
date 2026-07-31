@@ -187,6 +187,13 @@ export const api = {
   rejectPayment: (id, reason) =>
     request(`/api/admin/payments/${id}/reject`, { method: "POST", body: { reason } }),
 
+  // Mini-admin (MODERATOR) — cheklangan bo'lim: to'lovlar (yuqoridagi
+  // getPayments/approvePayment/rejectPayment allaqachon MODERATOR uchun ham
+  // ochiq) + oddiy foydalanuvchilar ro'yxati + statistika.
+  getModeratorUsers: (query) =>
+    request(`/api/moderator/users${query ? `?query=${encodeURIComponent(query)}` : ""}`),
+  getModeratorStats: () => request("/api/moderator/stats"),
+
   // Bildirishnomalar — admin
   getNotifications: () => request("/api/admin/notifications"),
   markNotificationRead: (id) => request(`/api/admin/notifications/${id}/read`, { method: "PATCH" }),

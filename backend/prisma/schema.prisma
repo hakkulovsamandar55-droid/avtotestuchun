@@ -14,6 +14,10 @@ datasource db {
 enum Role {
   USER
   ADMIN
+  // Mini-admin: faqat to'lov cheklarini tasdiqlash/rad etish, foydalanuvchilar
+  // ro'yxatini (asosiy ma'lumot) va statistikani ko'ra oladi. Foydalanuvchilarga
+  // premium/blok/rol berish, tariflarni tahrirlash, broadcast va h.k. kira olmaydi.
+  MODERATOR
 }
 
 enum AttemptType {
@@ -62,6 +66,7 @@ enum ActivityType {
   BLOCKED
   UNBLOCKED
   MADE_ADMIN
+  MADE_MODERATOR
   REMOVED_ADMIN
   REFERRAL_JOINED
   REFERRAL_REWARD_GIVEN

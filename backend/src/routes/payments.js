@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../db.js";
 import { requireAuth } from "../authMiddleware.js";
-import { loadCurrentUser, requireAdminUser } from "../services/userState.js";
+import { loadCurrentUser, requireAdminUser, requireModeratorOrAdminUser } from "../services/userState.js";
 import { asyncHandler } from "../asyncHandler.js";
 import { uploadImage, publicUrlFor, UPLOADS_DIR } from "../lib/upload.js";
 import { analyzeReceipt, computeReceiptHash } from "../services/receiptOcr.js";
@@ -215,14 +215,19 @@ paymentsRouter.post("/submit", requireAuth, loadCurrentUser, uploadImage.single(
 // ============================== ADMIN TOMONI ==============================
 
 const adminPayments = Router();
-adminPayments.use(requireAuth, loadCurrentUser, requireAdminUser);
+// Bu router MODERATOR (mini-admin) va ADMIN uchun umumiy — ikkalasi ham
+// to'lovlarni ko'rish, tasdiqlash va rad etishi kerak. Faqat tarif/karta
+// sozlamalarini O'ZGARTIRISH (pastda alohida requireAdminUser bilan
+// belgilangan) va shunga o'xshash "moliyaviy konfiguratsiya" endpointlari
+// faqat to'liq ADMIN uchun qoladi.
+adminPayments.use(requireAuth, loadCurrentUser, requireModeratorOrAdminUser);
 
 // GET /api/admin/payments/settings — joriy to'lov karta ma'lumotlari
-// PATCH /api/admin/payments/plans/:key — tarifni tahrirlash (faqat admin).
+// PATCH /api/admin/payments/plans/:key — tarifni tahrirlash (faqat to'liq admin).
 //
 // `key` va muddat (durationDays) o'zgartirilmaydi — ular kodda va biznes
 // mantiqiga ta'sir qiladi. Bu yerda faqat ko'rinadigan qiymatlar.
-adminPayments.patch("/plans/:key", asyncHandler(async (req, res) => {
+adminPayments.patch("/plans/:key", requireAdminUser, asyncHandler(async (req, res) => {
   const { name, price, period, badge, features } = req.body || {};
   try {
     const plan = await premiumPlanSvc.updatePlan(req.params.key, req.user.id, {
@@ -253,8 +258,9 @@ adminPayments.get("/settings", asyncHandler(async (_req, res) => {
 // PATCH /api/admin/payments/settings  { cardNumber, cardOwner }
 // Admin panel orqali karta ma'lumotlarini o'zgartirish — deploy yoki .env
 // tahriri shart emas, darhol kuchga kiradi (keyingi to'lov ekranlarida ham,
-// OCR solishtirishda ham).
-adminPayments.patch("/settings", asyncHandler(async (req, res) => {
+// OCR solishtirishda ham). Faqat to'liq admin — moderator karta raqamini
+// o'zgartira olmasligi kerak.
+adminPayments.patch("/settings", requireAdminUser, asyncHandler(async (req, res) => {
   const { cardNumber, cardOwner } = req.body;
   if (!cardNumber || !cardNumber.trim()) {
     return res.status(400).json({ error: "Karta raqami bo'sh bo'lmasligi kerak" });

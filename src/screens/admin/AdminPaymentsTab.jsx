@@ -216,7 +216,13 @@ function PaymentCard({ payment, onApprove, onReject }) {
 
 // Admin tomoni: to'lovlarni ko'rib chiqish (spec 8-11-bo'limlar) — OCR faqat
 // ma'lumot beradi, tasdiqlash/rad etish har doim admin qo'li bilan
-export default function AdminPaymentsTab() {
+//
+// moderatorMode: mini-admin (MODERATOR) buni ochganda karta sozlamalari
+// formasi (CardSettingsForm) ko'rsatilmaydi — backend baribir uni
+// requireAdminUser bilan rad etadi (faqat to'liq ADMIN karta raqamini
+// o'zgartira oladi), shuning uchun moderatorga bosib bo'lmaydigan forma
+// ko'rsatishning ma'nosi yo'q.
+export default function AdminPaymentsTab({ moderatorMode = false }) {
   const { t } = useTranslation();
   const [status, setStatus] = useState("PENDING");
   const [payments, setPayments] = useState([]);
@@ -246,7 +252,7 @@ export default function AdminPaymentsTab() {
 
   return (
     <div>
-      <CardSettingsForm />
+      {!moderatorMode && <CardSettingsForm />}
 
       <div className="flex gap-2 mb-3">
         {[
