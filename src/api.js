@@ -149,6 +149,8 @@ export const api = {
   removeUserDiscount: (id) => request(`/api/admin/users/${id}/discount`, { method: "DELETE" }),
   sendBroadcast: (text, audience, userIds) =>
     request("/api/admin/broadcast", { method: "POST", body: { text, audience, userIds } }),
+  markBroadcastSeen: (id) =>
+    request("/api/auth/broadcast-seen", { method: "POST", body: { id } }),
   getAdminLogs: () => request("/api/admin/logs"),
 
   // Support — foydalanuvchi

@@ -592,6 +592,10 @@ export default {
     allCategories: "Все",
     noResults: "Ничего не найдено",
   },
+  broadcast: {
+    title: "Объявление",
+    close: "Понятно",
+  },
   signs: {
     sourceNote: "Источник: Правила дорожного движения (ПКМ №172, приложение 1)",
     title: "Дорожные знаки",

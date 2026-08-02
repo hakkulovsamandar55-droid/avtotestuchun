@@ -592,6 +592,10 @@ export default {
     allCategories: "Ҳаммаси",
     noResults: "Ҳеч нарса топилмади",
   },
+  broadcast: {
+    title: "Эълон",
+    close: "Тушунарли",
+  },
   signs: {
     sourceNote: "Манба: Йўл ҳаракати қоидалари (ВМ 172-сон қарори, 1-илова)",
     title: "Йўл белгилари",

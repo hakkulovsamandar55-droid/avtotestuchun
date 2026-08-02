@@ -54,7 +54,7 @@ export default function ReferralScreen({ onBack }) {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-8 animate-slide-in">
+    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-8 bg-app min-h-full animate-slide-in">
       <div className="flex items-center gap-3 py-4">
         <button
           onClick={onBack}

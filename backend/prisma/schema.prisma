@@ -132,6 +132,10 @@ model User {
   // Ommaviy reytingda (leaderboard) ko'rinishni xohlaydimi. Sozlamalardan
   // o'chirilsa, foydalanuvchi barcha ommaviy reytinglardan butunlay chiqariladi.
   showOnLeaderboard Boolean @default(true) @map("show_on_leaderboard")
+  // Foydalanuvchi ilovaga kirganda ko'rgan oxirgi broadcast xabar ID'si.
+  // Shundan katta ID'li, o'ziga tegishli xabar bo'lsa — bir marta popup
+  // sifatida ko'rsatiladi, keyin bu qiymat o'sha xabar ID'siga yangilanadi.
+  lastSeenBroadcastId Int @default(0) @map("last_seen_broadcast_id")
   referredBy    User?    @relation("Referrals", fields: [referredById], references: [id])
   referrals     User[]   @relation("Referrals") // shu foydalanuvchi taklif qilgan barcha odamlar
   createdAt     DateTime @default(now()) @map("created_at")
@@ -306,6 +310,9 @@ model BroadcastMessage {
   audience  BroadcastAudience
   sentCount Int               @default(0) @map("sent_count")
   createdAt DateTime          @default(now()) @map("created_at")
+  // Yuborilgan payt aynan qaysi foydalanuvchilarga tegishli bo'lgani —
+  // ilovada bir martalik popup ko'rsatish shu ro'yxatga qarab aniqlanadi.
+  targetUserIds Int[]         @default([]) @map("target_user_ids")
 
   @@map("broadcast_messages")
 }

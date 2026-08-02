@@ -592,6 +592,10 @@ export default {
     allCategories: "Hammasi",
     noResults: "Hech narsa topilmadi",
   },
+  broadcast: {
+    title: "E'lon",
+    close: "Tushunarli",
+  },
   signs: {
     sourceNote: "Manba: Yo'l harakati qoidalari (VM 172-son qarori, 1-ilova)",
     title: "Yo'l belgilari",

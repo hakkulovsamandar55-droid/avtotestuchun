@@ -9,19 +9,19 @@ export default function TicketsScreen({ onBack, onSelectTicket }) {
   const tickets = Array.from({ length: TOTAL_TICKETS }, (_, i) => i + 1);
 
   return (
-    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-6 bg-[#0F1424] min-h-full animate-slide-in">
+    <div className="flex-1 overflow-y-auto px-5 tp-safe-top pb-6 bg-app min-h-full animate-slide-in">
       <div className="flex items-center gap-3 mb-1">
         <button
           onClick={onBack}
-          className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center shrink-0"
+          className="w-9 h-9 rounded-full bg-card border border-card-border shadow-sm flex items-center justify-center shrink-0"
         >
-          <ChevronLeft size={20} color="#E5E7EB" />
+          <ChevronLeft size={20} color="var(--icon-muted)" />
         </button>
-        <h1 className="text-2xl font-extrabold text-white">
+        <h1 className="text-2xl font-extrabold text-text-main">
           {t("home.tickets")}
         </h1>
       </div>
-      <p className="text-gray-400 text-sm mt-1 mb-5 ml-12">
+      <p className="text-text-muted text-sm mt-1 mb-5 ml-12">
         {t("tickets.subtitle", {
           count: TOTAL_TICKETS,
           questions: QUESTIONS_PER_TICKET,
@@ -33,12 +33,12 @@ export default function TicketsScreen({ onBack, onSelectTicket }) {
           <button
             key={num}
             onClick={() => onSelectTicket && onSelectTicket(num)}
-            className="aspect-square rounded-2xl border border-white/10 bg-white/[0.04] flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform"
+            className="aspect-square rounded-2xl bg-card border border-card-border shadow-sm flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform"
           >
             <span className="text-orange-400 font-extrabold text-lg leading-none">
               {num}
             </span>
-            <span className="text-gray-400 text-[11px] leading-none">
+            <span className="text-text-muted text-[11px] leading-none">
               {t("tickets.ticketWord")}
             </span>
           </button>

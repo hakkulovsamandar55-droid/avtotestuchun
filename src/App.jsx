@@ -28,11 +28,15 @@ export default function App() {
   const [user, setUser] = useState(null);
   // Sessiya tugagani/hisob bloklangani haqida LoginScreen'ga ko'rsatiladigan xabar.
   const [sessionNotice, setSessionNotice] = useState(null);
+  // Admin broadcast yuborgan, foydalanuvchi hali ko'rmagan xabar — login
+  // javobida keladi, MainApp popup sifatida bir marta ko'rsatadi.
+  const [pendingBroadcast, setPendingBroadcast] = useState(null);
 
   const { reload: reloadSettings } = useSettings();
 
-  const handleLogin = (loggedInUser) => {
+  const handleLogin = (loggedInUser, broadcast) => {
     setUser(loggedInUser);
+    setPendingBroadcast(broadcast || null);
     setSessionNotice(null);
     setStage("app");
     // MUHIM: /api/stats/settings AUTH TALAB QILADI. SettingsProvider esa
@@ -63,7 +67,9 @@ export default function App() {
       {stage === "login" && (
         <LoginScreen onLogin={handleLogin} externalNotice={sessionNotice} />
       )}
-      {stage === "app" && <MainApp user={user} />}
+      {stage === "app" && (
+        <MainApp user={user} initialBroadcast={pendingBroadcast} />
+      )}
     </div>
   );
 }

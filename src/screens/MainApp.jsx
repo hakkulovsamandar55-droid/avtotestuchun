@@ -23,17 +23,23 @@ import QuestionListScreen from "./QuestionListScreen";
 import TrickyTestScreen from "./TrickyTestScreen";
 import CheatSheetScreen from "./CheatSheetScreen";
 import ReferralScreen from "./ReferralScreen";
+import BroadcastPopup from "./BroadcastPopup";
 import OnboardingSlideshow, {
   hasSeenOnboarding,
   markOnboardingSeen,
 } from "../components/OnboardingSlideshow";
 import { getAllQuestions } from "../../shared/data/ticketsData";
 import { getQuestionsForTopic } from "../../shared/data/questionTopics";
+import { api } from "../api";
 
 // 3-EKRAN: login+loading dan keyingi asosiy ilova — 3 bo'lim + pastki nav
-export default function MainApp({ user }) {
+export default function MainApp({ user, initialBroadcast }) {
   const { t, i18n } = useTranslation();
   const [active, setActive] = useState("home");
+  // Admin broadcast xabari — login javobida kelgan, hali ko'rilmagan xabar.
+  // Yopilganda backendga "ko'rildi" deb bildiriladi, shundan keyin qayta
+  // chiqmaydi (keyingi kirishlarda ham).
+  const [broadcast, setBroadcast] = useState(initialBroadcast || null);
   // Birinchi marta kirgan foydalanuvchiga ko'rsatiladi. Lazy initializer
   // ishlatilyapti — har renderda emas, faqat komponent birinchi
   // yaratilganda localStorage tekshiriladi.
@@ -303,6 +309,15 @@ export default function MainApp({ user }) {
 
   return (
     <div className="flex flex-col h-full bg-app">
+      {broadcast && (
+        <BroadcastPopup
+          text={broadcast.text}
+          onClose={() => {
+            api.markBroadcastSeen(broadcast.id).catch(() => {});
+            setBroadcast(null);
+          }}
+        />
+      )}
       {active === "home" && (
         <HomeTab
           user={user}

@@ -600,10 +600,14 @@ adminRouter.post("/broadcast", asyncHandler(async (req, res) => {
     where = { ...where, isBlocked: false };
   }
 
-  const recipientCount = await prisma.user.count({ where });
+  // ID'larni ham olib qo'yamiz (faqat son emas) — ilovada ochilganda shu
+  // xabarni popup sifatida bir marta ko'rsatish uchun kerak bo'ladi.
+  const recipients = await prisma.user.findMany({ where, select: { id: true } });
+  const recipientIds = recipients.map((r) => r.id);
+  const recipientCount = recipientIds.length;
 
   const broadcast = await prisma.broadcastMessage.create({
-    data: { text: cleanText, audience, sentCount: recipientCount },
+    data: { text: cleanText, audience, sentCount: recipientCount, targetUserIds: recipientIds },
   });
 
   await logAdminAction(req.user.id, "BROADCAST_SENT", { details: `${audience}: ${recipientCount} ta foydalanuvchi` });

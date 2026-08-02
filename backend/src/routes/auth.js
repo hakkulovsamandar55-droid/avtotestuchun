@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { prisma } from "../db.js";
 import { verifyTelegramInitData } from "../telegramAuth.js";
-import { signToken } from "../authMiddleware.js";
+import { requireAuth, signToken } from "../authMiddleware.js";
+import { loadCurrentUser } from "../services/userState.js";
 import { asyncHandler } from "../asyncHandler.js";
 import { logActivity, notifyAllAdmins } from "../services/activity.js";
 import { generateUniqueReferralCode, resolveReferrer } from "../services/referral.js";
@@ -135,9 +136,21 @@ authRouter.post("/telegram", asyncHandler(async (req, res) => {
     });
   }
 
+  // Foydalanuvchi hali ko'rmagan, o'ziga tegishli eng so'nggi broadcast
+  // xabar — ilova ochilganda popup sifatida bir marta ko'rsatiladi.
+  const pendingBroadcast = await prisma.broadcastMessage.findFirst({
+    where: {
+      id: { gt: user.lastSeenBroadcastId },
+      targetUserIds: { has: user.id },
+    },
+    orderBy: { id: "desc" },
+    select: { id: true, text: true },
+  });
+
   const token = signToken(user);
   res.json({
     token,
+    pendingBroadcast,
     user: {
       id: user.id,
       name: user.name,
@@ -154,4 +167,24 @@ authRouter.post("/telegram", asyncHandler(async (req, res) => {
       registrationCompleted: Boolean(user.registrationCompletedAt),
     },
   });
+}));
+
+// POST /api/auth/broadcast-seen  { id }
+// Foydalanuvchi popup'ni yopganda chaqiriladi — shu ID'gacha (shu bilan
+// birga) bo'lgan barcha broadcastlar bu foydalanuvchi uchun "ko'rilgan"
+// deb belgilanadi, ya'ni keyingi kirishda qayta ko'rsatilmaydi.
+authRouter.post("/broadcast-seen", requireAuth, loadCurrentUser, asyncHandler(async (req, res) => {
+  const id = Number(req.body?.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ error: "id noto'g'ri" });
+  }
+
+  if (id > req.user.lastSeenBroadcastId) {
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { lastSeenBroadcastId: id },
+    });
+  }
+
+  res.json({ ok: true });
 }));

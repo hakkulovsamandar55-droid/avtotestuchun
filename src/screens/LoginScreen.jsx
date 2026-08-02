@@ -77,10 +77,10 @@ export default function LoginScreen({ onLogin, externalNotice }) {
 
     setConnecting(true);
     try {
-      const { token, user } = await api.loginWithTelegram(initData, profile, fallbackStartParam);
+      const { token, user, pendingBroadcast } = await api.loginWithTelegram(initData, profile, fallbackStartParam);
       setToken(token);
       if (profile) saveProfile(profile);
-      onLogin(user);
+      onLogin(user, pendingBroadcast);
     } catch (err) {
       setError(err.message);
       setConnecting(false);
