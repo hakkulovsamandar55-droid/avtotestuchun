@@ -12,7 +12,6 @@ import SignsScreen from "./SignsScreen";
 import AdminPanelScreen from "./AdminPanelScreen";
 import ModeratorPanelScreen from "./ModeratorPanelScreen";
 import PremiumScreen from "./PremiumScreen";
-import PremiumPopup from "./PremiumPopup";
 import DuelScreen from "./DuelScreen";
 import SupportChatScreen from "./SupportChatScreen";
 import PaymentScreen from "./PaymentScreen";
@@ -74,16 +73,6 @@ export default function MainApp({ user }) {
   // Mavzuli test: tanlangan mavzu kaliti
   const [topicKey, setTopicKey] = useState(null);
   const [paymentPlan, setPaymentPlan] = useState(null);
-
-  // Har safar ilova ochilganda premium bo'lmagan foydalanuvchiga tariflar
-  // popup ko'rsatiladi. "Har safar" — har SESSIYA (ilova qayta ochilganda)
-  // degani; bitta sessiya ichida bir marta yopilgach qayta chiqavermaydi
-  // (aks holda har ekran o'zgarishida qayta-qayta chiqib bezovta qilardi).
-  // Onboarding tugagunicha yoki guruhga qo'shilish havolasi bilan kirilgan
-  // holatda ko'rsatilmaydi — bu holatlar o'ziga xos ustuvor oqim.
-  const [showPremiumPopup, setShowPremiumPopup] = useState(
-    () => !user?.isPremium && !showOnboarding && !showSchool
-  );
 
   if (showOnboarding) {
     return (
@@ -314,16 +303,6 @@ export default function MainApp({ user }) {
 
   return (
     <div className="flex flex-col h-full bg-app">
-      {showPremiumPopup && (
-        <PremiumPopup
-          onClose={() => setShowPremiumPopup(false)}
-          onSelectPlan={(plan) => {
-            setShowPremiumPopup(false);
-            setPaymentPlan(plan);
-            setShowPremium(true);
-          }}
-        />
-      )}
       {active === "home" && (
         <HomeTab
           user={user}
