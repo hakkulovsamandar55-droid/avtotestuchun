@@ -1,6 +1,7 @@
 import React from "react";
 import { Check, X, Info, MinusCircle } from "lucide-react";
 import SignIcon from "../SignIcon";
+import TicketQuestionImage from "../TicketQuestionImage";
 
 /**
  * Savol kartasi — ikki rejimda ishlaydi:
@@ -32,12 +33,26 @@ export default function QuestionCard({
     <div>
       {question.image && (
         <div className="w-full flex justify-center mb-5">
-          <div
-            className="w-32 h-32 rounded-3xl bg-white flex items-center justify-center shadow-lg"
-            style={{ boxShadow: "0 10px 30px rgba(108,92,231,0.25)" }}
-          >
-            <SignIcon code={question.image} size={104} />
-          </div>
+          {/* MUHIM: question.image ikki xil bo'lishi mumkin — yo'l belgisi
+              kodi ("3.24", SignIcon uchun) yoki savol sahnasi rasmi
+              (masalan "t1-1.webp", TicketQuestionImage uchun). Kengaytma
+              bo'yicha ajratamiz — belgi kodlarida hech qachon ".webp"
+              bo'lmaydi. */}
+          {question.image.endsWith(".webp") ? (
+            <div
+              className="w-full max-w-[280px] rounded-3xl bg-white flex items-center justify-center shadow-lg p-2"
+              style={{ boxShadow: "0 10px 30px rgba(108,92,231,0.25)" }}
+            >
+              <TicketQuestionImage questionId={question.image.replace(".webp", "")} maxHeight={260} />
+            </div>
+          ) : (
+            <div
+              className="w-32 h-32 rounded-3xl bg-white flex items-center justify-center shadow-lg"
+              style={{ boxShadow: "0 10px 30px rgba(108,92,231,0.25)" }}
+            >
+              <SignIcon code={question.image} size={104} />
+            </div>
+          )}
         </div>
       )}
 
