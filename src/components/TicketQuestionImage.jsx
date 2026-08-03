@@ -16,16 +16,24 @@ for (const path in questionImages) {
   IMAGE_BY_KEY[key] = questionImages[path];
 }
 
+// Kalit ikki xil ko'rinishda kelishi mumkin: savol bazasida "t1-1.webp",
+// eski chaqiruvlarda esa kengaytmasiz "t1-1". Ikkalasi ham ishlashi uchun
+// kengaytmani shu yerda kesamiz — chaqiruv joylari buni bilishi shart emas.
+function normalizeKey(questionId) {
+  if (typeof questionId !== "string") return "";
+  return questionId.replace(/\.webp$/i, "");
+}
+
 export function hasQuestionImage(questionId) {
-  return Boolean(questionId && IMAGE_BY_KEY[questionId]);
+  return Boolean(IMAGE_BY_KEY[normalizeKey(questionId)]);
 }
 
 /**
- * @param {string} questionId  Savol ID'si, masalan "t1-1"
+ * @param {string} questionId  Savol ID'si, masalan "t1-1" yoki "t1-1.webp"
  * @param {number} [maxHeight] Piksel balandlik chegarasi
  */
 export default function TicketQuestionImage({ questionId, maxHeight = 220, alt }) {
-  const src = questionId && IMAGE_BY_KEY[questionId];
+  const src = IMAGE_BY_KEY[normalizeKey(questionId)];
   if (!src) return null;
 
   return (

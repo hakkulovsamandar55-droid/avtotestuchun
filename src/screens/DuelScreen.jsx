@@ -13,7 +13,7 @@ import {
   Check,
 } from "lucide-react";
 import { getDuelSocket, disconnectDuelSocket } from "../duelSocket";
-import SignIcon from "../components/SignIcon";
+import QuestionImage from "../components/QuestionImage";
 import { ACCENT_FROM, ACCENT_TO, ACCENT_WARM } from "../theme";
 
 // Duel (jonli musobaqa) rejimi — real vaqtda ikkita foydalanuvchi bir xil
@@ -464,13 +464,9 @@ export default function DuelScreen({ onExit }) {
           </div>
         </div>
 
-        {question.image && (
-          <div className="w-full flex justify-center mb-5">
-            <div className="w-28 h-28 rounded-3xl bg-white flex items-center justify-center shadow-lg">
-              <SignIcon code={question.image} size={92} />
-            </div>
-          </div>
-        )}
+        {/* Duelda ham savol rasmi ikki xil bo'lishi mumkin (sahna/belgi) —
+            QuestionImage o'zi ajratadi. */}
+        <QuestionImage image={question.image} signSize={92} sceneMaxHeight={220} />
 
         <h2 className="text-[17px] font-bold leading-snug mb-5">{question.text}</h2>
 

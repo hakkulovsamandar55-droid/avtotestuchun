@@ -1,6 +1,6 @@
 import React from "react";
 import { Check, X, Info, MinusCircle } from "lucide-react";
-import SignIcon from "../SignIcon";
+import QuestionImage from "../QuestionImage";
 
 /**
  * Savol kartasi — ikki rejimda ishlaydi:
@@ -30,16 +30,12 @@ export default function QuestionCard({
 
   return (
     <div>
-      {question.image && (
-        <div className="w-full flex justify-center mb-5">
-          <div
-            className="w-32 h-32 rounded-3xl bg-white flex items-center justify-center shadow-lg"
-            style={{ boxShadow: "0 10px 30px rgba(108,92,231,0.25)" }}
-          >
-            <SignIcon code={question.image} size={104} />
-          </div>
-        </div>
-      )}
+      {/* Sahna rasmi ham, yo'l belgisi ham shu komponent orqali chiziladi —
+          ajratish mantiqi QuestionImage ichida. */}
+      <QuestionImage
+        image={question.image}
+        sceneMaxHeight={isReview ? 200 : 260}
+      />
 
       <h2 className="text-[17px] font-bold leading-snug mb-5 text-white">
         {question.text}
