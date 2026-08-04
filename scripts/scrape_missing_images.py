@@ -29,6 +29,7 @@
 # ============================================================================
 
 import argparse
+import functools
 import json
 import os
 import re
@@ -44,6 +45,18 @@ ASSETS = ROOT / "src" / "assets" / "newQuestions"
 OUT_DIR = ROOT / "scripts" / "output"
 
 BASE = "https://avto-imtihon.uz"
+
+# GitHub Actions'da stdout quvur (pipe) bo'ladi va Python uni buferlaydi —
+# jarayon tugamaguncha loglarda hech narsa ko'rinmaydi. Har bosqichni jonli
+# ko'rish uchun har chiqishda flush qilamiz.
+print = functools.partial(print, flush=True)  # noqa: A001
+
+# Sahifa yuklanishini kutish usuli. "networkidle" React/Next.js saytlarda
+# hech qachon yuzaga kelmasligi mumkin (fon so'rovlari to'xtamaydi) —
+# shuning uchun DOM tayyor bo'lishini kutamiz va qisqa muddat beramiz.
+WAIT_UNTIL = "domcontentloaded"
+GOTO_TIMEOUT = 25000
+SETTLE_MS = 2500
 
 # Bilet sahifasining URL shakli oldindan ma'lum emas — shuning uchun
 # --discover shu ro'yxatni birma-bir sinab ko'radi va ishlaganini aytadi.
@@ -149,7 +162,8 @@ def discover(ticket):
 
         print("--- Bosh sahifa ---")
         try:
-            page.goto(BASE, wait_until="networkidle", timeout=60000)
+            page.goto(BASE, wait_until=WAIT_UNTIL, timeout=GOTO_TIMEOUT)
+            page.wait_for_timeout(SETTLE_MS)
             print(f"  sarlavha: {page.title()}")
             links = page.evaluate(
                 "() => [...document.querySelectorAll('a')].map(a => a.getAttribute('href')).filter(Boolean).slice(0, 60)"
@@ -162,10 +176,11 @@ def discover(ticket):
         for pattern in URL_CANDIDATES:
             url = urljoin(BASE, pattern.format(n=ticket))
             try:
-                resp = page.goto(url, wait_until="networkidle", timeout=45000)
+                resp = page.goto(url, wait_until=WAIT_UNTIL, timeout=GOTO_TIMEOUT)
+                page.wait_for_timeout(SETTLE_MS)
                 status = resp.status if resp else "?"
                 blocks = page_blocks(page)
-                body = (page.inner_text("body") or "")[:120].replace("\n", " ")
+                body = (page.inner_text("body", timeout=5000) or "")[:120].replace("\n", " ")
                 print(f"  {url}\n      status={status} rasm bloklari={len(blocks)} matn={body!r}")
                 if status == 200 and blocks:
                     print("\n--- Topilgan bloklar (birinchi 3 tasi) ---")
@@ -207,8 +222,8 @@ def fetch(url_pattern, tickets=None, threshold=0.90, force=False):
             url = urljoin(BASE, url_pattern.format(n=ticket))
             print(f"\n=== {ticket}-bilet ({len(questions)} ta savol kerak) — {url}")
             try:
-                page.goto(url, wait_until="networkidle", timeout=60000)
-                page.wait_for_timeout(1200)
+                page.goto(url, wait_until=WAIT_UNTIL, timeout=GOTO_TIMEOUT)
+                page.wait_for_timeout(SETTLE_MS)
                 blocks = page_blocks(page)
             except Exception as err:
                 print(f"  XATO: sahifa ochilmadi: {err}")
