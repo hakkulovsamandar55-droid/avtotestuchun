@@ -1,0 +1,100 @@
+name: Yetishmayotgan savol rasmlarini yig'ish (avto-imtihon.uz)
+
+# 94–120 biletlarda savol rasmlari yo'q. Bu ish avto-imtihon.uz dan o'sha
+# rasmlarni olib, src/assets/newQuestions/ ga qo'shadi va savol bazasiga
+# bog'laydi.
+#
+# IKKI BOSQICH:
+#   1) mode=discover — sayt tuzilishini o'rganadi (URL shakli, rasm bloklari).
+#      Natija loglarda ko'rinadi, hech narsa o'zgartirilmaydi.
+#   2) mode=fetch — 1-bosqichda topilgan url_pattern bilan rasmlarni yig'adi
+#      va natijani shu ishning branchiga commit qiladi.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "discover (o'rganish) yoki fetch (yig'ish)"
+        required: true
+        default: "discover"
+        type: choice
+        options: [discover, fetch]
+      ticket:
+        description: "discover uchun sinov bileti"
+        required: false
+        default: "94"
+      url_pattern:
+        description: "fetch uchun URL shakli, masalan /uz/biletlar/{n}"
+        required: false
+        default: ""
+      tickets:
+        description: "fetch uchun biletlar ro'yxati (bo'sh = hammasi), masalan 94,95,96"
+        required: false
+        default: ""
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Kutubxonalarni o'rnatish
+        run: |
+          pip install --quiet playwright pillow
+          python -m playwright install chromium --with-deps
+
+      - name: Sayt tuzilishini o'rganish
+        if: inputs.mode == 'discover'
+        run: python3 scripts/scrape_missing_images.py --discover "${{ inputs.ticket }}"
+
+      - name: Rasmlarni yig'ish
+        if: inputs.mode == 'fetch'
+        run: |
+          if [ -z "${{ inputs.url_pattern }}" ]; then
+            echo "XATO: fetch uchun url_pattern kerak — avval discover ishlatilsin."
+            exit 1
+          fi
+          ARGS=(--fetch --url-pattern "${{ inputs.url_pattern }}")
+          if [ -n "${{ inputs.tickets }}" ]; then
+            ARGS+=(--tickets "${{ inputs.tickets }}")
+          fi
+          python3 scripts/scrape_missing_images.py "${ARGS[@]}"
+
+      - name: Savol bazasiga bog'lash
+        if: inputs.mode == 'fetch'
+        run: |
+          node scripts/apply-image-map.mjs
+          node scripts/find-missing-images.mjs --md > RASMSIZ_SAVOLLAR.md
+
+      - name: Natijani commit qilish
+        if: inputs.mode == 'fetch'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/assets/newQuestions shared/data/ticketsData.js RASMSIZ_SAVOLLAR.md scripts/output
+          if git diff --cached --quiet; then
+            echo "Yangi rasm topilmadi — commit qilinmadi."
+          else
+            git commit -m "Yetishmayotgan savol rasmlari qo'shildi (avto-imtihon.uz)"
+            git push origin HEAD:${{ github.ref_name }}
+          fi
+
+      - name: Loglarni saqlash
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scrape-natijalar
+          path: scripts/output/
+          retention-days: 14
+          if-no-files-found: ignore

@@ -173,6 +173,19 @@ if (mode === "--ids") {
   process.exit(0);
 }
 
+// Scraper uchun: qidiriladigan savollar matni bilan (uch tilda).
+// scripts/scrape_missing_images.py shu ro'yxatni o'qiydi.
+if (mode === "--json") {
+  console.log(
+    JSON.stringify(
+      missing.map((q) => ({ id: q.id, ticket: ticketOf(q.id), text: q.text, reasons: detect(q) })),
+      null,
+      2
+    )
+  );
+  process.exit(0);
+}
+
 const cal = calibrate(all);
 const totalWithImage = all.filter((q) => q.image).length;
 const emptyTickets = groupByTicket(all)
