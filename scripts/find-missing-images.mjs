@@ -204,6 +204,28 @@ if (mode === "--md") {
   console.log(
     `- Qoidalar aniqligi (1–93 biletlarda sinaldi): **${pct(cal.precision)}**, qamrovi: **${pct(cal.recall)}** — ya'ni bu ro'yxat pastki chegara\n`
   );
+  console.log("## Rasmlarni qanday yig'ish\n");
+  console.log(
+    "Rasmlar manbasi — avto-imtihon.uz. MUHIM: bu sayt GitHub Actions runneridan ham,\n" +
+      "boshqa chet el tarmoqlaridan ham ochilmaydi. DNS ishlaydi (avto-imtihon.uz ->\n" +
+      "207.180.234.66), lekin 80/443 portlariga TCP ulanish umuman tugallanmaydi\n" +
+      "(`curl: (28) Connection timed out`, ulanish vaqti 0.000000s). test-avto.uz ham\n" +
+      "shunday. Ya'ni scraping O'zbekiston tarmog'idagi kompyuterdan bajarilishi kerak.\n"
+  );
+  console.log("```bash");
+  console.log("pip install playwright pillow");
+  console.log("python -m playwright install chromium");
+  console.log("");
+  console.log("# 1) sayt tuzilishi va URL shaklini aniqlash");
+  console.log("python3 scripts/scrape_missing_images.py --discover 94");
+  console.log("");
+  console.log("# 2) topilgan URL shakli bilan rasmlarni yig'ish");
+  console.log('python3 scripts/scrape_missing_images.py --fetch --url-pattern "/uz/biletlar/{n}"');
+  console.log("");
+  console.log("# 3) savol bazasiga bog'lash va hisobotni yangilash");
+  console.log("node scripts/apply-image-map.mjs");
+  console.log("node scripts/find-missing-images.mjs --md > RASMSIZ_SAVOLLAR.md");
+  console.log("```\n");
   console.log("| Bilet | Savol | Nima uchun rasm kerak | Savol matni |");
   console.log("| --- | --- | --- | --- |");
   for (const [t, qs] of groupByTicket(missing))
