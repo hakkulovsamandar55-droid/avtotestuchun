@@ -13,11 +13,11 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "discover (o'rganish) yoki fetch (yig'ish)"
+        description: "probe (tarmoq sinovi), discover (o'rganish) yoki fetch (yig'ish)"
         required: true
         default: "discover"
         type: choice
-        options: [discover, fetch]
+        options: [probe, discover, fetch]
       ticket:
         description: "discover uchun sinov bileti"
         required: false
@@ -49,7 +49,22 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Saytga ulanishni tekshirish
+        if: inputs.mode == 'probe'
+        run: |
+          # Sayt umuman javob beradimi? DNS, TCP, TLS va HTTP alohida ko'rinsin.
+          echo "--- DNS ---"
+          getent hosts avto-imtihon.uz || echo "DNS: nom aniqlanmadi"
+          getent hosts www.avto-imtihon.uz || echo "DNS(www): nom aniqlanmadi"
+          for u in https://avto-imtihon.uz/ https://www.avto-imtihon.uz/ http://avto-imtihon.uz/ https://test-avto.uz/; do
+            echo "--- $u ---"
+            curl -sS -m 30 -o /dev/null \
+              -w 'kod=%{http_code} ulanish=%{time_connect}s tls=%{time_appconnect}s jami=%{time_total}s\n' \
+              "$u" || echo "  ulanmadi"
+          done
+
       - name: Kutubxonalarni o'rnatish
+        if: inputs.mode != 'probe'
         run: |
           pip install --quiet playwright pillow
           python -m playwright install chromium --with-deps
